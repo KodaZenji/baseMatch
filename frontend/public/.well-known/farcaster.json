@@ -1,0 +1,39 @@
+{
+    "accountAssociation": {
+        "header": "",
+        "payload": "",
+        "signature": ""
+    },
+    "baseBuilder": {
+        "ownerAddress": "0x72389703895D9DF273830dBaE7d19AC399161797"
+    },
+    "miniapp": {
+        "version": "1",
+        "name": "BaseMatch",
+        "homeUrl": "https://basematch.app",
+        "iconUrl": "https://basematch.app/icon.png",
+        "splashImageUrl": "https://basematch.app/splash.png",
+        "splashBackgroundColor": "#FF1493",
+        "webhookUrl": "https://basematch.app/api/webhook",
+        "subtitle": "Web3 Dating on Base",
+        "description": "Find your match with blockchain-powered dating. Your wallet is your identity. Build real reputation.",
+        "screenshotUrls": [
+            "https://basematch.app/screenshot1.png",
+            "https://basematch.app/screenshot2.png"
+        ],
+        "primaryCategory": "social",
+        "tags": [
+            "dating",
+            "web3",
+            "base",
+            "social",
+            "blockchain"
+        ],
+        "heroImageUrl": "https://basematch.app/hero.png",
+        "tagline": "Date with confidence",
+        "ogTitle": "BaseMatch - Web3 Dating on Base",
+        "ogDescription": "The dating app where your wallet is your identity and reputation matters.",
+        "ogImageUrl": "https://basematch.app/og-image.png",
+        "noindex": false
+    }
+}

@@ -1,0 +1,245 @@
+# 🚀 BaseMatch Deployment Checklist
+
+## Phase 1: Local Development ✅
+
+- [x] Install Node.js 18+
+- [ ] Clone/setup project
+- [ ] Run `cd frontend && npm install`
+- [ ] Get WalletConnect Project ID from https://cloud.walletconnect.com/
+- [ ] Create `frontend/.env.local` with your Project ID
+- [ ] Run `npm run dev` to test locally
+- [ ] Test wallet connection
+- [ ] Verify all pages load
+
+## Phase 2: Smart Contract Deployment 📝
+
+### Testnet First (Base Sepolia)
+- [ ] Get Base Sepolia ETH from faucet
+- [ ] Install Hardhat or Foundry
+- [ ] Compile contracts
+- [ ] Deploy ProfileNFT contract
+- [ ] Deploy Matching contract (pass ProfileNFT address)
+- [ ] Deploy Staking contract (pass USDC address + Matching address)
+  - Testnet USDC: Get from Base Sepolia faucet
+- [ ] Deploy Reputation contract (pass Matching address)
+- [ ] Deploy Achievement contract
+- [ ] Save all deployed addresses
+- [ ] Verify contracts on BaseScan
+
+### Contract Address Updates
+- [ ] Update `frontend/lib/contracts.ts` with deployed addresses
+- [ ] Test create profile
+- [ ] Test express interest
+- [ ] Test matching
+- [ ] Test staking (if using testnet USDC)
+- [ ] Test ratings
+
+### Mainnet Deployment (When Ready)
+- [ ] Get Base mainnet ETH
+- [ ] Deploy all contracts to Base mainnet
+- [ ] Use Base USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+- [ ] Update contract addresses in code
+- [ ] Verify all contracts on BaseScan
+
+## Phase 3: Frontend Deployment 🌐
+
+### Prepare for Deployment
+- [ ] Choose hosting: Vercel (recommended) or Netlify
+- [ ] Push code to GitHub
+- [ ] Update all placeholder URLs in code
+- [ ] Prepare images:
+  - [ ] Embed image (3:2 ratio, 600x400px min)
+  - [ ] Splash screen (200x200px)
+  - [ ] Icon/Logo (square)
+  - [ ] Screenshots for Mini App store
+
+### Upload Images
+- [ ] Upload to IPFS (Pinata or NFT.Storage) or CDN
+- [ ] Update image URLs in:
+  - [ ] `frontend/public/.well-known/farcaster.json`
+  - [ ] `frontend/app/layout.tsx` (embed metadata)
+
+### Deploy Frontend
+- [ ] Connect GitHub repo to Vercel/Netlify
+- [ ] Set environment variables:
+  - NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+  - NEXT_PUBLIC_ENABLE_TESTNETS (false for prod)
+- [ ] Deploy!
+- [ ] Get production URL
+- [ ] Test on production URL
+
+## Phase 4: Farcaster Mini App Setup 📱
+
+### Update farcaster.json
+- [ ] Replace all `https://your-domain.com` with actual domain
+- [ ] Update `baseBuilder.ownerAddress` with your Base Account address
+- [ ] Update all image URLs
+- [ ] Update `homeUrl` to your production URL
+- [ ] Ensure file is accessible at `/.well-known/farcaster.json`
+
+### Generate Account Association
+- [ ] Visit https://base.build
+- [ ] Use Account Association tool
+- [ ] Enter your domain (e.g., basematch.vercel.app)
+- [ ] Click "Submit" then "Verify"
+- [ ] Copy generated `accountAssociation` fields
+- [ ] Paste into `farcaster.json`
+- [ ] Deploy updated farcaster.json
+
+### Test Mini App
+- [ ] Visit https://base.build/preview
+- [ ] Enter your app URL
+- [ ] Verify embeds display correctly
+- [ ] Test launch button works
+- [ ] Check all metadata appears
+- [ ] Test on mobile (Warpcast app)
+
+### Publish to Base
+- [ ] Open Base app (Warpcast)
+- [ ] Create a post with your app URL
+- [ ] Verify rich embed appears
+- [ ] Test "Find Your Match" button
+- [ ] Share with friends for testing
+
+## Phase 5: Testing & QA 🧪
+
+### Functional Testing
+- [ ] Connect wallet works
+- [ ] Create profile mints NFT
+- [ ] Browse profiles displays correctly
+- [ ] Express interest creates transaction
+- [ ] Matching creates mutual matches
+- [ ] Staking modal works
+- [ ] USDC approval + staking works
+- [ ] Meeting confirmation works
+- [ ] Stake claiming works correctly
+- [ ] Rating submission works
+- [ ] Reputation updates correctly
+- [ ] Dashboard shows correct data
+- [ ] Achievement NFTs mint
+
+### UI/UX Testing
+- [ ] Mobile responsive (especially 424x695 for Mini App)
+- [ ] All buttons work
+- [ ] Loading states display
+- [ ] Error messages are clear
+- [ ] Images load correctly
+- [ ] Font (Lexend) displays
+- [ ] Colors/gradients look good
+- [ ] Navigation between tabs works
+
+### Cross-Browser Testing
+- [ ] Chrome
+- [ ] Safari
+- [ ] Firefox
+- [ ] Mobile browsers
+- [ ] Warpcast in-app browser
+
+## Phase 6: Launch Preparation 🎉
+
+### Documentation
+- [ ] Update README with your domain
+- [ ] Add screenshots to repo
+- [ ] Write launch announcement
+- [ ] Create demo video (optional)
+- [ ] Prepare social media posts
+
+### Marketing Materials
+- [ ] Create Twitter/X account
+- [ ] Design banner images
+- [ ] Write compelling description
+- [ ] List key features
+- [ ] Prepare launch thread
+
+### Community
+- [ ] Set up Discord/Telegram (optional)
+- [ ] Prepare FAQs
+- [ ] Create support channels
+- [ ] Plan for feedback collection
+
+## Phase 7: Launch! 🚀
+
+### Go Live
+- [ ] Final test of all features
+- [ ] Monitor contract events
+- [ ] Post launch announcement
+- [ ] Share in Base community
+- [ ] Share in Farcaster
+- [ ] Tweet/post on social media
+- [ ] Submit to Mini App stores/directories
+
+### Monitor
+- [ ] Watch for errors in logs
+- [ ] Monitor contract transactions
+- [ ] Collect user feedback
+- [ ] Fix any critical bugs
+- [ ] Respond to users
+
+### Post-Launch
+- [ ] Gather analytics
+- [ ] Plan improvements
+- [ ] Add requested features
+- [ ] Build community
+- [ ] Iterate and improve
+
+## Phase 8: Ongoing Maintenance 🔧
+
+### Regular Tasks
+- [ ] Monitor contract for unusual activity
+- [ ] Update frontend as needed
+- [ ] Fix reported bugs
+- [ ] Respond to user feedback
+- [ ] Update dependencies
+- [ ] Security updates
+
+### Growth
+- [ ] Marketing campaigns
+- [ ] Partnership opportunities
+- [ ] Feature additions
+- [ ] Community events
+- [ ] Achievement expansions
+- [ ] Platform improvements
+
+## Important Reminders ⚠️
+
+🔴 **CRITICAL:**
+- Test everything on testnet FIRST
+- Contracts are NOT audited - use at own risk
+- Start small, grow gradually
+- Keep private keys secure
+- Never share seed phrases
+- Monitor for security issues
+
+🟡 **RECOMMENDED:**
+- Get contract audit before mainnet (if budget allows)
+- Set up monitoring/alerts
+- Have emergency pause mechanism
+- Keep backups of everything
+- Document all changes
+- Maintain changelog
+
+🟢 **NICE TO HAVE:**
+- Bug bounty program
+- Community moderators
+- Customer support system
+- Analytics dashboard
+- A/B testing setup
+- Performance monitoring
+
+---
+
+## Quick Reference Links
+
+- Base Docs: https://docs.base.org
+- Farcaster Mini Apps: https://miniapps.farcaster.xyz
+- Base Build: https://base.build
+- BaseScan: https://basescan.org
+- WalletConnect: https://cloud.walletconnect.com
+- Vercel: https://vercel.com
+- Pinata (IPFS): https://pinata.cloud
+
+---
+
+**Good luck with your launch! 💖**
+
+Remember: Start small, test thoroughly, and build an amazing community!
