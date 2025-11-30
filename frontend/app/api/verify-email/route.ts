@@ -1,53 +1,21 @@
 import { NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase';
 
+export const runtime = 'nodejs';
+
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const token = searchParams.get('token');
         const email = searchParams.get('email');
 
+        console.log('Verify email attempt:', { token: !!token, email });
+
         // Validate input
         if (!token || !email) {
-            const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-          <title>Verification Failed</title>
-          <style>
-              body { 
-                  font-family: Arial, sans-serif; 
-                  display: flex; 
-                  justify-content: center; 
-                  align-items: center; 
-                  height: 100vh; 
-                  margin: 0; 
-                  background-color: #f0f2f5;
-              }
-              .container { 
-                  text-align: center; 
-                  padding: 2rem; 
-                  background: white; 
-                  border-radius: 10px; 
-                  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-              }
-              .error { color: #f44336; }
-          </style>
-      </head>
-      <body>
-          <div class="container">
-              <h1 class="error">✗ Verification Failed</h1>
-              <p>Invalid verification link. Please make sure you're using the complete link from your email.</p>
-              <p><a href="/" style="color: #4f46e5;">Return to BaseMatch</a></p>
-          </div>
-      </body>
-      </html>
-      `;
-
-            return new NextResponse(html, {
-                headers: {
-                    'Content-Type': 'text/html',
-                },
+            console.error('Missing token or email');
+            return new NextResponse(getErrorHTML('Invalid verification link. Please make sure you\'re using the complete link from your email.'), {
+                headers: { 'Content-Type': 'text/html' },
                 status: 400
             });
         }
@@ -59,114 +27,47 @@ export async function GET(request: Request) {
             .eq('token', token)
             .single();
 
+        console.log('Token lookup result:', { found: !!verificationToken, error: tokenError?.message });
+
         // Check if token exists and matches the email
         if (tokenError || !verificationToken || verificationToken.email !== email) {
-            const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-          <title>Verification Failed</title>
-          <style>
-              body { 
-                  font-family: Arial, sans-serif; 
-                  display: flex; 
-                  justify-content: center; 
-                  align-items: center; 
-                  height: 100vh; 
-                  margin: 0; 
-                  background-color: #f0f2f5;
-              }
-              .container { 
-                  text-align: center; 
-                  padding: 2rem; 
-                  background: white; 
-                  border-radius: 10px; 
-                  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-              }
-              .error { color: #f44336; }
-          </style>
-      </head>
-      <body>
-          <div class="container">
-              <h1 class="error">✗ Verification Failed</h1>
-              <p>The verification link is invalid or has expired.</p>
-              <p><a href="/" style="color: #4f46e5;">Return to BaseMatch</a></p>
-          </div>
-      </body>
-      </html>
-      `;
-
-            return new NextResponse(html, {
-                headers: {
-                    'Content-Type': 'text/html',
-                },
+            console.error('Token not found or email mismatch');
+            return new NextResponse(getErrorHTML('The verification link is invalid or has expired.'), {
+                headers: { 'Content-Type': 'text/html' },
                 status: 400
             });
         }
 
         // Check if token is expired
         if (new Date(verificationToken.expires_at) < new Date()) {
+            console.error('Token expired');
             // Delete expired token
             await supabaseService
                 .from('email_verifications')
                 .delete()
                 .eq('token', token);
 
-            const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-          <title>Verification Failed</title>
-          <style>
-              body { 
-                  font-family: Arial, sans-serif; 
-                  display: flex; 
-                  justify-content: center; 
-                  align-items: center; 
-                  height: 100vh; 
-                  margin: 0; 
-                  background-color: #f0f2f5;
-              }
-              .container { 
-                  text-align: center; 
-                  padding: 2rem; 
-                  background: white; 
-                  border-radius: 10px; 
-                  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-              }
-              .error { color: #f44336; }
-          </style>
-      </head>
-      <body>
-          <div class="container">
-              <h1 class="error">✗ Verification Failed</h1>
-              <p>The verification link has expired. Please request a new verification email.</p>
-              <p><a href="/" style="color: #4f46e5;">Return to BaseMatch</a></p>
-          </div>
-      </body>
-      </html>
-      `;
-
-            return new NextResponse(html, {
-                headers: {
-                    'Content-Type': 'text/html',
-                },
+            return new NextResponse(getErrorHTML('The verification link has expired. Please request a new verification email.'), {
+                headers: { 'Content-Type': 'text/html' },
                 status: 400
             });
         }
 
-        // Mark the email as verified in the users table
-        const { data: user, error: updateError } = await supabaseService
-            .from('users')
+        // Mark the email as verified in the profiles table (NOT users)
+        const { error: updateError } = await supabaseService
+            .from('profiles')  // Changed from 'users' to 'profiles'
             .update({
                 email_verified: true,
                 updated_at: new Date().toISOString()
             })
-            .eq('wallet_address', verificationToken.wallet_address)
-            .select()
-            .single();
+            .eq('wallet_address', verificationToken.wallet_address);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+            console.error('Error updating profile:', updateError);
+            throw updateError;
+        }
+
+        console.log('Email verified successfully for:', verificationToken.wallet_address);
 
         // Delete the used token
         await supabaseService
@@ -174,98 +75,21 @@ export async function GET(request: Request) {
             .delete()
             .eq('token', token);
 
-        // Return HTML response with success message
-        const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Email Verified</title>
-        <style>
-            body { 
-                font-family: Arial, sans-serif; 
-                display: flex; 
-                justify-content: center; 
-                align-items: center; 
-                height: 100vh; 
-                margin: 0; 
-                background-color: #f0f2f5;
-            }
-            .container { 
-                text-align: center; 
-                padding: 2rem; 
-                background: white; 
-                border-radius: 10px; 
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            }
-            .success { color: #4CAF50; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1 class="success">✓ Email Verified Successfully!</h1>
-            <p>Your email address ${email} has been verified.</p>
-            <p>You can now close this window and return to the app.</p>
-            <p><a href="/" style="color: #4f46e5;">Return to BaseMatch</a></p>
-        </div>
-    </body>
-    </html>
-    `;
-
-        return new NextResponse(html, {
-            headers: {
-                'Content-Type': 'text/html',
-            },
+        // Return success HTML
+        return new NextResponse(getSuccessHTML(email), {
+            headers: { 'Content-Type': 'text/html' }
         });
+
     } catch (error) {
         console.error('Error verifying email:', error);
-
-        // Return HTML response with error message
-        const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Verification Failed</title>
-        <style>
-            body { 
-                font-family: Arial, sans-serif; 
-                display: flex; 
-                justify-content: center; 
-                align-items: center; 
-                height: 100vh; 
-                margin: 0; 
-                background-color: #f0f2f5;
-            }
-            .container { 
-                text-align: center; 
-                padding: 2rem; 
-                background: white; 
-                border-radius: 10px; 
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            }
-            .error { color: #f44336; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1 class="error">✗ Verification Failed</h1>
-            <p>There was an error verifying your email address.</p>
-            <p>Please try again or contact support.</p>
-            <p><a href="/" style="color: #4f46e5;">Return to BaseMatch</a></p>
-        </div>
-    </body>
-    </html>
-    `;
-
-        return new NextResponse(html, {
-            headers: {
-                'Content-Type': 'text/html',
-            },
+        return new NextResponse(getErrorHTML('There was an error verifying your email address. Please try again or contact support.'), {
+            headers: { 'Content-Type': 'text/html' },
             status: 500
         });
     }
 }
 
-// POST endpoint for API-based verification (like in your example)
+// POST endpoint for API-based verification
 export async function POST(request: Request) {
     try {
         const { token } = await request.json();
@@ -299,9 +123,9 @@ export async function POST(request: Request) {
             );
         }
 
-        // Mark email as verified
-        const { data: user, error: updateError } = await supabaseService
-            .from('users')
+        // Mark email as verified in profiles table
+        const { data: profile, error: updateError } = await supabaseService
+            .from('profiles')  // Changed from 'users' to 'profiles'
             .update({
                 email_verified: true,
                 updated_at: new Date().toISOString()
@@ -320,7 +144,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             success: true,
-            user
+            profile
         });
     } catch (error) {
         console.error('Error:', error);
@@ -329,4 +153,94 @@ export async function POST(request: Request) {
             { status: 500 }
         );
     }
+}
+
+// Helper functions for HTML responses
+function getSuccessHTML(email: string): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Email Verified</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            background-color: #f0f2f5;
+        }
+        .container { 
+            text-align: center; 
+            padding: 2rem; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 500px;
+        }
+        .success { color: #4CAF50; }
+        a { 
+            color: #4f46e5; 
+            text-decoration: none;
+            font-weight: bold;
+        }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="success">✓ Email Verified Successfully!</h1>
+        <p>Your email address <strong>${email}</strong> has been verified.</p>
+        <p>You can now close this window and return to the app.</p>
+        <p><a href="/">Return to BaseMatch</a></p>
+    </div>
+</body>
+</html>
+    `;
+}
+
+function getErrorHTML(message: string): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verification Failed</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            background-color: #f0f2f5;
+        }
+        .container { 
+            text-align: center; 
+            padding: 2rem; 
+            background: white; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 500px;
+        }
+        .error { color: #f44336; }
+        a { 
+            color: #4f46e5; 
+            text-decoration: none;
+            font-weight: bold;
+        }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="error">✗ Verification Failed</h1>
+        <p>${message}</p>
+        <p><a href="/">Return to BaseMatch</a></p>
+    </div>
+</body>
+</html>
+    `;
 }
