@@ -29,7 +29,12 @@ export async function POST(request: Request) {
 
         // Validate environment variables
         if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-            console.error('Missing SMTP environment variables');
+            console.error('Missing SMTP environment variables:', {
+                SMTP_HOST: !!process.env.SMTP_HOST,
+                SMTP_USER: !!process.env.SMTP_USER,
+                SMTP_PASS: !!process.env.SMTP_PASS,
+                SMTP_PORT: process.env.SMTP_PORT
+            });
             return NextResponse.json(
                 { error: 'Email service not properly configured' },
                 { status: 500 }
