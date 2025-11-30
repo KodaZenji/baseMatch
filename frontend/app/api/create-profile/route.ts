@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase';
-import fetch from 'node-fetch';
 
 export const runtime = 'nodejs';
 
@@ -48,7 +47,7 @@ export async function POST(request: Request) {
         // Try to sync with Neynar if API key is available
         if (process.env.NEXT_PUBLIC_NEYNAR_API_KEY) {
             try {
-                const neynarResponse = await fetch(
+                const neynarResponse = await (global.fetch || fetch)(
                     `https://api.neynar.com/v2/farcaster/user/by_verification?address=${address}&api_key=${process.env.NEXT_PUBLIC_NEYNAR_API_KEY}`
                 );
 
