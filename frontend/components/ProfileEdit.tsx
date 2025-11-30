@@ -22,6 +22,9 @@ export default function ProfileEdit() {
     const [newPhotoUrl, setNewPhotoUrl] = useState('');
     const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
     const [isSendingVerification, setIsSendingVerification] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showDeleteFinalConfirm, setShowDeleteFinalConfirm] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { writeContract, data: hash, isPending, isError, error } = useWriteContract();
@@ -191,6 +194,30 @@ export default function ProfileEdit() {
         }
     };
 
+    const handleDeleteProfile = async () => {
+        if (!profile?.exists) {
+            showNotification('Profile does not exist', 'error');
+            return;
+        }
+
+        setIsDeleting(true);
+
+        try {
+            writeContract({
+                address: CONTRACTS.PROFILE_NFT as `0x${string}`,
+                abi: PROFILE_NFT_ABI,
+                functionName: 'deleteProfile',
+                args: [],
+            });
+        } catch (error) {
+            console.error('Error deleting profile:', error);
+            showNotification('Failed to delete profile. Please try again.', 'error');
+            setIsDeleting(false);
+            setShowDeleteConfirm(false);
+            setShowDeleteFinalConfirm(false);
+        }
+    };
+
     // Handle transaction errors
     useEffect(() => {
         if (isError && error) {
@@ -202,13 +229,22 @@ export default function ProfileEdit() {
     // Handle transaction success
     useEffect(() => {
         if (isSuccess) {
-            showNotification('✅ Profile updated successfully!', 'success');
-            refreshProfile();
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
+            if (isDeleting) {
+                showNotification('✅ Profile deleted successfully!', 'success');
+                // Clear local state
+                localStorage.clear();
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                showNotification('✅ Profile updated successfully!', 'success');
+                refreshProfile();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
         }
-    }, [isSuccess, refreshProfile]);
+    }, [isSuccess, isDeleting, refreshProfile]);
 
     if (profileLoading) {
         return (
@@ -438,6 +474,104 @@ export default function ProfileEdit() {
                             'Update Profile'
                         )}
                     </button>
+
+                    {/* Delete Account Section */}
+                    <div className="mt-8 pt-6 border-t-2 border-gray-200">
+                        <div className="bg-red-50 rounded-xl p-4 border-2 border-red-200">
+                            <h3 className="text-lg font-semibold text-red-800 mb-2">⚠️ Danger Zone</h3>
+                            <p className="text-sm text-red-700 mb-4">
+                                Deleting your account will permanently remove your profile NFT and all associated data from the blockchain. This action cannot be undone.
+                            </p>
+
+                            {!showDeleteConfirm ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    disabled={isPending || isConfirming || isDeleting}
+                                    className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition-colors disabled:opacity-50"
+                                >
+                                    Delete My Account
+                                </button>
+                            ) : !showDeleteFinalConfirm ? (
+                                <div className="space-y-3">
+                                    <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-3">
+                                        <p className="text-sm font-semibold text-yellow-800 mb-2">⚠️ First Confirmation</p>
+                                        <p className="text-sm text-yellow-700 mb-3">
+                                            Are you sure you want to delete your account? This will:
+                                        </p>
+                                        <ul className="text-xs text-yellow-700 list-disc list-inside space-y-1 mb-3">
+                                            <li>Burn your Profile NFT permanently</li>
+                                            <li>Remove all your profile data from blockchain</li>
+                                            <li>Delete your email registration</li>
+                                            <li>Cannot be recovered or undone</li>
+                                        </ul>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowDeleteConfirm(false);
+                                                setShowDeleteFinalConfirm(false);
+                                            }}
+                                            className="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg font-semibold hover:bg-gray-400 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowDeleteFinalConfirm(true)}
+                                            className="flex-1 bg-orange-500 text-white py-2 rounded-lg font-semibold hover:bg-orange-600 transition-colors"
+                                        >
+                                            Yes, Continue
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className="bg-red-100 border-2 border-red-500 rounded-lg p-3">
+                                        <p className="text-sm font-bold text-red-900 mb-2">🚨 FINAL CONFIRMATION</p>
+                                        <p className="text-sm text-red-800 mb-2 font-semibold">
+                                            This is your last chance. Type your confirmation below:
+                                        </p>
+                                        <p className="text-xs text-red-700 mb-3">
+                                            Once you click "Permanently Delete Account", your profile NFT will be burned and all data will be permanently removed from the blockchain.
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowDeleteConfirm(false);
+                                                setShowDeleteFinalConfirm(false);
+                                            }}
+                                            disabled={isDeleting}
+                                            className="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg font-semibold hover:bg-gray-400 transition-colors disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleDeleteProfile}
+                                            disabled={isPending || isConfirming || isDeleting}
+                                            className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
+                                        >
+                                            {isDeleting ? (
+                                                <span className="flex items-center justify-center">
+                                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    Deleting...
+                                                </span>
+                                            ) : (
+                                                '🗑️ Permanently Delete Account'
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </form>
             </div>
         </div>

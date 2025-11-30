@@ -65,6 +65,13 @@ export const PROFILE_NFT_ABI = [
     },
     {
         type: "function",
+        name: "deleteProfile",
+        stateMutability: "nonpayable",
+        inputs: [],
+        outputs: []
+    },
+    {
+        type: "function",
         name: "profileExists",
         stateMutability: "view",
         inputs: [
@@ -124,6 +131,14 @@ export const PROFILE_NFT_ABI = [
             { name: "interests", type: "string", indexed: false },
             { name: "photoUrl", type: "string", indexed: false },
             { name: "email", type: "string", indexed: false }
+        ]
+    },
+    {
+        type: "event",
+        name: "ProfileDeleted",
+        inputs: [
+            { name: "user", type: "address", indexed: true },
+            { name: "tokenId", type: "uint256", indexed: false }
         ]
     }
 ] as const;

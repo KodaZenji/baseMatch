@@ -87,6 +87,7 @@ contract ProfileNFT is ERC721, Ownable {
     // ... existing code ...
     event ProfileCreated(address indexed user, uint256 tokenId, string name);
     event ProfileUpdated(address indexed user, string name, uint8 age, string gender, string interests, string photoUrl, string email);
+    event ProfileDeleted(address indexed user, uint256 tokenId);
     event EmailRegistered(string email, address user);
 
     constructor() ERC721("BaseMatch Profile", "BMPRO") {
@@ -259,6 +260,32 @@ contract ProfileNFT is ERC721, Ownable {
      */
     function profileExists(address user) external view returns (bool) {
         return profiles[user].exists;
+    }
+
+    /**
+     * @dev Delete user profile and burn NFT
+     * Can only be called by the profile owner
+     */
+    function deleteProfile() external {
+        require(profiles[msg.sender].exists, "Profile does not exist");
+        
+        Profile memory userProfile = profiles[msg.sender];
+        uint256 tokenId = userProfile.tokenId;
+        
+        // Clear email registration if exists
+        if (bytes(userProfile.email).length > 0) {
+            emailExists[userProfile.email] = false;
+            delete emailToAddress[userProfile.email];
+        }
+        
+        // Clear profile data
+        delete profiles[msg.sender];
+        delete addressToTokenId[msg.sender];
+        
+        // Burn the NFT
+        _burn(tokenId);
+        
+        emit ProfileDeleted(msg.sender, tokenId);
     }
 
     /**
