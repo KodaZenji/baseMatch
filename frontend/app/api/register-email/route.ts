@@ -10,10 +10,10 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { name, age, gender, interests, email } = body;
 
-        // Validate input
-        if (!name || !age || !gender || !interests || !email) {
+        // Validate input (only email is required)
+        if (!email) {
             return NextResponse.json(
-                { error: 'All fields are required' },
+                { error: 'Email is required' },
                 { status: 400 }
             );
         }
@@ -25,37 +25,35 @@ export async function POST(request: Request) {
             .eq('email', email)
             .single();
 
-        if (existingUser) {
-            return NextResponse.json(
-                { error: 'Email already registered' },
-                { status: 400 }
-            );
-        }
+        // Ensure we have a user record; create if not exists
+        let userId = existingUser?.id;
+        if (!userId) {
+            const { data: user, error: insertError } = await supabaseService
+                .from('users')
+                .insert([
+                    {
+                        email,
+                        name: name || null,
+                        age: age ? parseInt(age) : null,
+                        gender: gender || null,
+                        interests: interests || null,
+                        email_verified: false,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }
+                ])
+                .select()
+                .single();
 
-        // Create user in Supabase
-        const { data: user, error: insertError } = await supabaseService
-            .from('users')
-            .insert([
-                {
-                    name,
-                    age: parseInt(age),
-                    gender,
-                    interests,
-                    email,
-                    email_verified: false,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                }
-            ])
-            .select()
-            .single();
+            if (insertError || !user) {
+                console.error('Error creating user:', insertError);
+                return NextResponse.json(
+                    { error: 'Failed to create user account' },
+                    { status: 500 }
+                );
+            }
 
-        if (insertError || !user) {
-            console.error('Error creating user:', insertError);
-            return NextResponse.json(
-                { error: 'Failed to create user account' },
-                { status: 500 }
-            );
+            userId = user.id;
         }
 
         // Create verification token
@@ -68,7 +66,7 @@ export async function POST(request: Request) {
                 {
                     token,
                     email,
-                    user_id: user.id,
+                    user_id: userId,
                     expires_at: expiresAt.toISOString(),
                     created_at: new Date().toISOString()
                 }
@@ -164,7 +162,7 @@ export async function POST(request: Request) {
             return NextResponse.json({
                 success: true,
                 message: 'Verification email sent! Please check your inbox.',
-                userId: user.id
+                userId: userId
             });
         } catch (emailError) {
             console.error('Error sending email:', emailError);

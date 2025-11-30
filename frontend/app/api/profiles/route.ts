@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
         const { data: supabaseProfiles, error } = await supabase
             .from('profiles')
             .select('*')
+            .eq('email_verified', true)
             .order('created_at', { ascending: false });
 
         if (error || !supabaseProfiles) {
@@ -61,16 +62,44 @@ export async function GET(request: NextRequest) {
                     }
                 }
 
-                // Return profile with verification status
-                verifiedProfiles.push({
-                    ...profile,
-                    verified: {
-                        blockchain: true,
-                        neynar: !!neynarUser,
-                        neynarUsername: neynarUser?.username,
-                        neynarAvatar: neynarUser?.pfp_url,
-                    },
-                });
+                // Only include profiles verified by Neynar
+                if (neynarUser) {
+                    // Cache Neynar verification into consolidated table
+                    try {
+                        if (profile.email) {
+                            const { data: userRow } = await supabase
+                                .from('users')
+                                .select('id')
+                                .eq('email', profile.email)
+                                .single();
+                            if (userRow?.id) {
+                                await supabase
+                                    .from('user_verifications')
+                                    .upsert([
+                                        {
+                                            user_id: userRow.id,
+                                            wallet_verified: true,
+                                            wallet_verified_at: new Date().toISOString(),
+                                            wallet_address: profile.address,
+                                            updated_at: new Date().toISOString()
+                                        }
+                                    ], { onConflict: 'user_id' });
+                            }
+                        }
+                    } catch (cacheErr) {
+                        console.warn('Failed to cache Neynar verification:', cacheErr);
+                    }
+
+                    verifiedProfiles.push({
+                        ...profile,
+                        verified: {
+                            blockchain: true,
+                            neynar: true,
+                            neynarUsername: neynarUser?.username,
+                            neynarAvatar: neynarUser?.pfp_url,
+                        },
+                    });
+                }
             } catch (err) {
                 console.warn(`Failed to verify profile ${profile.address}:`, err);
             }

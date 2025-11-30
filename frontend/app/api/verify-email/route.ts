@@ -141,6 +141,18 @@ export async function POST(request: Request) {
 
         if (updateError) throw updateError;
 
+        // Upsert consolidated verification status
+        await supabaseService
+            .from('user_verifications')
+            .upsert([
+                {
+                    user_id: verification.user_id,
+                    email_verified: true,
+                    email_verified_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }
+            ], { onConflict: 'user_id' });
+
         console.log('Email verified successfully for:', email);
 
         // Delete the used token
