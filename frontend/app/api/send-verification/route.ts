@@ -3,6 +3,9 @@ import { createTransport } from 'nodemailer';
 import { supabaseService } from '@/lib/supabase';
 import { randomBytes } from 'crypto';
 
+// Force Node.js runtime (required for nodemailer and crypto)
+export const runtime = 'nodejs';
+
 // Configure nodemailer transport using environment variables
 const transporter = createTransport({
     host: process.env.SMTP_HOST,
@@ -73,65 +76,65 @@ export async function POST(request: Request) {
         // Send verification email
         try {
             await transporter.sendMail({
-                from: `"BaseMatch" <${process.env.SMTP_FROM}>`,
+                from: `"BaseMatch" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
                 to: email,
                 subject: 'Verify your email address - BaseMatch',
                 html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <title>Verify your email - BaseMatch</title>
-            <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { text-align: center; margin-bottom: 30px; }
-                .button { 
-                    display: inline-block; 
-                    padding: 12px 24px; 
-                    background-color: #4f46e5; 
-                    color: white; 
-                    text-decoration: none; 
-                    border-radius: 6px; 
-                    font-weight: bold;
-                }
-                .footer { 
-                    margin-top: 30px; 
-                    padding-top: 20px; 
-                    border-top: 1px solid #eee; 
-                    font-size: 12px; 
-                    color: #666; 
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>💖 BaseMatch</h1>
-                    <h2>Email Verification</h2>
-                </div>
-                
-                <p>Hello,</p>
-                
-                <p>Thank you for registering with BaseMatch! Please verify your email address by clicking the button below:</p>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="${verificationUrl}" class="button">Verify Email Address</a>
-                </div>
-                
-                <p>If the button doesn't work, you can also copy and paste this link into your browser:</p>
-                <p style="word-break: break-all; color: #4f46e5;">${verificationUrl}</p>
-                
-                <p>This link will expire in 24 hours.</p>
-                
-                <div class="footer">
-                    <p>If you didn't register for BaseMatch, please ignore this email.</p>
-                    <p>&copy; 2025 BaseMatch. All rights reserved.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Verify your email - BaseMatch</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .button { 
+            display: inline-block; 
+            padding: 12px 24px; 
+            background-color: #4f46e5; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            font-weight: bold;
+        }
+        .footer { 
+            margin-top: 30px; 
+            padding-top: 20px; 
+            border-top: 1px solid #eee; 
+            font-size: 12px; 
+            color: #666; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💖 BaseMatch</h1>
+            <h2>Email Verification</h2>
+        </div>
+        
+        <p>Hello,</p>
+        
+        <p>Thank you for registering with BaseMatch! Please verify your email address by clicking the button below:</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="${verificationUrl}" class="button">Verify Email Address</a>
+        </div>
+        
+        <p>If the button doesn't work, you can also copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; color: #4f46e5;">${verificationUrl}</p>
+        
+        <p>This link will expire in 24 hours.</p>
+        
+        <div class="footer">
+            <p>If you didn't register for BaseMatch, please ignore this email.</p>
+            <p>&copy; 2025 BaseMatch. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+                `
             });
 
             return NextResponse.json({
