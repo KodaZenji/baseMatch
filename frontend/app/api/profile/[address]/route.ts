@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { CONTRACTS, PROFILE_NFT_ABI } from '@/lib/contracts';
 import { createPublicClient, http } from 'viem';
 import { baseSepolia } from 'viem/chains';
@@ -10,11 +10,11 @@ const publicClient = createPublicClient({
 });
 
 export async function GET(
-    request: Request,
-    { params }: { params: { address: string } }
+    request: NextRequest,
+    { params }: { params: Promise<{ address: string }> }
 ) {
     try {
-        const { address } = params;
+        const { address } = await params;
 
         // Validate address format
         if (!address || !address.startsWith('0x') || address.length !== 42) {
