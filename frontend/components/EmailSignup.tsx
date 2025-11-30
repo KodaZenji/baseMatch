@@ -11,6 +11,7 @@ export default function EmailSignup() {
     const [formData, setFormData] = useState({
         name: '',
         age: '',
+        gender: '',
         interests: '',
         email: '',
     });
@@ -20,9 +21,9 @@ export default function EmailSignup() {
     const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
     // Check if contract is deployed
-    const isContractDeployed = CONTRACTS.PROFILE_NFT && 
-                               CONTRACTS.PROFILE_NFT.startsWith('0x') && 
-                               CONTRACTS.PROFILE_NFT.length === 42;
+    const isContractDeployed = CONTRACTS.PROFILE_NFT &&
+        CONTRACTS.PROFILE_NFT.startsWith('0x') &&
+        CONTRACTS.PROFILE_NFT.length === 42;
 
     useEffect(() => {
         console.log('Contract deployed check:', isContractDeployed, CONTRACTS.PROFILE_NFT);
@@ -57,7 +58,7 @@ export default function EmailSignup() {
             return;
         }
 
-        if (!formData.name || !formData.age || !formData.interests || !formData.email) {
+        if (!formData.name || !formData.age || !formData.gender || !formData.interests || !formData.email) {
             const errorMsg = 'Please fill in all fields';
             setFormError(errorMsg);
             console.error(errorMsg);
@@ -78,7 +79,7 @@ export default function EmailSignup() {
                 address: CONTRACTS.PROFILE_NFT as `0x${string}`,
                 abi: PROFILE_NFT_ABI,
                 functionName: 'registerWithEmail',
-                args: [formData.name, age, formData.interests, formData.email],
+                args: [formData.name, age, formData.gender, formData.interests, formData.email],
             });
 
             // Wait for connector to be ready
@@ -88,7 +89,7 @@ export default function EmailSignup() {
                 address: CONTRACTS.PROFILE_NFT as `0x${string}`,
                 abi: PROFILE_NFT_ABI,
                 functionName: 'registerWithEmail',
-                args: [formData.name, age, formData.interests, formData.email],
+                args: [formData.name, age, formData.gender, formData.interests, formData.email],
             });
 
             console.log('Contract write initiated');
@@ -211,6 +212,24 @@ export default function EmailSignup() {
                             max="100"
                             required
                         />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Gender
+                        </label>
+                        <select
+                            value={formData.gender}
+                            onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                            className="w-full px-4 py-3 text-gray-700 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            required
+                        >
+                            <option value="">Select gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Non-binary">Non-binary</option>
+                            <option value="Prefer not to say">Prefer not to say</option>
+                        </select>
                     </div>
 
                     <div>
