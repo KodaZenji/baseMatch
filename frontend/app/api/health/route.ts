@@ -1,15 +1,12 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 
 export async function GET() {
     try {
-        // Test database connectivity by performing a simple operation
-        await db.cleanupExpiredTokens();
-
+        // Simple health check
         return NextResponse.json({
             status: 'ok',
             timestamp: new Date().toISOString(),
-            service: 'email-verification'
+            service: 'basematch'
         });
     } catch (error) {
         console.error('Health check failed:', error);
@@ -17,7 +14,7 @@ export async function GET() {
         return NextResponse.json({
             status: 'error',
             timestamp: new Date().toISOString(),
-            service: 'email-verification',
+            service: 'basematch',
             error: error instanceof Error ? error.message : 'Unknown error'
         }, { status: 500 });
     }

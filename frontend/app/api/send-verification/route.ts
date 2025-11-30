@@ -61,7 +61,9 @@ export async function POST(request: Request) {
         }
 
         // Create verification URL
-        const verificationUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
+            (process.env.NODE_ENV === 'production' ? 'https://basematch.app' : 'http://localhost:3000');
+        const verificationUrl = `${baseUrl}/api/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
 
         // Send verification email
         try {
