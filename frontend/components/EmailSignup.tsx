@@ -1,13 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function EmailSignup() {
     const router = useRouter();
-    const { address, isConnected, connector } = useAccount();
     const [formData, setFormData] = useState({
         name: '',
         age: '',
@@ -16,151 +13,83 @@ export default function EmailSignup() {
         email: '',
     });
     const [formError, setFormError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
-    const { writeContract, data: hash, isPending, error } = useWriteContract();
-    const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
-
-    // Check if contract is deployed
-    const isContractDeployed = CONTRACTS.PROFILE_NFT &&
-        CONTRACTS.PROFILE_NFT.startsWith('0x') &&
-        CONTRACTS.PROFILE_NFT.length === 42;
-
-    useEffect(() => {
-        console.log('Contract deployed check:', isContractDeployed, CONTRACTS.PROFILE_NFT);
-        console.log('Wallet connection status:', { isConnected, address, connector: connector?.name });
-    }, [isContractDeployed, isConnected, address, connector]);
+    // ... existing code ...
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setFormError('');
-
-        console.log('Form submitted with data:', formData);
+        setSuccessMessage('');
 
         // Validation
-        if (!isConnected) {
-            const errorMsg = 'Please connect your wallet first';
-            setFormError(errorMsg);
-            console.error(errorMsg);
-            return;
-        }
-
-        if (!address) {
-            const errorMsg = 'Wallet address not found';
-            setFormError(errorMsg);
-            console.error(errorMsg);
-            return;
-        }
-
-        if (!isContractDeployed) {
-            const errorMsg = 'Contract not deployed';
-            setFormError(errorMsg);
-            console.error(errorMsg);
-            return;
-        }
-
         if (!formData.name || !formData.age || !formData.gender || !formData.interests || !formData.email) {
-            const errorMsg = 'Please fill in all fields';
-            setFormError(errorMsg);
-            console.error(errorMsg);
+            setFormError('Please fill in all fields');
             return;
         }
 
         const age = parseInt(formData.age);
         if (isNaN(age) || age < 18 || age > 100) {
-            const errorMsg = 'Please enter a valid age between 18 and 100';
-            setFormError(errorMsg);
-            console.error(errorMsg);
+            setFormError('Please enter a valid age between 18 and 100');
             return;
         }
 
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+            setFormError('Please enter a valid email address');
+            return;
+        }
+
+        setIsSubmitting(true);
+
         try {
-            console.log('Attempting to register with email...');
-            console.log('Calling writeContract with params:', {
-                address: CONTRACTS.PROFILE_NFT as `0x${string}`,
-                abi: PROFILE_NFT_ABI,
-                functionName: 'registerWithEmail',
-                args: [formData.name, age, formData.gender, formData.interests, formData.email],
+            // Call API to register email
+            const response = await fetch('/api/register-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
             });
 
-            // Wait for connector to be ready
-            await new Promise(resolve => setTimeout(resolve, 100));
+            const data = await response.json();
 
-            writeContract({
-                address: CONTRACTS.PROFILE_NFT as `0x${string}`,
-                abi: PROFILE_NFT_ABI,
-                functionName: 'registerWithEmail',
-                args: [formData.name, age, formData.gender, formData.interests, formData.email],
-            });
+            if (!response.ok) {
+                setFormError(data.error || 'Failed to register. Please try again.');
+                setIsSubmitting(false);
+                return;
+            }
 
-            console.log('Contract write initiated');
-
-            // Store data in localStorage for later completion
-            localStorage.setItem('pendingEmailRegistration', JSON.stringify({
+            // Success - show message and redirect
+            setSuccessMessage('✅ Check your email to verify your account!');
+            localStorage.setItem('pendingEmailVerification', JSON.stringify({
                 ...formData,
-                age,
-                address,
+                userId: data.userId,
                 timestamp: Date.now(),
             }));
+
+            // Redirect to verification page after a short delay
+            setTimeout(() => {
+                router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+            }, 2000);
         } catch (error: any) {
-            const errorMsg = 'Failed to register: ' + (error.message || error);
-            console.error(errorMsg, error);
-            setFormError(errorMsg);
+            setFormError(error.message || 'Failed to register. Please try again.');
+            setIsSubmitting(false);
         }
     };
 
-    useEffect(() => {
-        if (error) {
-            console.error('Contract write error:', error);
-            setFormError('Contract write error: ' + error.message);
-        }
-    }, [error]);
-
-    useEffect(() => {
-        console.log('Transaction status - isPending:', isPending, 'isConfirming:', isConfirming, 'isSuccess:', isSuccess, 'hash:', hash);
-    }, [isPending, isConfirming, isSuccess, hash]);
-
-    // Redirect on success
-    useEffect(() => {
-        if (isSuccess && address) {
-            console.log('Registration successful! Redirecting to profile setup...');
-            setTimeout(() => {
-                router.push('/profile/setup');
-            }, 2000);
-        }
-    }, [isSuccess, address, router]);
-
     // Show wallet connection required
-    if (!isConnected) {
+    if (successMessage) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
                 <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-                    <div className="mb-6">
-                        <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-2">
-                            💖 BaseMatch
-                        </h1>
-                        <p className="text-gray-600 text-lg">Connect Wallet Required</p>
-                    </div>
-                    <p className="text-gray-700 mb-6">
-                        Please connect your wallet using the button at the top of the page to continue with email registration.
-                    </p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
-                    >
-                        Refresh Page
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    // Success state
-    if (isSuccess) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="text-white text-2xl mb-4">✅ Email Registered Successfully!</div>
-                    <div className="text-white text-lg">Redirecting to complete your profile...</div>
+                    <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-4">
+                        💖 BaseMatch
+                    </h1>
+                    <p className="text-gray-700 text-lg mb-4">{successMessage}</p>
+                    <p className="text-gray-600">Redirecting to verify your email...</p>
                 </div>
             </div>
         );
@@ -260,17 +189,12 @@ export default function EmailSignup() {
                         />
                     </div>
 
-                    <div className="bg-blue-50 rounded-xl p-4 text-sm text-gray-700">
-                        <p className="font-semibold mb-1">Connected Wallet:</p>
-                        <p className="font-mono text-xs break-all">{address}</p>
-                    </div>
-
                     <button
                         type="submit"
-                        disabled={isPending || isConfirming || !isConnected}
+                        disabled={isSubmitting}
                         className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isPending ? 'Submitting...' : isConfirming ? 'Confirming...' : 'Register with Email'}
+                        {isSubmitting ? 'Creating Account...' : 'Sign Up with Email'}
                     </button>
                 </form>
 

@@ -89,54 +89,61 @@ export async function GET(request: Request) {
     }
 }
 
-// POST endpoint for API-based verification
+// POST endpoint for email verification from email signup flow
 export async function POST(request: Request) {
     try {
-        const { token } = await request.json();
+        const { token, email } = await request.json();
 
-        if (!token) {
+        if (!token || !email) {
             return NextResponse.json(
-                { error: 'Token is required' },
+                { error: 'Token and email are required' },
                 { status: 400 }
             );
         }
 
-        // Find verification token
+        // Find and validate the verification token
         const { data: verification, error: verifyError } = await supabaseService
             .from('email_verifications')
             .select('*')
             .eq('token', token)
+            .eq('email', email)
             .single();
 
         if (verifyError || !verification) {
             return NextResponse.json(
-                { error: 'Invalid verification token' },
+                { error: 'Invalid or expired verification link' },
                 { status: 400 }
             );
         }
 
-        // Check if token expired
+        // Check if token is expired
         if (new Date(verification.expires_at) < new Date()) {
+            // Delete expired token
+            await supabaseService
+                .from('email_verifications')
+                .delete()
+                .eq('token', token);
+
             return NextResponse.json(
-                { error: 'Verification token has expired' },
+                { error: 'Verification link has expired' },
                 { status: 400 }
             );
         }
 
-        // Mark email as verified in profiles table
-        const { data: profile, error: updateError } = await supabaseService
-            .from('profiles')  // Changed from 'users' to 'profiles'
+        // Update user's email verification status
+        const { error: updateError } = await supabaseService
+            .from('users')
             .update({
                 email_verified: true,
                 updated_at: new Date().toISOString()
             })
-            .eq('wallet_address', verification.wallet_address)
-            .select()
-            .single();
+            .eq('id', verification.user_id);
 
         if (updateError) throw updateError;
 
-        // Delete used token
+        console.log('Email verified successfully for:', email);
+
+        // Delete the used token
         await supabaseService
             .from('email_verifications')
             .delete()
@@ -144,10 +151,11 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             success: true,
-            profile
+            userId: verification.user_id,
+            message: 'Email verified successfully'
         });
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error verifying email:', error);
         return NextResponse.json(
             { error: 'Failed to verify email' },
             { status: 500 }
