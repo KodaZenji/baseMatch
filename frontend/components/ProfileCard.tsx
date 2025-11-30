@@ -7,10 +7,14 @@ import { MATCHING_ABI, CONTRACTS } from '@/lib/contracts';
 
 export default function ProfileCard({
     profile,
-    onGift
+    onGift,
+    onExpressInterest,
+    isPending
 }: {
     profile: any;
     onGift?: () => void;
+    onExpressInterest?: (address: string) => Promise<void>;
+    isPending?: boolean;
 }) {
     const { address } = useAccount();
     const [avatarUrl, setAvatarUrl] = useState('');
@@ -48,12 +52,17 @@ export default function ProfileCard({
         setIsExpressingInterest(true);
 
         try {
-            writeContract({
-                address: CONTRACTS.MATCHING as `0x${string}`,
-                abi: MATCHING_ABI,
-                functionName: 'expressInterest',
-                args: [profile.address as `0x${string}`],
-            });
+            if (onExpressInterest) {
+                await onExpressInterest(profile.address);
+                showNotification('Interest expressed successfully!', 'success');
+            } else {
+                writeContract({
+                    address: CONTRACTS.MATCHING as `0x${string}`,
+                    abi: MATCHING_ABI,
+                    functionName: 'expressInterest',
+                    args: [profile.address as `0x${string}`],
+                });
+            }
         } catch (error) {
             console.error('Error expressing interest:', error);
             showNotification('Failed to express interest', 'error');
@@ -138,10 +147,10 @@ export default function ProfileCard({
                 <div className="flex space-x-3">
                     <button
                         onClick={handleExpressInterest}
-                        disabled={isPending || isConfirming || isExpressingInterest}
+                        disabled={(isPending ?? false) || isConfirming || isExpressingInterest}
                         className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
                     >
-                        {isPending || isConfirming || isExpressingInterest ? (
+                        {(isPending ?? false) || isConfirming || isExpressingInterest ? (
                             <span className="flex items-center justify-center">
                                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
