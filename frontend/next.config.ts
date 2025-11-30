@@ -9,15 +9,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Move to top-level (removed from experimental)
-  serverExternalPackages: ['pino', 'thread-stream', 'pino-pretty'],
+  serverExternalPackages: ['pino', 'thread-stream', 'pino-pretty', 'lokijs', 'encoding'],
+  turbopack: {},
   webpack: (config) => {
     config.resolve.fallback = { fs: false, net: false, tls: false };
     config.externals.push('pino-pretty', 'lokijs', 'encoding');
     return config;
   },
-  // Tell Next.js to use webpack instead of Turbopack
-  turbopack: undefined,
 };
 
 export default nextConfig;
