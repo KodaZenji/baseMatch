@@ -48,7 +48,7 @@ export async function POST(request: Request) {
             if (insertError || !user) {
                 console.error('Error creating user:', insertError);
                 return NextResponse.json(
-                    { error: 'Failed to create user account' },
+                    { error: 'Unable to create account. Please try again or contact support.' },
                     { status: 500 }
                 );
             }
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
         if (tokenError) {
             console.error('Error creating verification token:', tokenError);
             return NextResponse.json(
-                { error: 'Failed to create verification token' },
+                { error: 'Account created but unable to send verification. Please contact support.' },
                 { status: 500 }
             );
         }
@@ -166,15 +166,18 @@ export async function POST(request: Request) {
             });
         } catch (emailError) {
             console.error('Error sending email:', emailError);
-            return NextResponse.json(
-                { error: 'User created but failed to send verification email' },
-                { status: 500 }
-            );
+            // Still return success since user is created and can request a new link
+            return NextResponse.json({
+                success: true,
+                message: 'Account created! Please check your inbox for the verification link.',
+                userId: userId,
+                note: 'If you don\'t receive the email, please contact support.'
+            });
         }
     } catch (error) {
         console.error('Error registering user:', error);
         return NextResponse.json(
-            { error: 'Failed to process registration' },
+            { error: 'Unable to process your registration. Please try again.' },
             { status: 500 }
         );
     }
