@@ -9,7 +9,7 @@ export default function ProfileCard({
     profile,
     onGift,
     onExpressInterest,
-    isPending
+    isPending: isPendingProp
 }: {
     profile: any;
     onGift?: () => void;
@@ -21,7 +21,7 @@ export default function ProfileCard({
     const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
     const [isExpressingInterest, setIsExpressingInterest] = useState(false);
 
-    const { writeContract, data: hash, isPending, error } = useWriteContract();
+    const { writeContract, data: hash, isPending: isWritePending, error } = useWriteContract();
     const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
     // Generate avatar based on wallet address
@@ -147,10 +147,10 @@ export default function ProfileCard({
                 <div className="flex space-x-3">
                     <button
                         onClick={handleExpressInterest}
-                        disabled={(isPending ?? false) || isConfirming || isExpressingInterest}
+                        disabled={(isPendingProp ?? false) || isConfirming || isExpressingInterest}
                         className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
                     >
-                        {(isPending ?? false) || isConfirming || isExpressingInterest ? (
+                        {(isPendingProp ?? false) || isConfirming || isExpressingInterest ? (
                             <span className="flex items-center justify-center">
                                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
