@@ -1,21 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createTransport } from 'nodemailer';
 import { supabaseService } from '@/lib/supabase';
 import { randomBytes } from 'crypto';
+import * as brevo from '@getbrevo/brevo';
 
-// Force Node.js runtime (required for nodemailer and crypto)
+// Force Node.js runtime (required for Brevo and crypto)
 export const runtime = 'nodejs';
 
-// Configure nodemailer transport using environment variables
-const transporter = createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false, // true for 465, false for other ports
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-    }
-});
+
 
 export async function POST(request: Request) {
     try {
@@ -31,13 +22,8 @@ export async function POST(request: Request) {
         }
 
         // Validate environment variables
-        if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-            console.error('Missing SMTP environment variables:', {
-                SMTP_HOST: !!process.env.SMTP_HOST,
-                SMTP_USER: !!process.env.SMTP_USER,
-                SMTP_PASS: !!process.env.SMTP_PASS,
-                SMTP_PORT: process.env.SMTP_PORT
-            });
+        if (!process.env.BREVO_API_KEY) {
+            console.error('Missing BREVO_API_KEY environment variable');
             return NextResponse.json(
                 { error: 'Email service not properly configured' },
                 { status: 500 }
@@ -73,13 +59,22 @@ export async function POST(request: Request) {
             (process.env.NODE_ENV === 'production' ? 'https://basematch.app' : 'http://localhost:3000');
         const verificationUrl = `${baseUrl}/api/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
 
-        // Send verification email
+        // Send verification email using Brevo
         try {
-            await transporter.sendMail({
-                from: `"BaseMatch" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-                to: email,
-                subject: 'Verify your email address - BaseMatch',
-                html: `
+            const apiInstance = new brevo.TransactionalEmailsApi();
+            apiInstance.setApiKey(
+                brevo.TransactionalEmailsApiApiKeys.apiKey,
+                process.env.BREVO_API_KEY
+            );
+
+            const sendSmtpEmail = new brevo.SendSmtpEmail();
+            sendSmtpEmail.sender = {
+                name: process.env.BREVO_SENDER_NAME || 'BaseMatch',
+                email: process.env.BREVO_SENDER_EMAIL || 'noreply@basematch.app'
+            };
+            sendSmtpEmail.to = [{ email }];
+            sendSmtpEmail.subject = 'Verify your email address - BaseMatch';
+            sendSmtpEmail.htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -134,8 +129,9 @@ export async function POST(request: Request) {
     </div>
 </body>
 </html>
-                `
-            });
+                `;
+
+            await apiInstance.sendTransacEmail(sendSmtpEmail);
 
             return NextResponse.json({
                 success: true,

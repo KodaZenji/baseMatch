@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase';
 import { randomBytes } from 'crypto';
+import * as brevo from '@getbrevo/brevo';
 
 export const runtime = 'nodejs';
 
@@ -86,24 +87,22 @@ export async function POST(request: Request) {
             (process.env.NODE_ENV === 'production' ? 'https://basematch.app' : 'http://localhost:3000');
         const verificationUrl = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
 
-        // Send verification email
+        // Send verification email using Brevo
         try {
-            const { createTransport } = require('nodemailer');
-            const transporter = createTransport({
-                host: process.env.SMTP_HOST,
-                port: parseInt(process.env.SMTP_PORT || '587'),
-                secure: false,
-                auth: {
-                    user: process.env.SMTP_USER,
-                    pass: process.env.SMTP_PASS
-                }
-            });
+            const apiInstance = new brevo.TransactionalEmailsApi();
+            apiInstance.setApiKey(
+                brevo.TransactionalEmailsApiApiKeys.apiKey,
+                process.env.BREVO_API_KEY || ''
+            );
 
-            await transporter.sendMail({
-                from: `"BaseMatch" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-                to: email,
-                subject: 'Verify your email address - BaseMatch',
-                html: `
+            const sendSmtpEmail = new brevo.SendSmtpEmail();
+            sendSmtpEmail.sender = {
+                name: process.env.BREVO_SENDER_NAME || 'BaseMatch',
+                email: process.env.BREVO_SENDER_EMAIL || 'noreply@basematch.app'
+            };
+            sendSmtpEmail.to = [{ email, name }];
+            sendSmtpEmail.subject = 'Verify your email address - BaseMatch';
+            sendSmtpEmail.htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -158,8 +157,9 @@ export async function POST(request: Request) {
     </div>
 </body>
 </html>
-                `
-            });
+            `;
+
+            await apiInstance.sendTransacEmail(sendSmtpEmail);
 
             return NextResponse.json({
                 success: true,
