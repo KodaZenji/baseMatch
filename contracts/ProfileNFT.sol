@@ -4,6 +4,10 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+interface IMatching {
+    function notifyProfileDeleted(address deletedUser) external;
+}
+
 /**
  * @title ProfileNFT
  * @dev Soulbound NFT for user profiles - non-transferable
@@ -25,6 +29,8 @@ contract ProfileNFT is ERC721, Ownable {
     mapping(address => uint256) public addressToTokenId;
     mapping(string => bool) private emailExists;
     mapping(string => address) private emailToAddress;
+
+    address public matchingContract;
 
     // Constants for validation
     uint256 private constant MAX_NAME_LENGTH = 100;
@@ -92,6 +98,15 @@ contract ProfileNFT is ERC721, Ownable {
 
     constructor() ERC721("BaseMatch Profile", "BMPRO") {
         // Initialize the contract owner to the deployer
+    }
+
+    /**
+     * @dev Set the Matching contract address (can only be set once)
+     */
+    function setMatchingContract(address _matchingContract) external onlyOwner {
+        require(matchingContract == address(0), "Matching contract already set");
+        require(_matchingContract != address(0), "Invalid address");
+        matchingContract = _matchingContract;
     }
 
     /**
@@ -276,6 +291,15 @@ contract ProfileNFT is ERC721, Ownable {
         if (bytes(userProfile.email).length > 0) {
             emailExists[userProfile.email] = false;
             delete emailToAddress[userProfile.email];
+        }
+        
+        // Notify Matching contract to clean up matches if contract is set
+        if (matchingContract != address(0)) {
+            try IMatching(matchingContract).notifyProfileDeleted(msg.sender) {
+                // Successfully cleaned up matches
+            } catch {
+                // Continue even if matching cleanup fails
+            }
         }
         
         // Clear profile data

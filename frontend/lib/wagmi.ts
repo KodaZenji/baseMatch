@@ -7,9 +7,19 @@ if (!projectId) {
     console.warn('NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID environment variable is not set. WalletConnect will not work.');
 }
 
-export const config = getDefaultConfig({
-    appName: 'BaseMatch',
-    projectId: projectId || '',
-    chains: [baseSepolia],
-    ssr: true,
-});
+// Use singleton pattern to prevent re-initialization in development mode
+let wagmiConfig: ReturnType<typeof getDefaultConfig> | null = null;
+
+export const getConfig = () => {
+    if (!wagmiConfig) {
+        wagmiConfig = getDefaultConfig({
+            appName: 'BaseMatch',
+            projectId: projectId || '',
+            chains: [baseSepolia],
+            ssr: true,
+        });
+    }
+    return wagmiConfig;
+};
+
+export const config = getConfig();

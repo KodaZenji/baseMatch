@@ -11,6 +11,7 @@ interface IProfileNFT {
  */
 contract Matching {
     IProfileNFT public profileNFT;
+    address public profileNFTContract;
 
     struct Match {
         uint256 matchId;
@@ -26,9 +27,16 @@ contract Matching {
 
     event InterestExpressed(address indexed from, address indexed to);
     event MatchCreated(address indexed user1, address indexed user2, uint256 matchId);
+    event ProfileDeleted(address indexed user, uint256 matchesCleared);
 
     constructor(address _profileNFT) {
         profileNFT = IProfileNFT(_profileNFT);
+        profileNFTContract = _profileNFT;
+    }
+
+    modifier onlyProfileNFT() {
+        require(msg.sender == profileNFTContract, "Only ProfileNFT can call this");
+        _;
     }
 
     /**
@@ -78,5 +86,52 @@ contract Matching {
      */
     function hasExpressedInterest(address from, address to) external view returns (bool) {
         return interests[from][to];
+    }
+
+    /**
+     * @dev Clean up all match data when a profile is deleted
+     * Can only be called by ProfileNFT contract
+     */
+    function notifyProfileDeleted(address deletedUser) external onlyProfileNFT {
+        address[] memory matches = userMatches[deletedUser];
+        uint256 matchCount = matches.length;
+        
+        // Clean up all matches for this user
+        for (uint256 i = 0; i < matchCount; i++) {
+            address matchedUser = matches[i];
+            
+            // Clear mutual match status
+            isMatched[deletedUser][matchedUser] = false;
+            isMatched[matchedUser][deletedUser] = false;
+            
+            // Clear mutual interests
+            interests[deletedUser][matchedUser] = false;
+            interests[matchedUser][deletedUser] = false;
+            
+            // Remove deletedUser from matchedUser's match list
+            _removeFromMatchList(matchedUser, deletedUser);
+        }
+        
+        // Clear deletedUser's match list
+        delete userMatches[deletedUser];
+        
+        emit ProfileDeleted(deletedUser, matchCount);
+    }
+
+    /**
+     * @dev Helper function to remove a user from another user's match list
+     */
+    function _removeFromMatchList(address user, address toRemove) private {
+        address[] storage matches = userMatches[user];
+        uint256 length = matches.length;
+        
+        for (uint256 i = 0; i < length; i++) {
+            if (matches[i] == toRemove) {
+                // Move the last element to this position and pop
+                matches[i] = matches[length - 1];
+                matches.pop();
+                break;
+            }
+        }
     }
 }

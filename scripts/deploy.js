@@ -37,6 +37,12 @@ async function main() {
     await achievement.deployed();
     console.log("Achievement deployed to:", achievement.address);
 
+    // Link ProfileNFT to Matching contract for cleanup coordination
+    console.log("Setting Matching contract address in ProfileNFT...");
+    const setMatchingTx = await profileNFT.setMatchingContract(matching.address);
+    await setMatchingTx.wait();
+    console.log("Matching contract linked to ProfileNFT");
+
     // Save addresses to a file for easy access
     const fs = require("fs");
     const addresses = {

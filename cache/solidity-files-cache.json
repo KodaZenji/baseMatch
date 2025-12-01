@@ -607,8 +607,8 @@
       ]
     },
     "C:\\Users\\ADMIN\\baseMatch\\contracts\\ProfileNFT.sol": {
-      "lastModificationDate": 1764435947911,
-      "contentHash": "25cdac362c089ef164432d51249a2f19",
+      "lastModificationDate": 1764569631910,
+      "contentHash": "f1a3ed2cd7d4c400dc52e1e29c4cbfc6",
       "sourceName": "contracts/ProfileNFT.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -642,12 +642,13 @@
         "^0.8.20"
       ],
       "artifacts": [
+        "IMatching",
         "ProfileNFT"
       ]
     },
     "C:\\Users\\ADMIN\\baseMatch\\contracts\\Matching.sol": {
-      "lastModificationDate": 1764074830316,
-      "contentHash": "343e734981e4c91952a3e0fb7c6e1c54",
+      "lastModificationDate": 1764569597061,
+      "contentHash": "a624281e8826c7e78702750f23b4c6c9",
       "sourceName": "contracts/Matching.sol",
       "solcConfig": {
         "version": "0.8.20",
