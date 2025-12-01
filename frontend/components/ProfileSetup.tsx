@@ -166,6 +166,10 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
                 return;
             }
 
+            addDebug(`Contract address: ${CONTRACTS.PROFILE_NFT}`);
+            addDebug(`User address: ${address}`);
+            addDebug(`Form data: name=${formData.name}, age=${age}, gender=${formData.gender}`);
+
             if (isEmailUser) {
                 addDebug('Updating profile for email user...');
                 writeContract({
@@ -187,6 +191,7 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
             const errorMsg = 'Failed to create profile: ' + (error.message || error);
             setFormError(errorMsg);
             addDebug(errorMsg);
+            console.error('Full error:', error);
         }
     };
 
