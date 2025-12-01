@@ -200,12 +200,25 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
             const errorMsg = 'Contract write error: ' + writeError.message;
             setFormError(errorMsg);
             addDebug(errorMsg);
+
+            // Log full error for debugging
+            console.error('Full write error:', writeError);
+
+            // Check for specific errors
+            if (writeError.message.includes('User rejected')) {
+                setFormError('Transaction was rejected in your wallet');
+            } else if (writeError.message.includes('Profile already exists')) {
+                setFormError('You already have a profile. Please delete it first to create a new one.');
+            } else if (writeError.message.includes('insufficient funds')) {
+                setFormError('Insufficient funds for gas. Please add some ETH to your wallet.');
+            }
         }
 
         if (receiptError) {
             const errorMsg = 'Transaction receipt error: ' + receiptError.message;
             setFormError(errorMsg);
             addDebug(errorMsg);
+            console.error('Full receipt error:', receiptError);
         }
     }, [writeError, receiptError]);
 
@@ -470,6 +483,22 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
                         {isPending ? 'Submitting...' : isConfirming ? 'Confirming Transaction...' : isEmailUser ? 'Complete Profile' : 'Create Profile NFT'}
                     </button>
                 </form>
+
+                {/* Debug Info */}
+                <div className="mt-4 p-3 bg-gray-100 rounded-lg text-xs">
+                    <p className="font-mono text-gray-600">Contract: {CONTRACTS.PROFILE_NFT}</p>
+                    <p className="font-mono text-gray-600">Wallet: {address}</p>
+                    {debugInfo.length > 0 && (
+                        <details className="mt-2">
+                            <summary className="cursor-pointer text-blue-600">Debug Logs</summary>
+                            <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                                {debugInfo.map((info, i) => (
+                                    <p key={i} className="text-gray-700">{info}</p>
+                                ))}
+                            </div>
+                        </details>
+                    )}
+                </div>
             </div>
         </div>
     );
