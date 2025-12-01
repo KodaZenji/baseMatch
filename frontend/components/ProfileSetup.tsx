@@ -203,6 +203,7 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
 
             // Log full error for debugging
             console.error('Full write error:', writeError);
+            console.error('Error details:', JSON.stringify(writeError, null, 2));
 
             // Check for specific errors
             if (writeError.message.includes('User rejected')) {
@@ -211,6 +212,8 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
                 setFormError('You already have a profile. Please delete it first to create a new one.');
             } else if (writeError.message.includes('insufficient funds')) {
                 setFormError('Insufficient funds for gas. Please add some ETH to your wallet.');
+            } else if (writeError.message.includes('Simulation')) {
+                setFormError('Simulation failed - ' + writeError.message + '. This usually means the contract validation failed. Check the console for details.');
             }
         }
 
