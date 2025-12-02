@@ -18,11 +18,10 @@ const NEYNAR_API_KEY = process.env.NEXT_PUBLIC_NEYNAR_API_KEY;
 
 export async function GET(request: NextRequest) {
     try {
-        // Fetch all profiles from Supabase
+        // Fetch all profiles from Supabase that exist on blockchain
         const { data: supabaseProfiles, error } = await supabase
             .from('profiles')
             .select('*')
-            .eq('email_verified', true)
             .order('created_at', { ascending: false });
 
         if (error || !supabaseProfiles) {
