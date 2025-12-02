@@ -177,68 +177,39 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
             addDebug(`Form data: name=${formData.name}, age=${age}, gender=${formData.gender}`);
 
             if (isEmailUser) {
-                // Email user: first verify wallet signature, then call registerWithEmail
-                addDebug('Generating signature message for wallet verification...');
-                setIsVerifyingWallet(true);
+                // Email user: email already verified via link, upload avatar then call registerWithEmail
+                addDebug('Email verified. Uploading avatar...');
 
-                try {
-                    // Step 1: Get message to sign
-                    const signRes = await fetch('/api/generate-signature-message', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            address: address!,
-                            email: emailData.email
-                        })
-                    });
+                // Upload avatar to Supabase
+                if (avatarUrl) {
+                    try {
+                        const response = await fetch(avatarUrl);
+                        const blob = await response.blob();
+                        const formDataUpload = new FormData();
+                        formDataUpload.append('file', blob, 'avatar.png');
 
-                    const signData = await signRes.json();
-                    if (!signRes.ok) {
-                        throw new Error(signData.error || 'Failed to generate signature message');
+                        const uploadRes = await fetch('/api/upload-image', {
+                            method: 'POST',
+                            body: formDataUpload,
+                        });
+
+                        const uploadData = await uploadRes.json();
+                        if (uploadRes.ok) {
+                            setUploadedPhotoUrl(uploadData.url);
+                            addDebug(`Avatar uploaded: ${uploadData.url}`);
+                        }
+                    } catch (err) {
+                        addDebug(`Avatar upload warning (non-critical): ${err}`);
                     }
-
-                    setSignatureMessage(signData.message);
-                    addDebug('Signature message generated. Please sign the message in your wallet...');
-
-                    // Step 2: Sign the message
-                    const signature = await signMessageAsync({ message: signData.message });
-                    addDebug('Message signed successfully!');
-
-                    // Step 3: Verify signature on backend
-                    const verifyRes = await fetch('/api/verify-wallet-signature', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            address: address!,
-                            email: emailData.email,
-                            message: signData.message,
-                            signature
-                        })
-                    });
-
-                    const verifyData = await verifyRes.json();
-                    if (!verifyRes.ok) {
-                        throw new Error(verifyData.error || 'Wallet verification failed');
-                    }
-
-                    addDebug('Wallet verified! Now creating profile...');
-                    setWalletVerified(true);
-                    setIsVerifyingWallet(false);
-
-                    // Step 4: Now call registerWithEmail
-                    addDebug('Calling registerWithEmail for email user...');
-                    writeContract({
-                        address: CONTRACTS.PROFILE_NFT as `0x${string}`,
-                        abi: PROFILE_NFT_ABI,
-                        functionName: 'registerWithEmail',
-                        args: [formData.name, age, formData.gender, formData.interests, emailData.email || ''],
-                    });
-                } catch (signError: any) {
-                    setIsVerifyingWallet(false);
-                    const errorMsg = signError.message || 'Wallet verification failed';
-                    setFormError(errorMsg);
-                    addDebug(`Wallet verification error: ${errorMsg}`);
                 }
+
+                addDebug('Calling registerWithEmail...');
+                writeContract({
+                    address: CONTRACTS.PROFILE_NFT as `0x${string}`,
+                    abi: PROFILE_NFT_ABI,
+                    functionName: 'registerWithEmail',
+                    args: [formData.name, age, formData.gender, formData.interests, emailData.email || ''],
+                });
             } else {
                 // Wallet user: handle minting flow
                 addDebug('Starting minting flow for wallet user...');
@@ -325,8 +296,10 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
                         }),
                     });
 
+                    // ... existing code ...
                     if (response.ok) {
                         addDebug('Profile registered in database');
+                        setUploadedPhotoUrl(''); // Clear after successful upload
                     } else {
                         console.warn('Failed to register profile in database');
                     }
