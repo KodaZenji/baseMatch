@@ -57,9 +57,11 @@ export default function VerifyEmailPage() {
                     timestamp: Date.now(),
                 }));
 
-                // Redirect to profile setup to connect wallet and complete registration
+                // Redirect to profile setup
+                // If wallet already connected, ProfileSetup will auto-detect email and merge the flows
+                // If wallet not connected, user will see prompt to connect wallet
                 setTimeout(() => {
-                    router.push('/?signup=wallet');
+                    router.push('/profile/setup');
                 }, 2000);
             } catch (error) {
                 setVerificationStatus('error');
@@ -90,8 +92,8 @@ export default function VerifyEmailPage() {
                 {verificationStatus === 'success' && (
                     <>
                         <p className="text-gray-700 text-lg mb-4">{message}</p>
-                        <p className="text-gray-600 mb-4">Now let's connect your wallet...</p>
-                        <div className="text-sm text-gray-600">Redirecting...</div>
+                        <p className="text-gray-600 mb-4">Redirecting to profile creation...</p>
+                        <div className="text-sm text-gray-600">If you have a wallet connected, you can complete your profile immediately. If not, we'll ask you to connect.</div>
                     </>
                 )}
 
