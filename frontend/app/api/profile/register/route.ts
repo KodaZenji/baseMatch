@@ -85,24 +85,41 @@ export async function POST(request: NextRequest) {
         const finalPhotoUrl = photoUrl || '';
         const photoHash = finalPhotoUrl ? calculatePhotoHash(finalPhotoUrl) : '';
 
-        // 4. User Lookup: Find existing user by email
-        const { data: existingUser, error: userLookupError } = await supabaseService
+        // 4. User Lookup: Find existing user by email OR wallet
+        const { data: existingUserByEmail } = await supabaseService
             .from('users')
             .select('*')
             .eq('email', normalizedEmail)
             .single();
+
+        const { data: existingUserByWallet } = await supabaseService
+            .from('users')
+            .select('*')
+            .eq('wallet_address', normalizedAddress)
+            .single();
+
+        // Check for conflicts
+        if (existingUserByEmail && existingUserByWallet && existingUserByEmail.id !== existingUserByWallet.id) {
+            return NextResponse.json(
+                { error: 'Email is already associated with a different wallet address' },
+                { status: 409 }
+            );
+        }
+
+        const existingUser = existingUserByEmail || existingUserByWallet;
 
         let userId: string;
         let needsEmailVerification = false;
 
         // 5. Upsert Logic
         if (existingUser) {
-            // User exists - update their record to link wallet
+            // User exists - update their record to link wallet and email
             const { error: updateError } = await supabaseService
                 .from('users')
                 .update({
                     wallet_address: normalizedAddress,
                     wallet_verified: true,
+                    email: normalizedEmail, // Update email if they registered with wallet first
                     name,
                     age,
                     gender,
@@ -116,7 +133,7 @@ export async function POST(request: NextRequest) {
             if (updateError) {
                 console.error('Error updating existing user:', updateError);
                 return NextResponse.json(
-                    { error: 'Failed to update user profile' },
+                    { error: 'Failed to update existing user profile', details: updateError.message },
                     { status: 500 }
                 );
             }
@@ -147,7 +164,7 @@ export async function POST(request: NextRequest) {
             if (createError || !newUser) {
                 console.error('Error creating new user:', createError);
                 return NextResponse.json(
-                    { error: 'Failed to create user account' },
+                    { error: 'Failed to create user account', details: createError?.message },
                     { status: 500 }
                 );
             }
