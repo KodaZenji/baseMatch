@@ -57,11 +57,11 @@ export default function VerifyEmailPage() {
                     timestamp: Date.now(),
                 }));
 
-                // Redirect to profile setup
+                // Redirect to home page (ProfileSetup is rendered there)
                 // If wallet already connected, ProfileSetup will auto-detect email and merge the flows
                 // If wallet not connected, user will see prompt to connect wallet
                 setTimeout(() => {
-                    router.push('/profile/setup');
+                    router.push('/');
                 }, 2000);
             } catch (error) {
                 setVerificationStatus('error');
