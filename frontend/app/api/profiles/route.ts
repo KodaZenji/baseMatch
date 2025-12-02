@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
 
                 // Try to verify with Neynar if API key available
                 let neynarUser = null;
+                let neynarVerified = false;
                 if (NEYNAR_API_KEY) {
                     try {
                         const neynarResponse = await fetch(
@@ -56,15 +57,27 @@ export async function GET(request: NextRequest) {
                         if (neynarResponse.ok) {
                             const neynarData = await neynarResponse.json();
                             neynarUser = neynarData.result?.user;
+                            neynarVerified = true;
                         }
                     } catch (err) {
                         console.warn(`Failed to verify ${profile.address} with Neynar:`, err);
                     }
                 }
 
-                // Only include profiles verified by Neynar
-                if (neynarUser) {
-                    // Cache Neynar verification into consolidated table
+                // Include profile regardless of Neynar verification
+                // But mark if Neynar verified
+                verifiedProfiles.push({
+                    ...profile,
+                    verified: {
+                        blockchain: true,
+                        neynar: neynarVerified,
+                        neynarUsername: neynarUser?.username,
+                        neynarAvatar: neynarUser?.pfp_url,
+                    },
+                });
+
+                // Cache Neynar verification if successful
+                if (neynarVerified && neynarUser) {
                     try {
                         if (profile.email) {
                             const { data: userRow } = await supabase
@@ -89,16 +102,6 @@ export async function GET(request: NextRequest) {
                     } catch (cacheErr) {
                         console.warn('Failed to cache Neynar verification:', cacheErr);
                     }
-
-                    verifiedProfiles.push({
-                        ...profile,
-                        verified: {
-                            blockchain: true,
-                            neynar: true,
-                            neynarUsername: neynarUser?.username,
-                            neynarAvatar: neynarUser?.pfp_url,
-                        },
-                    });
                 }
             } catch (err) {
                 console.warn(`Failed to verify profile ${profile.address}:`, err);

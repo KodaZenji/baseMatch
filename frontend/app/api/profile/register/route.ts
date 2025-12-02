@@ -48,15 +48,18 @@ export async function POST(request: NextRequest) {
         if (email) {
             try {
                 // Find user by email
-                const { data: user } = await supabase
+                const { data: user, error: userError } = await supabase
                     .from('users')
                     .select('id')
                     .eq('email', email.toLowerCase().trim())
                     .single();
 
-                if (user?.id) {
+                if (userError) {
+                    console.warn('Error finding user by email:', userError);
+                } else if (user?.id) {
+                    console.log('Found user:', user.id, 'for email:', email);
                     // Update user_verifications with wallet address and mark wallet as verified
-                    await supabase
+                    const { error: updateError, data: updateData } = await supabase
                         .from('user_verifications')
                         .upsert({
                             user_id: user.id,
@@ -65,6 +68,14 @@ export async function POST(request: NextRequest) {
                             wallet_verified_at: new Date().toISOString(),
                             updated_at: new Date().toISOString(),
                         }, { onConflict: 'user_id' });
+
+                    if (updateError) {
+                        console.error('Error updating wallet verification:', updateError);
+                    } else {
+                        console.log('Updated wallet verification:', updateData);
+                    }
+                } else {
+                    console.warn('No user found for email:', email);
                 }
             } catch (verifyErr) {
                 console.warn('Error updating wallet verification:', verifyErr);

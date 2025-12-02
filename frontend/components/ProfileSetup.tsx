@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract, useSignMessage } from 'wagmi';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 import { generateAvatar } from '@/lib/avatarUtils';
 import { handleProfileMint, handleEmailRegistration } from '@/lib/profileMinting';
@@ -22,12 +22,16 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
     const [isEmailUser, setIsEmailUser] = useState(false);
     const [formError, setFormError] = useState('');
     const [debugInfo, setDebugInfo] = useState<string[]>([]);
+    const [walletVerified, setWalletVerified] = useState(false); // Track if email user verified wallet
+    const [isVerifyingWallet, setIsVerifyingWallet] = useState(false);
+    const [signatureMessage, setSignatureMessage] = useState<string>('');
 
     // State for email data
     const [emailData, setEmailData] = useState<{ email?: string }>({});
 
     const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
     const { isLoading: isConfirming, isSuccess, error: receiptError } = useWaitForTransactionReceipt({ hash });
+    const { signMessageAsync } = useSignMessage();
 
     // Add debug logging helper
     const addDebug = (message: string) => {
@@ -173,14 +177,68 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
             addDebug(`Form data: name=${formData.name}, age=${age}, gender=${formData.gender}`);
 
             if (isEmailUser) {
-                // Email user: registerWithEmail doesn't accept photo, so just call contract
-                addDebug('Calling registerWithEmail for email user...');
-                writeContract({
-                    address: CONTRACTS.PROFILE_NFT as `0x${string}`,
-                    abi: PROFILE_NFT_ABI,
-                    functionName: 'registerWithEmail',
-                    args: [formData.name, age, formData.gender, formData.interests, emailData.email || ''],
-                });
+                // Email user: first verify wallet signature, then call registerWithEmail
+                addDebug('Generating signature message for wallet verification...');
+                setIsVerifyingWallet(true);
+
+                try {
+                    // Step 1: Get message to sign
+                    const signRes = await fetch('/api/generate-signature-message', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            address: address!,
+                            email: emailData.email
+                        })
+                    });
+
+                    const signData = await signRes.json();
+                    if (!signRes.ok) {
+                        throw new Error(signData.error || 'Failed to generate signature message');
+                    }
+
+                    setSignatureMessage(signData.message);
+                    addDebug('Signature message generated. Please sign the message in your wallet...');
+
+                    // Step 2: Sign the message
+                    const signature = await signMessageAsync({ message: signData.message });
+                    addDebug('Message signed successfully!');
+
+                    // Step 3: Verify signature on backend
+                    const verifyRes = await fetch('/api/verify-wallet-signature', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            address: address!,
+                            email: emailData.email,
+                            message: signData.message,
+                            signature
+                        })
+                    });
+
+                    const verifyData = await verifyRes.json();
+                    if (!verifyRes.ok) {
+                        throw new Error(verifyData.error || 'Wallet verification failed');
+                    }
+
+                    addDebug('Wallet verified! Now creating profile...');
+                    setWalletVerified(true);
+                    setIsVerifyingWallet(false);
+
+                    // Step 4: Now call registerWithEmail
+                    addDebug('Calling registerWithEmail for email user...');
+                    writeContract({
+                        address: CONTRACTS.PROFILE_NFT as `0x${string}`,
+                        abi: PROFILE_NFT_ABI,
+                        functionName: 'registerWithEmail',
+                        args: [formData.name, age, formData.gender, formData.interests, emailData.email || ''],
+                    });
+                } catch (signError: any) {
+                    setIsVerifyingWallet(false);
+                    const errorMsg = signError.message || 'Wallet verification failed';
+                    setFormError(errorMsg);
+                    addDebug(`Wallet verification error: ${errorMsg}`);
+                }
             } else {
                 // Wallet user: handle minting flow
                 addDebug('Starting minting flow for wallet user...');
@@ -493,10 +551,18 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
 
                     <button
                         type="submit"
-                        disabled={isPending || isConfirming || !avatarUrl}
+                        disabled={isPending || isConfirming || isVerifyingWallet || !avatarUrl}
                         className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50"
                     >
-                        {isPending ? 'Submitting...' : isConfirming ? 'Confirming Transaction...' : isEmailUser ? 'Complete Profile' : 'Create Profile NFT'}
+                        {isVerifyingWallet
+                            ? 'Verifying wallet...'
+                            : isPending
+                                ? 'Submitting...'
+                                : isConfirming
+                                    ? 'Confirming Transaction...'
+                                    : isEmailUser
+                                        ? 'Complete Profile & Verify Wallet'
+                                        : 'Create Profile NFT'}
                     </button>
                 </form>
 
