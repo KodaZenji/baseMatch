@@ -11,7 +11,8 @@ import { useQueryClient } from '@tanstack/react-query';
 export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: () => void }) {
     const router = useRouter();
     const { address, isConnected } = useAccount();
-    const [avatarUrl, setAvatarUrl] = useState('');
+    const [avatarUrl, setAvatarUrl] = useState(''); // Data URL for preview only
+    const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState(''); // Supabase URL for contract & API
     const [formData, setFormData] = useState({
         name: '',
         age: '',
@@ -172,13 +173,22 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
             addDebug(`Form data: name=${formData.name}, age=${age}, gender=${formData.gender}`);
 
             if (isEmailUser) {
-                // Email user: use updateProfile (no minting needed)
+                // Email user: need to upload avatar too
                 addDebug('Updating profile for email user...');
+                const mintData = await handleProfileMint(address!, {
+                    name: formData.name,
+                    age,
+                    gender: formData.gender,
+                    interests: formData.interests,
+                });
+                addDebug(`Image uploaded: ${mintData.photoUrl}`);
+                setUploadedPhotoUrl(mintData.photoUrl);
+                addDebug('Executing updateProfile contract transaction...');
                 writeContract({
                     address: CONTRACTS.PROFILE_NFT as `0x${string}`,
                     abi: PROFILE_NFT_ABI,
                     functionName: 'updateProfile',
-                    args: [formData.name, age, formData.gender, formData.interests, avatarUrl, emailData.email || ''],
+                    args: [formData.name, age, formData.gender, formData.interests, mintData.photoUrl, emailData.email || ''],
                 });
             } else {
                 // Wallet user: handle minting flow
@@ -190,6 +200,7 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
                     interests: formData.interests,
                 });
                 addDebug(`Image uploaded: ${mintData.photoUrl}`);
+                setUploadedPhotoUrl(mintData.photoUrl);
                 addDebug('Executing createProfile contract transaction...');
                 writeContract({
                     address: CONTRACTS.PROFILE_NFT as `0x${string}`,
@@ -261,7 +272,7 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
                             gender: formData.gender,
                             interests: formData.interests,
                             email: emailData.email || '',
-                            photoUrl: avatarUrl,
+                            photoUrl: uploadedPhotoUrl || '', // Use uploaded Supabase URL, not data URL
                         }),
                     });
 
