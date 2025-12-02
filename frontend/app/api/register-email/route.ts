@@ -10,7 +10,7 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { name, age, gender, interests, email } = body;
 
-        // Validate input (only email is required)
+        // Validate input
         if (!email) {
             return NextResponse.json(
                 { error: 'Email is required' },
@@ -18,11 +18,14 @@ export async function POST(request: Request) {
             );
         }
 
-        // Check if user already exists
+        // Normalize email to lowercase (must match contract normalization)
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // Check if user already exists (use normalized email)
         const { data: existingUser } = await supabaseService
             .from('users')
             .select('id')
-            .eq('email', email)
+            .eq('email', normalizedEmail)
             .single();
 
         // Ensure we have a user record; create if not exists
@@ -32,7 +35,7 @@ export async function POST(request: Request) {
                 .from('users')
                 .insert([
                     {
-                        email,
+                        email: normalizedEmail,
                         name: name || null,
                         age: age ? parseInt(age) : null,
                         gender: gender || null,
@@ -65,7 +68,7 @@ export async function POST(request: Request) {
             .insert([
                 {
                     token,
-                    email,
+                    email: normalizedEmail,
                     user_id: userId,
                     expires_at: expiresAt.toISOString(),
                     created_at: new Date().toISOString()
@@ -83,7 +86,7 @@ export async function POST(request: Request) {
         // Create verification URL
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
             (process.env.NODE_ENV === 'production' ? 'https://basematch.app' : 'http://localhost:3000');
-        const verificationUrl = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
+        const verificationUrl = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
 
         // Send verification email using Brevo
         try {
@@ -98,7 +101,7 @@ export async function POST(request: Request) {
                 name: process.env.BREVO_SENDER_NAME || 'BaseMatch',
                 email: process.env.BREVO_SENDER_EMAIL || 'noreply@basematch.app'
             };
-            sendSmtpEmail.to = [{ email, name }];
+            sendSmtpEmail.to = [{ email: normalizedEmail, name }];
             sendSmtpEmail.subject = 'Verify your email address - BaseMatch';
             sendSmtpEmail.htmlContent = `
 <!DOCTYPE html>
