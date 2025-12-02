@@ -173,22 +173,13 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
             addDebug(`Form data: name=${formData.name}, age=${age}, gender=${formData.gender}`);
 
             if (isEmailUser) {
-                // Email user: need to upload avatar too
-                addDebug('Updating profile for email user...');
-                const mintData = await handleProfileMint(address!, {
-                    name: formData.name,
-                    age,
-                    gender: formData.gender,
-                    interests: formData.interests,
-                });
-                addDebug(`Image uploaded: ${mintData.photoUrl}`);
-                setUploadedPhotoUrl(mintData.photoUrl);
-                addDebug('Executing updateProfile contract transaction...');
+                // Email user: registerWithEmail doesn't accept photo, so just call contract
+                addDebug('Calling registerWithEmail for email user...');
                 writeContract({
                     address: CONTRACTS.PROFILE_NFT as `0x${string}`,
                     abi: PROFILE_NFT_ABI,
-                    functionName: 'updateProfile',
-                    args: [formData.name, age, formData.gender, formData.interests, mintData.photoUrl, emailData.email || ''],
+                    functionName: 'registerWithEmail',
+                    args: [formData.name, age, formData.gender, formData.interests, emailData.email || ''],
                 });
             } else {
                 // Wallet user: handle minting flow

@@ -45,16 +45,21 @@ export default function VerifyEmailPage() {
                 setVerificationStatus('success');
                 setMessage('✅ Email verified successfully!');
 
-                // Store verification status
+                // Store verification status and redirect to profile setup
                 localStorage.setItem('emailVerified', JSON.stringify({
                     email,
                     userId: data.userId,
                     timestamp: Date.now(),
                 }));
+                localStorage.setItem('pendingEmailRegistration', JSON.stringify({
+                    email,
+                    userId: data.userId,
+                    timestamp: Date.now(),
+                }));
 
-                // Redirect to wallet connection page
+                // Redirect to profile setup to connect wallet and complete registration
                 setTimeout(() => {
-                    router.push('/connect-wallet?email=' + encodeURIComponent(email));
+                    router.push('/?signup=wallet');
                 }, 2000);
             } catch (error) {
                 setVerificationStatus('error');
