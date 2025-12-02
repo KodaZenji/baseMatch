@@ -3,13 +3,13 @@ const NETWORKS = {
     'base-sepolia': {
         rpcUrl: 'https://sepolia.base.org',
         chainId: 84532,
-        contractAddress: '0x50ac9Eb1710a2557463E25bBb09762A51C4a74B5',
+        contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS || '0x2722CB9D5543759242F81507081866f082C1480d',
         name: 'Base Sepolia'
     },
     'base-mainnet': {
         rpcUrl: 'https://mainnet.base.org',
         chainId: 8453,
-        contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_MAINNET || '0x50ac9Eb1710a2557463E25bBb09762A51C4a74B5', // Will be updated after mainnet deployment
+        contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_MAINNET || '0x2722CB9D5543759242F81507081866f082C1480d',
         name: 'Base Mainnet'
     }
 } as const;

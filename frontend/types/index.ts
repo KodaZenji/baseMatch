@@ -42,3 +42,73 @@ export interface InterestExpression {
     to: string;
     timestamp: number;
 }
+
+// API Response Types
+
+export interface ConnectWalletResponse {
+    success: boolean;
+    message: string;
+    userId: string;
+    fullyVerified: boolean;
+}
+
+export interface ProfileCompleteResponse {
+    success: boolean;
+    message: string;
+    contractAddress: string;
+    mintingPayload: {
+        name: string;
+        age: number;
+        gender: string;
+        interests: string;
+        photoUrl: string;
+        email: string;
+        photoHash: string;
+    };
+    userInfo: {
+        userId: string;
+        email: string;
+        walletAddress: string;
+    };
+}
+
+export interface ProfileRegisterResponse {
+    success: boolean;
+    message: string;
+    needsEmailVerification: boolean;
+    contractAddress: string;
+    createProfilePayload: {
+        name: string;
+        age: number;
+        gender: string;
+        interests: string;
+        photoUrl: string;
+        email: string;
+        photoHash: string;
+    };
+    userInfo: {
+        userId: string;
+        email: string;
+        walletAddress: string;
+        emailVerified: boolean;
+    };
+}
+
+export interface UpdateInterestsResponse {
+    success: boolean;
+    message: string;
+    onChainPayload: {
+        to: string;
+        data: string;
+    };
+    updatedInterests: string;
+    userInfo: {
+        userId: string;
+        walletAddress: string;
+    };
+}
+
+export interface ErrorResponse {
+    error: string;
+    [key: string]: any;
+}
