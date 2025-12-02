@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 import { generateAvatar } from '@/lib/avatarUtils';
+import { handleProfileMint, handleEmailRegistration } from '@/lib/profileMinting';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -171,6 +172,7 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
             addDebug(`Form data: name=${formData.name}, age=${age}, gender=${formData.gender}`);
 
             if (isEmailUser) {
+                // Email user: use updateProfile (no minting needed)
                 addDebug('Updating profile for email user...');
                 writeContract({
                     address: CONTRACTS.PROFILE_NFT as `0x${string}`,
@@ -179,12 +181,21 @@ export default function ProfileSetup({ onProfileCreated }: { onProfileCreated?: 
                     args: [formData.name, age, formData.gender, formData.interests, avatarUrl, emailData.email || ''],
                 });
             } else {
-                addDebug('Creating new profile for wallet user...');
+                // Wallet user: handle minting flow
+                addDebug('Starting minting flow for wallet user...');
+                const mintData = await handleProfileMint(address!, {
+                    name: formData.name,
+                    age,
+                    gender: formData.gender,
+                    interests: formData.interests,
+                });
+                addDebug(`Image uploaded: ${mintData.photoUrl}`);
+                addDebug('Executing createProfile contract transaction...');
                 writeContract({
                     address: CONTRACTS.PROFILE_NFT as `0x${string}`,
                     abi: PROFILE_NFT_ABI,
                     functionName: 'createProfile',
-                    args: [formData.name, age, formData.gender, formData.interests, avatarUrl],
+                    args: mintData.contractArgs,
                 });
             }
         } catch (error: any) {

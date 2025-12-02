@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 import { generateAvatar } from '@/lib/avatarUtils';
+import { handleProfileTextUpdate } from '@/lib/profileMinting';
 import { useProfile } from '@/hooks/useProfile';
 
 export default function ProfileEdit() {
@@ -179,18 +180,41 @@ export default function ProfileEdit() {
         }
 
         try {
-            // Use newPhotoUrl if it's been changed, otherwise use the existing photoUrl from formData
-            const photoUrlToUse = newPhotoUrl || formData.photoUrl || '';
+            // Determine if image was changed
+            const imageChanged = newPhotoUrl && newPhotoUrl !== formData.photoUrl;
+            let newImageFile: File | undefined;
+
+            // If user uploaded a new image, get the file from the input
+            if (imageChanged && fileInputRef.current?.files?.[0]) {
+                newImageFile = fileInputRef.current.files[0];
+            }
+
+            // Use the unified update handler
+            const updateData = await handleProfileTextUpdate(
+                profile.tokenId.toString(),
+                {
+                    name: formData.name,
+                    age,
+                    gender: formData.gender,
+                    interests: formData.interests,
+                    photoUrl: newPhotoUrl || formData.photoUrl || '',
+                    email: formData.email,
+                },
+                newImageFile
+            );
+
+            console.log('Update handler returned:', updateData);
+            console.log('Executing updateProfile contract transaction...');
 
             writeContract({
                 address: CONTRACTS.PROFILE_NFT as `0x${string}`,
                 abi: PROFILE_NFT_ABI,
                 functionName: 'updateProfile',
-                args: [formData.name, age, formData.gender, formData.interests, photoUrlToUse, formData.email],
+                args: updateData.contractArgs,
             });
         } catch (error) {
             console.error('Error updating profile:', error);
-            showNotification('Failed to update profile', 'error');
+            showNotification(error instanceof Error ? error.message : 'Failed to update profile', 'error');
         }
     };
 
