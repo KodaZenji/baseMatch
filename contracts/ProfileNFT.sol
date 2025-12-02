@@ -27,6 +27,7 @@ contract ProfileNFT is ERC721, Ownable {
     uint256 private _tokenIdCounter;
     mapping(address => Profile) public profiles;
     mapping(address => uint256) public addressToTokenId;
+    mapping(uint256 => address) public tokenIdToAddress; // NEW: Map tokenId to address for efficient metadata queries
     mapping(string => bool) private emailExists;
     mapping(string => address) private emailToAddress;
 
@@ -142,6 +143,7 @@ contract ProfileNFT is ERC721, Ownable {
         });
 
         addressToTokenId[msg.sender] = newTokenId;
+        tokenIdToAddress[newTokenId] = msg.sender; // NEW: Map tokenId to address
         _safeMint(msg.sender, newTokenId);
 
         emit ProfileCreated(msg.sender, newTokenId, name);
@@ -188,6 +190,7 @@ contract ProfileNFT is ERC721, Ownable {
         });
 
         addressToTokenId[msg.sender] = newTokenId;
+        tokenIdToAddress[newTokenId] = msg.sender; // NEW: Map tokenId to address
         _safeMint(msg.sender, newTokenId);
 
         emit ProfileCreated(msg.sender, newTokenId, name);
@@ -271,6 +274,15 @@ contract ProfileNFT is ERC721, Ownable {
     }
 
     /**
+     * @dev NEW: Get profile by tokenId (for metadata API queries)
+     */
+    function getProfileByTokenId(uint256 tokenId) external view returns (Profile memory) {
+        address user = tokenIdToAddress[tokenId];
+        require(user != address(0), "Token does not exist");
+        return profiles[user];
+    }
+
+    /**
      * @dev Check if profile exists
      */
     function profileExists(address user) external view returns (bool) {
@@ -305,6 +317,7 @@ contract ProfileNFT is ERC721, Ownable {
         // Clear profile data
         delete profiles[msg.sender];
         delete addressToTokenId[msg.sender];
+        delete tokenIdToAddress[tokenId]; // NEW: Clean up tokenId mapping
         
         // Burn the NFT
         _burn(tokenId);
