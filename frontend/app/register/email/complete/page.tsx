@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export default function CompleteEmailProfilePage() {
     const router = useRouter();
@@ -29,8 +30,31 @@ export default function CompleteEmailProfilePage() {
         }
     }, []);
 
-    // Redirect if not connected or no email
-    if (!isConnected || !email) {
+    // Show wallet connection screen if not connected but email is verified
+    if (!isConnected && email) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+                    <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
+                        💖 BaseMatch
+                    </h1>
+                    <p className="text-gray-700 mb-2 font-semibold">Step 2: Connect Wallet</p>
+                    <p className="text-gray-600 mb-6">
+                        Email verified! Now connect your wallet to complete your profile.
+                    </p>
+                    <div className="bg-green-50 rounded-lg p-3 mb-6 border border-green-200">
+                        <p className="text-sm text-green-800">✅ {email}</p>
+                    </div>
+                    <div className="flex justify-center">
+                        <ConnectButton />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Redirect if no email (user hasn't verified email yet)
+    if (!email) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
                 <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
@@ -38,13 +62,13 @@ export default function CompleteEmailProfilePage() {
                         💖 BaseMatch
                     </h1>
                     <p className="text-gray-700 mb-6">
-                        {!email ? 'Please verify your email first' : 'Please connect your wallet'}
+                        Please verify your email first
                     </p>
                     <button
-                        onClick={() => router.push('/')}
+                        onClick={() => router.push('/register/email')}
                         className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90"
                     >
-                        Go Back
+                        Back to Email Registration
                     </button>
                 </div>
             </div>
