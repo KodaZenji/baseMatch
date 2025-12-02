@@ -18,17 +18,20 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Normalize email to lowercase (must match contract)
+        const normalizedEmail = email ? email.toLowerCase().trim() : '';
+
         // Insert profile into Supabase for discovery
         const { data, error } = await supabase
             .from('profiles')
             .upsert({
                 address: address.toLowerCase(),
-                name,
-                age,
-                gender,
-                interests,
-                email,
-                photoUrl,
+                name: name || '',
+                age: age || 0,
+                gender: gender || '',
+                interests: interests || '',
+                email: normalizedEmail,
+                photoUrl: photoUrl || '',
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
             }, { onConflict: 'address' });
@@ -36,7 +39,7 @@ export async function POST(request: NextRequest) {
         if (error) {
             console.error('Supabase error:', error);
             return NextResponse.json(
-                { error: 'Failed to register profile' },
+                { error: `Failed to register profile: ${error.message}` },
                 { status: 500 }
             );
         }
