@@ -299,10 +299,11 @@ contract ProfileNFT is ERC721, Ownable {
         Profile memory userProfile = profiles[msg.sender];
         uint256 tokenId = userProfile.tokenId;
         
-        // Clear email registration if exists
+        // Clear email registration if exists (must normalize like we did when storing)
         if (bytes(userProfile.email).length > 0) {
-            emailExists[userProfile.email] = false;
-            delete emailToAddress[userProfile.email];
+            string memory normalizedEmail = _normalizeEmail(userProfile.email);
+            emailExists[normalizedEmail] = false;
+            delete emailToAddress[normalizedEmail];
         }
         
         // Notify Matching contract to clean up matches if contract is set
