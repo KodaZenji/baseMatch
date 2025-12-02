@@ -19,9 +19,26 @@ export default function EmailRegisterPage() {
                 throw new Error('Please enter a valid email address');
             }
 
-            // Store email in localStorage and redirect to verification
+            // Call the register-email API to create token and send verification email
+            const response = await fetch('/api/register-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to register email');
+            }
+
+            // Store email in localStorage
             localStorage.setItem('emailForRegistration', email);
-            router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+
+            // Show success message and wait before redirecting
+            setError('');
+            // The user will receive email with verification link
+            alert(`Verification email sent to ${email}. Please check your inbox!`);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to register email');
         } finally {
@@ -63,8 +80,11 @@ export default function EmailRegisterPage() {
                         disabled={isLoading}
                         className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
                     >
-                        {isLoading ? 'Sending...' : 'Continue with Email'}
+                        {isLoading ? 'Sending verification email...' : 'Continue with Email'}
                     </button>
+                    <p className="text-xs text-gray-500 text-center mt-3">
+                        We'll send a verification link to your email
+                    </p>
                 </form>
 
                 <div className="mt-6 text-center">

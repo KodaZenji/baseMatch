@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { useRouter } from 'next/navigation';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export default function WalletRegisterPage() {
     const router = useRouter();
@@ -39,11 +40,14 @@ export default function WalletRegisterPage() {
                         💖 BaseMatch
                     </h1>
                     <p className="text-gray-700 mb-6">Please connect your wallet to register</p>
+                    <div className="flex justify-center mb-6">
+                        <ConnectButton />
+                    </div>
                     <button
                         onClick={() => router.push('/')}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90"
+                        className="w-full bg-gray-400 text-white py-3 rounded-xl font-semibold hover:opacity-90"
                     >
-                        Go Back
+                        Back to home
                     </button>
                 </div>
             </div>

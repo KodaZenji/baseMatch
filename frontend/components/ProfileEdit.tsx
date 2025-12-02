@@ -120,21 +120,20 @@ export default function ProfileEdit() {
         setIsSendingVerification(true);
 
         try {
-            const response = await fetch('/api/send-verification', {
+            const response = await fetch('/api/register-email', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     email: formData.email,
-                    address: address,
                 }),
             });
 
             const result = await response.json();
 
             if (response.ok && result.success) {
-                showNotification(' Verification email sent! Check your inbox.', 'success');
+                showNotification('Verification email sent! Check your inbox.', 'success');
             } else {
                 showNotification(result.error || 'Failed to send verification email', 'error');
             }
