@@ -1,121 +1,88 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useAccount, useSignMessage } from 'wagmi';
+import { useRouter } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
-import { generateAvatar } from '@/lib/avatarUtils';
 
 export default function ConnectWalletPage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const { address, isConnected } = useAccount();
-    const email = searchParams.get('email');
+    const { signMessageAsync } = useSignMessage();
 
-    const [formData, setFormData] = useState({
-        name: '',
-        age: '',
-        gender: '',
-        interests: '',
-        email: email || '',
-    });
-    const [avatarUrl, setAvatarUrl] = useState('');
-    const [formError, setFormError] = useState('');
-    const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+    const [email, setEmail] = useState('');
+    const [isConnecting, setIsConnecting] = useState(false);
+    const [error, setError] = useState('');
 
-    const { writeContract, data: hash, isPending } = useWriteContract();
-    const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
-
-    // Generate avatar when wallet connects
+    // Load email from localStorage (from email verification)
     useEffect(() => {
-        if (address) {
-            const avatar = generateAvatar(address);
-            setAvatarUrl(avatar);
-            setIsLoadingProfile(false);
-        }
-    }, [address]);
-
-    // Load user profile from localStorage
-    useEffect(() => {
-        const pendingVerification = localStorage.getItem('pendingEmailVerification');
-        if (pendingVerification) {
-            const data = JSON.parse(pendingVerification);
-            setFormData({
-                name: data.name,
-                age: data.age,
-                gender: data.gender,
-                interests: data.interests,
-                email: data.email,
-            });
+        const emailVerified = localStorage.getItem('emailVerified');
+        if (emailVerified) {
+            const data = JSON.parse(emailVerified);
+            setEmail(data.email);
         }
     }, []);
 
-    // Handle redirect after successful profile creation
+    // Auto-connect wallet signature when wallet is connected
     useEffect(() => {
-        if (isSuccess && address) {
-            // Register profile in Supabase and Neynar
-            const registerProfile = async () => {
-                try {
-                    const response = await fetch('/api/create-profile', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            address,
-                            name: formData.name,
-                            age: parseInt(formData.age),
-                            gender: formData.gender,
-                            interests: formData.interests,
-                            email: formData.email,
-                            photoUrl: avatarUrl,
-                        }),
-                    });
-
-                    if (response.ok) {
-                        // Clear localStorage
-                        localStorage.removeItem('pendingEmailVerification');
-                        localStorage.removeItem('emailVerified');
-
-                        // Redirect to home
-                        setTimeout(() => {
-                            router.push('/');
-                        }, 1500);
-                    } else {
-                        setFormError('Failed to save profile. Please try again.');
-                    }
-                } catch (error) {
-                    console.error('Error registering profile:', error);
-                    setFormError('Failed to save profile. Please try again.');
-                }
-            };
-
-            registerProfile();
+        if (isConnected && address && email && !isConnecting) {
+            handleConnectWallet();
         }
-    }, [isSuccess, address, formData, avatarUrl, router]);
+    }, [isConnected, address, email]);
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!isConnected || !address) {
-            setFormError('Please connect your wallet first');
+    const handleConnectWallet = async () => {
+        if (!address || !email) {
+            setError('Missing email or wallet address');
             return;
         }
 
-        const age = parseInt(formData.age);
-        if (isNaN(age) || age < 18 || age > 100) {
-            setFormError('Please enter a valid age between 18 and 100');
-            return;
-        }
+        setIsConnecting(true);
+        setError('');
 
-        // Create on-chain profile
-        writeContract({
-            address: CONTRACTS.PROFILE_NFT as `0x${string}`,
-            abi: PROFILE_NFT_ABI,
-            functionName: 'createProfile',
-            args: [formData.name, age, formData.gender, formData.interests, avatarUrl],
-        });
+        try {
+            // Step 1: Sign message to verify wallet ownership
+            const message = `Connect wallet ${address} to ${email}\n\nTimestamp: ${Date.now()}`;
+            const signature = await signMessageAsync({ message });
+
+            // Step 2: Call connect-wallet API
+            const response = await fetch('/api/connect-wallet', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email,
+                    walletAddress: address,
+                    signature,
+                    message,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to connect wallet');
+            }
+
+            // Step 3: Success! Clear localStorage and redirect to profile/edit
+            localStorage.removeItem('emailVerified');
+            localStorage.setItem('walletConnected', JSON.stringify({
+                address,
+                email,
+                timestamp: Date.now(),
+            }));
+
+            // Redirect to profile completion (where they fill out name, age, etc.)
+            router.push('/register/email/complete');
+        } catch (err: any) {
+            console.error('Error connecting wallet:', err);
+            if (err.message.includes('User rejected')) {
+                setError('You rejected the signature request. Please try again.');
+            } else {
+                setError(err.message || 'Failed to connect wallet. Please try again.');
+            }
+            setIsConnecting(false);
+        }
     };
 
     if (!isConnected) {
@@ -125,9 +92,17 @@ export default function ConnectWalletPage() {
                     <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
                         💖 BaseMatch
                     </h1>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Step 2: Connect Wallet</h2>
                     <p className="text-gray-700 text-lg mb-6">
-                        Your email has been verified! Now let's connect your wallet to complete your profile.
+                        Your email has been verified! Now connect your wallet to complete your profile.
                     </p>
+                    {email && (
+                        <div className="bg-green-50 rounded-lg p-3 mb-6">
+                            <p className="text-sm text-green-800">
+                                ✅ Email verified: <strong>{email}</strong>
+                            </p>
+                        </div>
+                    )}
                     <div className="flex justify-center mb-6">
                         <ConnectButton />
                     </div>
@@ -136,63 +111,46 @@ export default function ConnectWalletPage() {
         );
     }
 
-    if (isLoadingProfile) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center">
-                <div className="text-white text-2xl">Loading...</div>
-            </div>
-        );
-    }
-
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full">
-                <h2 className="text-3xl font-bold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                    Complete Your Profile
+            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+                <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
+                    💖 BaseMatch
+                </h1>
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                    {isConnecting ? 'Connecting Wallet...' : 'Wallet Connected!'}
                 </h2>
-
-                {formError && (
-                    <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-                        {formError}
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Avatar */}
-                    <div className="flex justify-center">
-                        {avatarUrl && (
-                            <img
-                                src={avatarUrl}
-                                alt="Your avatar"
-                                className="w-32 h-32 rounded-full border-4 border-white shadow-lg"
-                            />
+                {error ? (
+                    <>
+                        <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4">
+                            {error}
+                        </div>
+                        <button
+                            onClick={handleConnectWallet}
+                            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+                        >
+                            Try Again
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        {isConnecting ? (
+                            <>
+                                <div className="flex justify-center mb-4">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                                </div>
+                                <p className="text-gray-600">Please sign the message in your wallet...</p>
+                            </>
+                        ) : (
+                            <>
+                                <div className="bg-green-50 rounded-lg p-4 mb-4">
+                                    <p className="text-green-800 font-medium">✅ Wallet connected successfully!</p>
+                                </div>
+                                <p className="text-gray-600">Redirecting to profile completion...</p>
+                            </>
                         )}
-                    </div>
-
-                    {/* Profile Info (Read-only) */}
-                    <div className="bg-gray-50 rounded-xl p-4">
-                        <p className="text-sm text-gray-600 mb-2"><strong>Name:</strong> {formData.name}</p>
-                        <p className="text-sm text-gray-600 mb-2"><strong>Age:</strong> {formData.age}</p>
-                        <p className="text-sm text-gray-600 mb-2"><strong>Gender:</strong> {formData.gender}</p>
-                        <p className="text-sm text-gray-600 mb-2"><strong>Interests:</strong> {formData.interests}</p>
-                        <p className="text-sm text-gray-600"><strong>Email:</strong> {formData.email}</p>
-                    </div>
-
-                    {/* Wallet Info */}
-                    <div className="bg-blue-50 rounded-xl p-4">
-                        <p className="text-sm font-semibold text-gray-700 mb-2">Connected Wallet:</p>
-                        <p className="text-xs font-mono text-gray-600 break-all">{address}</p>
-                    </div>
-
-                    {/* Submit Button */}
-                    <button
-                        type="submit"
-                        disabled={isPending || isConfirming}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-                    >
-                        {isPending ? 'Creating Profile...' : isConfirming ? 'Confirming...' : 'Create Profile NFT'}
-                    </button>
-                </form>
+                    </>
+                )}
             </div>
         </div>
     );

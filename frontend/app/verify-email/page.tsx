@@ -45,23 +45,16 @@ export default function VerifyEmailPage() {
                 setVerificationStatus('success');
                 setMessage('✅ Email verified successfully!');
 
-                // Store verification status and redirect to profile setup
+                // Store verification status
                 localStorage.setItem('emailVerified', JSON.stringify({
                     email,
                     userId: data.userId,
                     timestamp: Date.now(),
                 }));
-                localStorage.setItem('pendingEmailRegistration', JSON.stringify({
-                    email,
-                    userId: data.userId,
-                    timestamp: Date.now(),
-                }));
 
-                // Redirect to home page (ProfileSetup is rendered there)
-                // If wallet already connected, ProfileSetup will auto-detect email and merge the flows
-                // If wallet not connected, user will see prompt to connect wallet
+                // Redirect to email profile completion page (Email-First flow step 2)
                 setTimeout(() => {
-                    router.push('/');
+                    router.push('/register/email/complete');
                 }, 2000);
             } catch (error) {
                 setVerificationStatus('error');
@@ -92,8 +85,8 @@ export default function VerifyEmailPage() {
                 {verificationStatus === 'success' && (
                     <>
                         <p className="text-gray-700 text-lg mb-4">{message}</p>
-                        <p className="text-gray-600 mb-4">Redirecting to profile creation...</p>
-                        <div className="text-sm text-gray-600">If you have a wallet connected, you can complete your profile immediately. If not, we'll ask you to connect.</div>
+                        <p className="text-gray-600 mb-4">Redirecting to profile completion...</p>
+                        <div className="text-sm text-gray-600">Next step: Connect your wallet and complete your profile.</div>
                     </>
                 )}
 
@@ -101,7 +94,7 @@ export default function VerifyEmailPage() {
                     <>
                         <p className="text-red-600 text-lg mb-6">{message}</p>
                         <button
-                            onClick={() => router.push('/signup')}
+                            onClick={() => router.push('/register/email')}
                             className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
                         >
                             Try Again
