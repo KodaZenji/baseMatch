@@ -14,24 +14,62 @@ export default function MintPage() {
     const [mintData, setMintData] = useState<any>(null);
     const [error, setError] = useState('');
     const [isMinting, setIsMinting] = useState(false);
+    // 🛑 NEW STATE: To manage the status check before loading the mint form
+    const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+    const [statusError, setStatusError] = useState('');
 
     useEffect(() => {
-        // Check if coming from wallet-first or email-first flow
-        const walletReg = localStorage.getItem('walletRegistration');
-        const emailFirstReg = localStorage.getItem('emailFirstMint');
-
-        if (walletReg) {
-            const data = JSON.parse(walletReg);
-            setMintData(data);
-        } else if (emailFirstReg) {
-            const data = JSON.parse(emailFirstReg);
-            setMintData(data);
-        } else {
-            setError('No registration data found. Please register first.');
+        // Only run if wallet is connected and we have an address
+        if (!address) {
+            setIsCheckingStatus(false);
+            return;
         }
-    }, []);
 
-    // Handle successful mint
+        const checkProfileStatus = async () => {
+            setIsCheckingStatus(true);
+            setStatusError('');
+
+            try {
+                // 🛑 STEP 1: Check if the user is already registered/minted
+                const response = await fetch('/api/profile/status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address }),
+                });
+
+                const statusData = await response.json();
+
+                if (response.ok && statusData.profileExists) {
+                    // 🛑 STEP 2: User found! Redirect to the main app dashboard
+                    console.log('User profile found. Redirecting to dashboard.');
+                    router.push('/browse'); // Change to your main app route
+                    return;
+                }
+
+                // STEP 3: If not existing, proceed to load minting payload from localStorage
+                const walletReg = localStorage.getItem('walletRegistration');
+                const emailFirstReg = localStorage.getItem('emailFirstMint');
+
+                if (walletReg || emailFirstReg) {
+                    const data = JSON.parse(walletReg || emailFirstReg);
+                    setMintData(data);
+                    setError('');
+                } else {
+                    setError('No registration data found. Please register first.');
+                }
+
+            } catch (err) {
+                console.error("Profile status check failed:", err);
+                setStatusError('Failed to check profile status. Please try again.');
+            } finally {
+                setIsCheckingStatus(false);
+            }
+        };
+
+        checkProfileStatus();
+    }, [address, router]);
+
+    // Handle successful mint (No change needed here)
     useEffect(() => {
         if (isSuccess && mintData) {
             // Clear registration data
@@ -40,11 +78,33 @@ export default function MintPage() {
 
             // Redirect to dashboard
             setTimeout(() => {
-                router.push('/');
+                router.push('/browse'); // Change to your main app route
             }, 2000);
         }
     }, [isSuccess, mintData, router]);
 
+    // 🛑 NEW RENDER BLOCK: Status Check Loading
+    if (isCheckingStatus) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+                    <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
+                        💖 BaseMatch
+                    </h1>
+                    <div className="flex flex-col items-center justify-center">
+                        <svg className="animate-spin h-8 w-8 text-indigo-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p className="text-gray-700 text-lg">Checking profile status...</p>
+                        {statusError && <p className="text-red-500 mt-2">{statusError}</p>}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    
+    // Original wallet connection check (No change needed)
     if (!isConnected) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
@@ -64,6 +124,7 @@ export default function MintPage() {
         );
     }
 
+    // Original mintData check (No change needed)
     if (!mintData) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
@@ -83,6 +144,7 @@ export default function MintPage() {
         );
     }
 
+    // Original handleMint function (No change needed)
     const handleMint = async () => {
         if (!mintData?.createProfilePayload && !mintData?.mintingPayload && !mintData?.registerWithEmailPayload) {
             setError('No minting payload available');
@@ -131,6 +193,7 @@ export default function MintPage() {
         }
     };
 
+    // Original render block (No change needed)
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
