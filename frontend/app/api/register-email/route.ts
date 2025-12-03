@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseService } from '@/lib/supabase';
+import { supabaseService } from '@/lib/supabase'; // Assumed to be the Service Role client
 import { randomBytes } from 'crypto';
 import * as brevo from '@getbrevo/brevo';
 
@@ -8,6 +8,7 @@ export const runtime = 'nodejs';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
+        // Destructure all expected fields, even if some might be null initially
         const { name, age, gender, interests, email } = body;
 
         // Validate input
@@ -18,21 +19,21 @@ export async function POST(request: Request) {
             );
         }
 
-        // Normalize email to lowercase (must match contract normalization)
+        // Normalize email to lowercase
         const normalizedEmail = email.toLowerCase().trim();
 
-        // Check if user already exists (use normalized email)
-        const { data: existingUser } = await supabaseService
-            .from('users')
+        // 🛑 FIX 1: Check if profile already exists in the 'profiles' table
+        const { data: existingProfile } = await supabaseService
+            .from('profiles') 
             .select('id')
             .eq('email', normalizedEmail)
             .single();
 
-        // Ensure we have a user record; create if not exists
-        let userId = existingUser?.id;
-        if (!userId) {
-            const { data: user, error: insertError } = await supabaseService
-                .from('users')
+        // Ensure we have a profile record; create if not exists
+        let profileId = existingProfile?.id;
+        if (!profileId) {
+            const { data: profile, error: insertError } = await supabaseService
+                .from('profiles') // 🛑 FIX 2: Use 'profiles' table
                 .insert([
                     {
                         email: normalizedEmail,
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
                         age: age ? parseInt(age) : null,
                         gender: gender || null,
                         interests: interests || null,
-                        email_verified: false,
+                        email_verified: false, // Initial state is FALSE
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
                     }
@@ -48,28 +49,29 @@ export async function POST(request: Request) {
                 .select()
                 .single();
 
-            if (insertError || !user) {
-                console.error('Error creating user:', insertError);
+            if (insertError || !profile) {
+                console.error('Error creating profile:', insertError);
                 return NextResponse.json(
-                    { error: 'Unable to create account. Please try again or contact support.' },
+                    { error: 'Unable to create profile. Please try again or contact support.' },
                     { status: 500 }
                 );
             }
 
-            userId = user.id;
+            profileId = profile.id;
         }
 
         // Create verification token
         const token = randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
+        // Insert token into the email_verifications table
         const { error: tokenError } = await supabaseService
             .from('email_verifications')
             .insert([
                 {
                     token,
                     email: normalizedEmail,
-                    user_id: userId,
+                    user_id: profileId, // Use the new profileId
                     expires_at: expiresAt.toISOString(),
                     created_at: new Date().toISOString()
                 }
@@ -78,7 +80,7 @@ export async function POST(request: Request) {
         if (tokenError) {
             console.error('Error creating verification token:', tokenError);
             return NextResponse.json(
-                { error: 'Account created but unable to send verification. Please contact support.' },
+                { error: 'Profile created but unable to send verification. Please contact support.' },
                 { status: 500 }
             );
         }
@@ -103,6 +105,8 @@ export async function POST(request: Request) {
             };
             sendSmtpEmail.to = [{ email: normalizedEmail, name }];
             sendSmtpEmail.subject = 'Verify your email address - BaseMatch';
+            
+            // 🛑 Full HTML Content included here
             sendSmtpEmail.htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -138,7 +142,7 @@ export async function POST(request: Request) {
             <h2>Email Verification</h2>
         </div>
         
-        <p>Hello ${name},</p>
+        <p>Hello ${name || 'User'},</p>
         
         <p>Thank you for signing up with BaseMatch! Please verify your email address by clicking the button below:</p>
         
@@ -165,20 +169,20 @@ export async function POST(request: Request) {
             return NextResponse.json({
                 success: true,
                 message: 'Verification email sent! Please check your inbox.',
-                userId: userId
+                profileId: profileId
             });
         } catch (emailError) {
             console.error('Error sending email:', emailError);
-            // Still return success since user is created and can request a new link
+            // Still return success since profile is created and can request a new link
             return NextResponse.json({
                 success: true,
-                message: 'Account created! Please check your inbox for the verification link.',
-                userId: userId,
+                message: 'Profile created! Please check your inbox for the verification link.',
+                profileId: profileId,
                 note: 'If you don\'t receive the email, please contact support.'
             });
         }
     } catch (error) {
-        console.error('Error registering user:', error);
+        console.error('Error registering profile:', error);
         return NextResponse.json(
             { error: 'Unable to process your registration. Please try again.' },
             { status: 500 }
