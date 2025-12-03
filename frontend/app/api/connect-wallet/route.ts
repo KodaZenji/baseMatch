@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase';
-import { verifyWalletSignature } from '@/lib/utils';
+// Assuming verifyWalletSignature is a custom function imported from a utility file
+import { verifyWalletSignature } from '@/lib/utils'; 
 
 export const runtime = 'nodejs';
 
 /**
  * POST /api/connect-wallet
- * Email-First Flow: Connect wallet to existing email account
- * 
- * Input: { email, walletAddress, signature, message }
+ * Email-First Flow: Connect wallet to existing email profile
+ * * Input: { email, walletAddress, signature, message }
  * Requirements:
- * - User must have verified email first
+ * - Profile must have verified email first
  * - Verifies wallet signature
- * - Updates users table with wallet_address and wallet_verified
+ * - Updates PROFILES table with wallet_address and wallet_verified
  */
 export async function POST(request: NextRequest) {
     try {
@@ -41,22 +41,23 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 2. Find user by email
-        const { data: user, error: userError } = await supabaseService
-            .from('users')
+        // 2. Find profile by email
+        // 🛑 FIX 1: Using 'profiles' table
+        const { data: profile, error: profileError } = await supabaseService
+            .from('profiles')
             .select('*')
             .eq('email', normalizedEmail)
             .single();
 
-        if (userError || !user) {
+        if (profileError || !profile) {
             return NextResponse.json(
-                { error: 'User not found with this email. Please register first.' },
+                { error: 'Profile not found with this email. Please register first.' },
                 { status: 404 }
             );
         }
 
-        // 3. CRUCIAL CHECK: User must have verified email first
-        if (!user.email_verified) {
+        // 3. CRUCIAL CHECK: Profile must have verified email first
+        if (!profile.email_verified) {
             return NextResponse.json(
                 {
                     error: 'Email not verified. Please verify your email before connecting wallet.',
@@ -66,33 +67,35 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 4. Check if wallet is already connected to another account
+        // 4. Check if wallet is already connected to another profile
+        // 🛑 FIX 2: Using 'profiles' table
         const { data: existingWallet, error: walletCheckError } = await supabaseService
-            .from('users')
+            .from('profiles')
             .select('id, email')
             .eq('wallet_address', normalizedAddress)
-            .neq('id', user.id)
+            .neq('id', profile.id)
             .single();
 
         if (existingWallet) {
             return NextResponse.json(
-                { error: 'This wallet is already connected to another account' },
+                { error: 'This wallet is already connected to another profile' },
                 { status: 409 }
             );
         }
 
-        // 5. Update user record with wallet information
+        // 5. Update profile record with wallet information
+        // 🛑 FIX 3: Using 'profiles' table
         const { error: updateError } = await supabaseService
-            .from('users')
+            .from('profiles')
             .update({
                 wallet_address: normalizedAddress,
-                wallet_verified: true,
+                wallet_verified: true, // 🛑 CRITICAL: Set the flag to true
                 updated_at: new Date().toISOString()
             })
-            .eq('id', user.id);
+            .eq('id', profile.id);
 
         if (updateError) {
-            console.error('Error updating user with wallet:', updateError);
+            console.error('Error updating profile with wallet:', updateError);
             return NextResponse.json(
                 { error: 'Failed to connect wallet' },
                 { status: 500 }
@@ -102,13 +105,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             message: 'Wallet connected successfully!',
-            userId: user.id,
+            profileId: profile.id, // Return profileId for consistency
             fullyVerified: true
         });
 
     } catch (error) {
         console.error('Error connecting wallet:', error);
-        return NextResponse.json(
+        return NextResponse.json (
             { error: 'Failed to process wallet connection' },
             { status: 500 }
         );
