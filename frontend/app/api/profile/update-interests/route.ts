@@ -8,10 +8,9 @@ const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS;
 /**
  * POST /api/profile/update-interests
  * Update user interests on-chain
- * 
- * Input: { walletAddress, newInterests }
+ * * Input: { walletAddress, newInterests }
  * Requirements:
- * - User must be fully verified (email_verified AND wallet_verified)
+ * - Profile must be fully verified (email_verified AND wallet_verified)
  * - Updates DB optimistically (UX optimization)
  * - Returns encoded transaction data for on-chain update
  */
@@ -38,40 +37,42 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 1. Lookup user by walletAddress
-        const { data: user, error: userError } = await supabaseService
-            .from('users')
+        // 1. Lookup profile by walletAddress
+        // 🛑 FIX 1: Use 'profiles' table
+        const { data: profile, error: profileError } = await supabaseService
+            .from('profiles')
             .select('*')
             .eq('wallet_address', normalizedAddress)
             .single();
 
-        if (userError || !user) {
+        if (profileError || !profile) {
             return NextResponse.json(
-                { error: 'User not found with this wallet address' },
+                { error: 'Profile not found with this wallet address' },
                 { status: 404 }
             );
         }
 
         // 2. REQUIRE Fully Verified status to proceed
-        if (!user.email_verified || !user.wallet_verified) {
+        if (!profile.email_verified || !profile.wallet_verified) {
             return NextResponse.json(
                 {
                     error: 'Account not fully verified. Both email and wallet must be verified to update interests.',
-                    emailVerified: user.email_verified,
-                    walletVerified: user.wallet_verified
+                    emailVerified: profile.email_verified,
+                    walletVerified: profile.wallet_verified
                 },
                 { status: 403 }
             );
         }
 
-        // 3. Update DB (UX Optimization) - Update optimistically
+        // 3. Update DB (UX Optimization) - Update interests optimistically
+        // 🛑 FIX 2: Use 'profiles' table
         const { error: updateError } = await supabaseService
-            .from('users')
+            .from('profiles')
             .update({
                 interests: newInterests,
                 updated_at: new Date().toISOString()
             })
-            .eq('id', user.id);
+            .eq('id', profile.id); // Use profile.id
 
         if (updateError) {
             console.error('Error updating interests in DB:', updateError);
@@ -83,7 +84,6 @@ export async function POST(request: NextRequest) {
 
         // 4. Encode Transaction Data using viem
         // The contract has updateProfile(name, age, gender, interests, photoUrl, email)
-        // We need to fetch current profile data and only update interests
 
         // Using viem's encodeFunctionData
         const { encodeFunctionData } = await import('viem');
@@ -107,12 +107,12 @@ export async function POST(request: NextRequest) {
             ],
             functionName: 'updateProfile',
             args: [
-                user.name || '',
-                user.age || 18,
-                user.gender || '',
+                profile.name || '',
+                profile.age || 18,
+                profile.gender || '',
                 newInterests, // Updated interests
-                user.photo_url || '',
-                user.email || ''
+                profile.photo_url || '',
+                profile.email || ''
             ]
         });
 
@@ -127,14 +127,14 @@ export async function POST(request: NextRequest) {
             // Additional info for confirmation
             updatedInterests: newInterests,
             userInfo: {
-                userId: user.id,
+                profileId: profile.id, // Consistent naming
                 walletAddress: normalizedAddress
             }
         });
 
     } catch (error) {
         console.error('Error updating interests:', error);
-        return NextResponse.json(
+         return NextResponse.json(
             { error: 'Failed to process interests update' },
             { status: 500 }
         );
