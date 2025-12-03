@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export default function MintPage() {
     const router = useRouter();
@@ -14,7 +15,8 @@ export default function MintPage() {
     const [mintData, setMintData] = useState<any>(null);
     const [error, setError] = useState('');
     const [isMinting, setIsMinting] = useState(false);
-    // 🛑 NEW STATE: To manage the status check before loading the mint form
+    
+    // State for checking profile status before minting
     const [isCheckingStatus, setIsCheckingStatus] = useState(true);
     const [statusError, setStatusError] = useState('');
 
@@ -22,6 +24,8 @@ export default function MintPage() {
         // Only run if wallet is connected and we have an address
         if (!address) {
             setIsCheckingStatus(false);
+            // If disconnected, clear any pending data just in case
+            setMintData(null);
             return;
         }
 
@@ -30,7 +34,7 @@ export default function MintPage() {
             setStatusError('');
 
             try {
-                // 🛑 STEP 1: Check if the user is already registered/minted
+                // 🛑 Step 1: Check if the user is already registered/minted
                 const response = await fetch('/api/profile/status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -40,20 +44,26 @@ export default function MintPage() {
                 const statusData = await response.json();
 
                 if (response.ok && statusData.profileExists) {
-                    // 🛑 STEP 2: User found! Redirect to the main app dashboard
+                    // 🛑 CRITICAL FIX: User found! Redirect to the main app dashboard
                     console.log('User profile found. Redirecting to dashboard.');
                     router.push('/browse'); // Change to your main app route
                     return;
                 }
 
-                // STEP 3: If not existing, proceed to load minting payload from localStorage
+                // Step 2: If not existing, proceed to safely load minting payload
                 const walletReg = localStorage.getItem('walletRegistration');
                 const emailFirstReg = localStorage.getItem('emailFirstMint');
+                const regString = walletReg || emailFirstReg; // Will be string or null
 
-                if (walletReg || emailFirstReg) {
-                    const data = JSON.parse(walletReg || emailFirstReg);
-                    setMintData(data);
-                    setError('');
+                // ✅ FIX 3: Safely parse localStorage item
+                if (regString) {
+                    try {
+                        const data = JSON.parse(regString);
+                        setMintData(data);
+                        setError('');
+                    } catch (e) {
+                        setError('Corrupted registration data found.');
+                    }
                 } else {
                     setError('No registration data found. Please register first.');
                 }
@@ -67,9 +77,9 @@ export default function MintPage() {
         };
 
         checkProfileStatus();
-    }, [address, router]);
+    }, [address, router]); // Re-run if address changes
 
-    // Handle successful mint (No change needed here)
+    // Handle successful mint (No change needed)
     useEffect(() => {
         if (isSuccess && mintData) {
             // Clear registration data
@@ -104,7 +114,7 @@ export default function MintPage() {
         );
     }
     
-    // Original wallet connection check (No change needed)
+    // Original wallet connection check
     if (!isConnected) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
@@ -113,6 +123,9 @@ export default function MintPage() {
                         💖 BaseMatch
                     </h1>
                     <p className="text-gray-700 mb-6">Please connect your wallet to mint your profile</p>
+                    <div className="mb-4">
+                        <ConnectButton />
+                    </div>
                     <button
                         onClick={() => router.push('/')}
                         className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90"
@@ -124,7 +137,7 @@ export default function MintPage() {
         );
     }
 
-    // Original mintData check (No change needed)
+    // Original mintData check
     if (!mintData) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
@@ -144,7 +157,7 @@ export default function MintPage() {
         );
     }
 
-    // Original handleMint function (No change needed)
+    // Original handleMint function (No changes needed, relies on fixed API payload)
     const handleMint = async () => {
         if (!mintData?.createProfilePayload && !mintData?.mintingPayload && !mintData?.registerWithEmailPayload) {
             setError('No minting payload available');
@@ -174,6 +187,7 @@ export default function MintPage() {
             } else {
                 // Wallet-first flow: use createProfile (with photo)
                 const payload = mintData.createProfilePayload || mintData.mintingPayload;
+                // CRITICAL: payload.photoUrl now contains the SHORT HASH from the API
                 writeContract({
                     address: (mintData.contractAddress || CONTRACTS.PROFILE_NFT) as `0x${string}`,
                     abi: PROFILE_NFT_ABI,
@@ -183,7 +197,7 @@ export default function MintPage() {
                         payload.age,
                         payload.gender,
                         payload.interests,
-                        payload.photoUrl,
+                        payload.photoUrl, // This is the short hash
                     ],
                 });
             }
@@ -228,9 +242,9 @@ export default function MintPage() {
                         <div className="bg-blue-50 rounded-lg p-6 mb-6 text-left">
                             <h3 className="font-semibold text-gray-800 mb-3">Profile Summary</h3>
                             <div className="space-y-2 text-sm text-gray-700">
-                                <p><strong>Name:</strong> {mintData?.createProfilePayload?.name || mintData?.mintingPayload?.name}</p>
-                                <p><strong>Age:</strong> {mintData?.createProfilePayload?.age || mintData?.mintingPayload?.age}</p>
-                                <p><strong>Gender:</strong> {mintData?.createProfilePayload?.gender || mintData?.mintingPayload?.gender}</p>
+                                <p><strong>Name:</strong> {mintData?.createProfilePayload?.name || mintData?.mintingPayload?.name || mintData?.registerWithEmailPayload?.name}</p>
+                                <p><strong>Age:</strong> {mintData?.createProfilePayload?.age || mintData?.mintingPayload?.age || mintData?.registerWithEmailPayload?.age}</p>
+                                <p><strong>Gender:</strong> {mintData?.createProfilePayload?.gender || mintData?.mintingPayload?.gender || mintData?.registerWithEmailPayload?.gender}</p>
                                 <p><strong>Email:</strong> {mintData?.email}</p>
                             </div>
                         </div>
