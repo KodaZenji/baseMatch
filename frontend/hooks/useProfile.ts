@@ -6,12 +6,12 @@ import { useQueryClient } from '@tanstack/react-query';
 
 export function useProfile(address?: string) {
     // If no address provided, use the connected wallet address
-    const { wallet_address: connectedAddress, isConnected } = useAccount();
+    const { address: connectedAddress, isConnected } = useAccount();
     const effectiveAddress = address || connectedAddress;
     const queryClient = useQueryClient();
 
     const { data: profileData, error, isLoading, refetch } = useReadContract({
-        wallet_address: CONTRACTS.PROFILE_NFT as `0x${string}`,
+        address: CONTRACTS.PROFILE_NFT as `0x${string}`,
         abi: PROFILE_NFT_ABI,
         functionName: 'getProfile',
         args: effectiveAddress ? [effectiveAddress as `0x${string}`] : undefined, // Only call if address exists
