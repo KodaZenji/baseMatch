@@ -46,7 +46,7 @@ export async function GET(request: Request) {
 
         // 🛑 FIX: Use 'profile_id' (or 'user_id' if you didn't rename it) to find the profile
         // Do NOT use wallet_address here as it might be null for email-first users.
-        const targetProfileId = verificationToken.profile_id || verificationToken.user_id;
+        const targetProfileId = verificationToken.profile_id;
 
         // 2. Mark email as verified in PROFILES table
         const { error: updateError } = await supabaseService
