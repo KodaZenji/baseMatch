@@ -23,50 +23,60 @@ export default function MintPage() {
     const [isSyncing, setIsSyncing] = useState(false); 
 
     // Helper function to sync the profile off-chain after a successful mint
-    const syncProfileWithWallet = async (walletAddress: string) => {
-        setIsSyncing(true);
-        const emailFirstReg = localStorage.getItem('emailFirstMint');
-        
-        if (emailFirstReg) {
-            try {
-                const data = JSON.parse(emailFirstReg);
-                const profileId = data.profileId; // The ID created during email registration
+const syncProfileWithWallet = async (walletAddress: string): Promise<boolean> => {
+    setIsSyncing(true);
+    const emailFirstReg = localStorage.getItem('emailFirstMint');
+    
+    if (emailFirstReg) {
+        try {
+            const data = JSON.parse(emailFirstReg);
+            const profileId = data.profileId;
 
-                if (!profileId) {
-                    console.error("Profile ID missing in localStorage. Cannot sync.");
-                    setIsSyncing(false);
-                    return; 
-                }
+            console.log('🔄 Attempting to sync wallet:', { profileId, walletAddress });
 
-                // 🛑 CRITICAL API CALL: Update Supabase profile with wallet address and verification status
-                const response = await fetch('/api/link-wallet', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        profileId: profileId,
-                        walletAddress: walletAddress,
-                    }),
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error('Failed to sync wallet address to profile in Supabase:', errorData);
-                    setError('Mint success, but failed to sync wallet to profile database. Contact support.');
-                } else {
-                    console.log('Successfully synced wallet address to existing profile.');
-                }
-
-            } catch (e) {
-                console.error("Error parsing emailFirstMint data or syncing profile:", e);
-                setError('Mint success, but internal error syncing profile. Contact support.');
-            } finally {
+            if (!profileId) {
+                console.error("❌ Profile ID missing in localStorage. Cannot sync.");
+                setError('Profile ID missing. Please contact support.');
                 setIsSyncing(false);
+                return false;
             }
-        } else {
-            // For Wallet-First flow, the profile is assumed to be created/synced during initial registration
+
+            // Make the API call
+            const response = await fetch('/api/link-wallet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    profileId: profileId,
+                    walletAddress: walletAddress,
+                }),
+            });
+
+            const responseData = await response.json();
+            console.log('📡 API Response:', responseData);
+
+            if (!response.ok) {
+                console.error('❌ Failed to sync wallet:', responseData);
+                setError(`Mint successful, but failed to sync wallet: ${responseData.error || 'Unknown error'}`);
+                setIsSyncing(false);
+                return false;
+            }
+
+            console.log('✅ Successfully synced wallet to profile');
             setIsSyncing(false);
+            return true;
+
+        } catch (e) {
+            console.error("❌ Error syncing profile:", e);
+            setError('Mint successful, but internal error syncing profile. Please contact support.');
+            setIsSyncing(false);
+            return false;
         }
-    };
+    } else {
+        console.log('ℹ️ No emailFirstMint data - assuming wallet-first flow');
+        setIsSyncing(false);
+        return true; // For wallet-first flow
+    }
+};
 
     // --- EFFECT 1: Check Profile Status and Load Data ---
     useEffect(() => {
