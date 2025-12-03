@@ -22,18 +22,21 @@ export async function POST(request: Request) {
         // Normalize email to lowercase
         const normalizedEmail = email.toLowerCase().trim();
 
-        // 🛑 FIX 1: Check if profile already exists in the 'profiles' table
+        // --- 1. Profile Lookup and Creation (Upsert Logic) ---
+        
+        // Check if profile already exists in the 'profiles' table
         const { data: existingProfile } = await supabaseService
             .from('profiles') 
             .select('id')
             .eq('email', normalizedEmail)
             .single();
 
-        // Ensure we have a profile record; create if not exists
+        // Determine profileId; create profile if it doesn't exist
         let profileId = existingProfile?.id;
+        
         if (!profileId) {
             const { data: profile, error: insertError } = await supabaseService
-                .from('profiles') // 🛑 FIX 2: Use 'profiles' table
+                .from('profiles') // Correctly using 'profiles' table
                 .insert([
                     {
                         email: normalizedEmail,
@@ -42,6 +45,8 @@ export async function POST(request: Request) {
                         gender: gender || null,
                         interests: interests || null,
                         email_verified: false, // Initial state is FALSE
+                        wallet_verified: false, // Initial state is FALSE
+                        // wallet_address is omitted here (must be NULLABLE in DB)
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
                     }
@@ -60,7 +65,8 @@ export async function POST(request: Request) {
             profileId = profile.id;
         }
 
-        // Create verification token
+        // --- 2. Token Creation and Database Insert ---
+
         const token = randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
@@ -71,7 +77,7 @@ export async function POST(request: Request) {
                 {
                     token,
                     email: normalizedEmail,
-                    user_id: profileId, // Use the new profileId
+                    profile_id: profileId, // 🛑 FIX: Use profile_id to match the renamed database column
                     expires_at: expiresAt.toISOString(),
                     created_at: new Date().toISOString()
                 }
@@ -85,12 +91,13 @@ export async function POST(request: Request) {
             );
         }
 
+        // --- 3. Email Sending (Brevo) ---
+
         // Create verification URL
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
             (process.env.NODE_ENV === 'production' ? 'https://basematch.app' : 'http://localhost:3000');
         const verificationUrl = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
 
-        // Send verification email using Brevo
         try {
             const apiInstance = new brevo.TransactionalEmailsApi();
             apiInstance.setApiKey(
@@ -106,7 +113,7 @@ export async function POST(request: Request) {
             sendSmtpEmail.to = [{ email: normalizedEmail, name }];
             sendSmtpEmail.subject = 'Verify your email address - BaseMatch';
             
-            // 🛑 Full HTML Content included here
+            // HTML Content remains the same, using the dynamically generated verificationUrl
             sendSmtpEmail.htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -173,7 +180,7 @@ export async function POST(request: Request) {
             });
         } catch (emailError) {
             console.error('Error sending email:', emailError);
-            // Still return success since profile is created and can request a new link
+            // Return success for profile creation but warn about email failure
             return NextResponse.json({
                 success: true,
                 message: 'Profile created! Please check your inbox for the verification link.',
