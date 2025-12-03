@@ -51,14 +51,15 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Internal server error or malformed request.' }, { status: 500 });
     }
 }
-```
 
+/*
 ### Next Action
 
-You must ensure that when you make the client-side `fetch` call to this endpoint **after the NFT mint succeeds**, you are sending a JSON body that looks like this:
+You must ensure that when you make the client-side fetch call to this endpoint 
+after the NFT mint succeeds, you are sending a JSON body that looks like this:
 
-```json
 {
   "profile_id": "YOUR_SUPABASE_UUID_HERE",
   "wallet_address": "0x..."
 }
+*/
