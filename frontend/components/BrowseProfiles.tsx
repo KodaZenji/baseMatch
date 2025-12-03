@@ -119,7 +119,7 @@ export default function BrowseProfiles() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {profiles.map((profile) => (
                     <ProfileCard
-                        key={profile.address}
+                        key={profile.wallet_address}
                         profile={profile}
                         onExpressInterest={handleExpressInterest}
                         onGift={() => handleGift(profile.address, profile.name)}
@@ -139,7 +139,7 @@ export default function BrowseProfiles() {
             <GiftingModal
                 isOpen={showGiftingModal}
                 onClose={() => setShowGiftingModal(false)}
-                recipientAddress={selectedRecipient.address}
+                recipientAddress={selectedRecipient.wallet_address}
                 recipientName={selectedRecipient.name}
             />
         </div>
