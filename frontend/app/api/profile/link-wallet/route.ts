@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase';
-import { verifyWalletSignature } from '@/lib/utils';
+import { verifyWalletSignature } from '@/lib/utils'; // Assumed to be imported
 
 export const runtime = 'nodejs';
 
 /**
  * POST /api/profile/link-wallet
- * Email-First Flow: Link a wallet to an existing email-registered account
- * 
- * Input: { email, address, signature, message }
+ * Email-First Flow: Link a wallet to an existing email-registered profile
+ * * Input: { email, address, signature, message }
  * Requirements:
  * - Verifies wallet signature
- * - Finds user by email
- * - Links wallet to their account
- * - Updates wallet_verified status
+ * - Finds profile by email
+ * - Links wallet to the profile account in the 'profiles' table
+ * - Sets wallet_verified status to true
  */
 export async function POST(request: NextRequest) {
     try {
@@ -41,73 +40,63 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 2. Find user by email
-        const { data: existingUser, error: userLookupError } = await supabaseService
-            .from('users')
-            .select('*')
+        // 2. Find profile by email
+        // 🛑 FIX 1: Use 'profiles' table
+        const { data: existingProfile, error: profileLookupError } = await supabaseService
+            .from('profiles')
+            .select('id, email_verified')
             .eq('email', normalizedEmail)
             .single();
 
-        if (userLookupError || !existingUser) {
+        if (profileLookupError || !existingProfile) {
             return NextResponse.json(
                 { error: 'No account found with this email. Please register first.' },
                 { status: 404 }
             );
         }
 
-        // 3. Check if wallet is already linked to another account
-        const { data: walletUser } = await supabaseService
-            .from('users')
+        // 3. Check if wallet is already linked to another profile
+        // 🛑 FIX 2: Use 'profiles' table
+        const { data: walletProfile } = await supabaseService
+            .from('profiles')
             .select('id, email')
             .eq('wallet_address', normalizedAddress)
             .single();
 
-        if (walletUser && walletUser.id !== existingUser.id) {
+        if (walletProfile && walletProfile.id !== existingProfile.id) {
             return NextResponse.json(
-                { error: 'This wallet is already linked to another account' },
+                { error: 'This wallet is already linked to another profile' },
                 { status: 409 }
             );
         }
 
-        // 4. Link wallet to user account
+        // 4. Link wallet to profile account
+        // 🛑 FIX 3: Use 'profiles' table
         const { error: updateError } = await supabaseService
-            .from('users')
+            .from('profiles')
             .update({
                 wallet_address: normalizedAddress,
                 wallet_verified: true,
                 updated_at: new Date().toISOString()
             })
-            .eq('id', existingUser.id);
+            .eq('id', existingProfile.id);
 
         if (updateError) {
-            console.error('Error linking wallet to user:', updateError);
+            console.error('Error linking wallet to profile:', updateError);
             return NextResponse.json(
                 { error: 'Failed to link wallet to account', details: updateError.message },
                 { status: 500 }
             );
         }
 
-        // 5. Update/create profile record
-        const { error: profileError } = await supabaseService
-            .from('profiles')
-            .upsert({
-                user_id: existingUser.id,
-                address: normalizedAddress,
-                on_chain: false,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id' });
-
-        if (profileError) {
-            console.error('Error updating profile record:', profileError);
-            // Don't fail - profile record is for audit/indexing
-        }
+        // 🛑 REMOVED STEP 5: The separate upsert to 'profiles' is redundant
+        // since the main update in step 4 now handles the 'profiles' table.
 
         return NextResponse.json({
             success: true,
             message: 'Wallet linked successfully!',
             userInfo: {
-                userId: existingUser.id,
+                profileId: existingProfile.id, // Consistent with 'profiles' table name
                 email: normalizedEmail,
                 walletAddress: normalizedAddress,
                 walletVerified: true
