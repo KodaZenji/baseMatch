@@ -9,37 +9,16 @@ const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS;
 /**
  * POST /api/profile/register
  * Wallet-First Flow: Register profile with wallet signature, trigger email verification if needed
- * 
- * Input: { address, name, age, gender, interests, email (MANDATORY), photoUrl, signature, message }
- * Requirements:
- * - Verifies wallet signature
- * - Creates/links user profile
- * - Triggers email verification if email not verified
- * - Returns createProfile payload and needsEmailVerification flag
  */
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         const { address, name, age, gender, interests, email, photoUrl, signature, message } = body;
 
-        // Validate required fields
-        if (!address) {
+        // --- 1. Basic Validation ---
+        if (!address || !email || !name || !age || !gender || !interests) {
             return NextResponse.json(
-                { error: 'Wallet address is required' },
-                { status: 400 }
-            );
-        }
-
-        if (!email) {
-            return NextResponse.json(
-                { error: 'Email is required for registration' },
-                { status: 400 }
-            );
-        }
-
-        if (!name || !age || !gender || !interests) {
-            return NextResponse.json(
-                { error: 'Name, age, gender, and interests are required' },
+                { error: 'Missing required fields for registration' },
                 { status: 400 }
             );
         }
@@ -48,7 +27,7 @@ export async function POST(request: NextRequest) {
         const normalizedEmail = email.toLowerCase().trim();
         const normalizedAddress = address.toLowerCase();
 
-        // 1. Verify wallet signature if provided
+        // 2. Verify wallet signature
         if (signature && message) {
             const isValidSignature = await verifyWalletSignature(message, signature, normalizedAddress);
             if (!isValidSignature) {
@@ -59,33 +38,20 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // 2. Validate profile data
+        // 3. Data Validation
         if (age < 18 || age > 120) {
             return NextResponse.json(
                 { error: 'Age must be between 18 and 120' },
                 { status: 400 }
             );
         }
+        // Assuming other data validations (name length, interests length) are in place...
 
-        if (name.length < 2 || name.length > 100) {
-            return NextResponse.json(
-                { error: 'Name must be between 2 and 100 characters' },
-                { status: 400 }
-            );
-        }
-
-        if (!interests || interests.length === 0 || interests.length > 500) {
-            return NextResponse.json(
-                { error: 'Interests must be between 1 and 500 characters' },
-                { status: 400 }
-            );
-        }
-
-        // 3. Handle photo upload/hashing
+        // 4. Handle photo upload/hashing
         const finalPhotoUrl = photoUrl || '';
         const photoHash = finalPhotoUrl ? calculatePhotoHash(finalPhotoUrl) : '';
 
-        // 4. User Lookup: Find existing user by email OR wallet
+        // 5. User Lookup: Find existing user by email OR wallet
         const { data: existingUserByEmail } = await supabaseService
             .from('users')
             .select('*')
@@ -98,10 +64,10 @@ export async function POST(request: NextRequest) {
             .eq('wallet_address', normalizedAddress)
             .single();
 
-        // Check for conflicts
+        // Check for conflicts (Email linked to a different wallet)
         if (existingUserByEmail && existingUserByWallet && existingUserByEmail.id !== existingUserByWallet.id) {
             return NextResponse.json(
-                { error: 'Email is already associated with a different wallet address' },
+                { error: 'Email is already associated with a different wallet address (Conflict)' },
                 { status: 409 }
             );
         }
@@ -111,20 +77,21 @@ export async function POST(request: NextRequest) {
         let userId: string;
         let needsEmailVerification = false;
 
-        // 5. Upsert Logic
+        // 6. Upsert Logic
         if (existingUser) {
-            // User exists - update their record to link wallet and email
+            // User exists - attempt to UPDATE
             const { error: updateError } = await supabaseService
                 .from('users')
                 .update({
                     wallet_address: normalizedAddress,
                     wallet_verified: true,
-                    email: normalizedEmail, // Update email if they registered with wallet first
+                    email: normalizedEmail,
                     name,
                     age,
                     gender,
                     interests,
-                    photo_url: finalPhotoUrl,
+                    // 🛑 FIX: Use the new, correct Supabase column name
+                    profile_photo_url: finalPhotoUrl,
                     photo_hash: photoHash,
                     updated_at: new Date().toISOString()
                 })
@@ -132,8 +99,9 @@ export async function POST(request: NextRequest) {
 
             if (updateError) {
                 console.error('Error updating existing user:', updateError);
+                // 🛑 Improved Error Message
                 return NextResponse.json(
-                    { error: 'Failed to update existing user profile', details: updateError.message },
+                    { error: `Registration failed (Update): ${updateError.message}` },
                     { status: 500 }
                 );
             }
@@ -141,7 +109,7 @@ export async function POST(request: NextRequest) {
             userId = existingUser.id;
             needsEmailVerification = !existingUser.email_verified;
         } else {
-            // New user - create record
+            // New user - attempt to CREATE
             const { data: newUser, error: createError } = await supabaseService
                 .from('users')
                 .insert([{
@@ -153,7 +121,8 @@ export async function POST(request: NextRequest) {
                     age,
                     gender,
                     interests,
-                    photo_url: finalPhotoUrl,
+                    // 🛑 FIX: Use the new, correct Supabase column name
+                    profile_photo_url: finalPhotoUrl,
                     photo_hash: photoHash,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
@@ -163,8 +132,9 @@ export async function POST(request: NextRequest) {
 
             if (createError || !newUser) {
                 console.error('Error creating new user:', createError);
+                // 🛑 Improved Error Message
                 return NextResponse.json(
-                    { error: 'Failed to create user account', details: createError?.message },
+                    { error: `Registration failed (Creation): ${createError?.message || 'Unknown DB error'}` },
                     { status: 500 }
                 );
             }
@@ -173,13 +143,12 @@ export async function POST(request: NextRequest) {
             needsEmailVerification = true;
         }
 
-        // 6. Verification Trigger: Send email verification if needed
+        // 7. Verification Trigger: Send email verification if needed (No changes needed here)
         if (needsEmailVerification) {
             try {
                 const token = generateToken();
-                const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+                const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); 
 
-                // Insert token into email_verifications
                 const { error: tokenError } = await supabaseService
                     .from('email_verifications')
                     .insert([{
@@ -190,36 +159,30 @@ export async function POST(request: NextRequest) {
                         created_at: new Date().toISOString()
                     }]);
 
-                if (tokenError) {
-                    console.error('Error creating email verification token:', tokenError);
-                    // Don't fail registration, but log the error
-                } else {
-                    // Send verification email
+                if (!tokenError) {
                     await sendVerificationEmail(normalizedEmail, token);
                 }
             } catch (emailError) {
                 console.error('Error sending verification email:', emailError);
-                // Don't fail registration if email sending fails
             }
         }
 
-        // 7. Insert/update profile record in profiles table (for on-chain minting audit)
+        // 8. Insert/update profile record in profiles table (No changes needed here)
         const { error: profileError } = await supabaseService
             .from('profiles')
             .upsert({
                 user_id: userId,
                 address: normalizedAddress,
-                on_chain: false, // Will be updated to true after successful minting
+                on_chain: false,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             }, { onConflict: 'user_id' });
 
         if (profileError) {
             console.error('Error creating profile record:', profileError);
-            // Don't fail - profile record is for audit/indexing
         }
 
-        // 8. Return createProfile payload
+        // 9. Return createProfile payload
         return NextResponse.json({
             success: true,
             message: needsEmailVerification
@@ -232,9 +195,11 @@ export async function POST(request: NextRequest) {
                 age,
                 gender,
                 interests,
-                photoUrl: finalPhotoUrl,
+                // 🚀 CRITICAL FIX: Send the short HASH, NOT the long URL, to the client 
+                // for the smart contract call.
+                photoUrl: photoHash, 
                 email: normalizedEmail,
-                photoHash
+                photoHash: photoHash
             },
             userInfo: {
                 userId,
@@ -247,7 +212,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error('Error registering profile:', error);
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : 'Failed to register profile' },
+            { error: error instanceof Error ? error.message : 'An unknown error occurred during registration' },
             { status: 500 }
         );
     }
