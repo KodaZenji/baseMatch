@@ -32,7 +32,7 @@ export default function BrowseProfiles() {
             console.log('Expressing interest in mock profile:', targetAddress);
 
             // Show success message
-            const profileName = profiles.find(p => p.address === targetAddress)?.name || 'user';
+            const profileName = profiles.find(p => p.wallet_address === targetAddress)?.name || 'user';
             setSuccessMessage(`Interest expressed in ${profileName}! (Test mode - no blockchain interaction)`);
             setShowSuccess(true);
 
@@ -122,7 +122,7 @@ export default function BrowseProfiles() {
                         key={profile.wallet_address}
                         profile={profile}
                         onExpressInterest={handleExpressInterest}
-                        onGift={() => handleGift(profile.address, profile.name)}
+                        onGift={() => handleGift(profile.wallet_address, profile.name)}
                         isPending={isPending}
                     />
                 ))}
