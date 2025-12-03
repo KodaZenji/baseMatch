@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase';
-import { verifyWalletSignature, generateToken, sendVerificationEmail, calculatePhotoHash } from '@/lib/utils';
+import { verifyWalletSignature, generateToken, sendVerificationEmail, calculatePhotoHash } from '@/lib/utils'; // Assumed to be imported
 
 export const runtime = 'nodejs';
 
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
         const normalizedEmail = email.toLowerCase().trim();
         const normalizedAddress = address.toLowerCase();
 
-        // 2. Verify wallet signature
+        // 2. Verify wallet signature (Only runs if signature/message are provided)
         if (signature && message) {
             const isValidSignature = await verifyWalletSignature(message, signature, normalizedAddress);
             if (!isValidSignature) {
@@ -45,43 +45,45 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
-        // Assuming other data validations (name length, interests length) are in place...
 
         // 4. Handle photo upload/hashing
         const finalPhotoUrl = photoUrl || '';
         const photoHash = finalPhotoUrl ? calculatePhotoHash(finalPhotoUrl) : '';
 
-        // 5. User Lookup: Find existing user by email OR wallet
-        const { data: existingUserByEmail } = await supabaseService
-            .from('users')
+        // 5. Profile Lookup: Find existing profile by email OR wallet
+        // 🛑 FIX 1: Use 'profiles' table
+        const { data: existingProfileByEmail } = await supabaseService
+            .from('profiles') 
             .select('*')
             .eq('email', normalizedEmail)
             .single();
 
-        const { data: existingUserByWallet } = await supabaseService
-            .from('users')
+        // 🛑 FIX 2: Use 'profiles' table
+        const { data: existingProfileByWallet } = await supabaseService
+            .from('profiles')
             .select('*')
             .eq('wallet_address', normalizedAddress)
             .single();
 
         // Check for conflicts (Email linked to a different wallet)
-        if (existingUserByEmail && existingUserByWallet && existingUserByEmail.id !== existingUserByWallet.id) {
+        if (existingProfileByEmail && existingProfileByWallet && existingProfileByEmail.id !== existingProfileByWallet.id) {
             return NextResponse.json(
                 { error: 'Email is already associated with a different wallet address (Conflict)' },
                 { status: 409 }
             );
         }
 
-        const existingUser = existingUserByEmail || existingUserByWallet;
+        const existingProfile = existingProfileByEmail || existingProfileByWallet;
 
-        let userId: string;
+        let profileId: string; // 🛑 Renamed from userId to profileId
         let needsEmailVerification = false;
 
         // 6. Upsert Logic
-        if (existingUser) {
-            // User exists - attempt to UPDATE
+        if (existingProfile) {
+            // Profile exists - attempt to UPDATE
+            // 🛑 FIX 3: Use 'profiles' table
             const { error: updateError } = await supabaseService
-                .from('users')
+                .from('profiles')
                 .update({
                     wallet_address: normalizedAddress,
                     wallet_verified: true,
@@ -90,28 +92,27 @@ export async function POST(request: NextRequest) {
                     age,
                     gender,
                     interests,
-                    // 🛑 FIX: Use the new, correct Supabase column name
                     profile_photo_url: finalPhotoUrl,
                     photo_hash: photoHash,
                     updated_at: new Date().toISOString()
                 })
-                .eq('id', existingUser.id);
+                .eq('id', existingProfile.id);
 
             if (updateError) {
-                console.error('Error updating existing user:', updateError);
-                // 🛑 Improved Error Message
+                console.error('Error updating existing profile:', updateError);
                 return NextResponse.json(
                     { error: `Registration failed (Update): ${updateError.message}` },
                     { status: 500 }
                 );
             }
 
-            userId = existingUser.id;
-            needsEmailVerification = !existingUser.email_verified;
+            profileId = existingProfile.id; // 🛑 Use profileId
+            needsEmailVerification = !existingProfile.email_verified;
         } else {
-            // New user - attempt to CREATE
-            const { data: newUser, error: createError } = await supabaseService
-                .from('users')
+            // New profile - attempt to CREATE
+            // 🛑 FIX 4: Use 'profiles' table
+            const { data: newProfile, error: createError } = await supabaseService
+                .from('profiles')
                 .insert([{
                     email: normalizedEmail,
                     wallet_address: normalizedAddress,
@@ -121,7 +122,6 @@ export async function POST(request: NextRequest) {
                     age,
                     gender,
                     interests,
-                    // 🛑 FIX: Use the new, correct Supabase column name
                     profile_photo_url: finalPhotoUrl,
                     photo_hash: photoHash,
                     created_at: new Date().toISOString(),
@@ -130,20 +130,19 @@ export async function POST(request: NextRequest) {
                 .select('id')
                 .single();
 
-            if (createError || !newUser) {
-                console.error('Error creating new user:', createError);
-                // 🛑 Improved Error Message
+            if (createError || !newProfile) {
+                console.error('Error creating new profile:', createError);
                 return NextResponse.json(
                     { error: `Registration failed (Creation): ${createError?.message || 'Unknown DB error'}` },
                     { status: 500 }
                 );
             }
 
-            userId = newUser.id;
+            profileId = newProfile.id; // 🛑 Use profileId
             needsEmailVerification = true;
         }
 
-        // 7. Verification Trigger: Send email verification if needed (No changes needed here)
+        // 7. Verification Trigger: Send email verification if needed
         if (needsEmailVerification) {
             try {
                 const token = generateToken();
@@ -152,7 +151,7 @@ export async function POST(request: NextRequest) {
                 const { error: tokenError } = await supabaseService
                     .from('email_verifications')
                     .insert([{
-                        user_id: userId,
+                        user_id: profileId, // Pass profileId as user_id for the token table
                         email: normalizedEmail,
                         token,
                         expires_at: expiresAt.toISOString(),
@@ -167,22 +166,10 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // 8. Insert/update profile record in profiles table (No changes needed here)
-        const { error: profileError } = await supabaseService
-            .from('profiles')
-            .upsert({
-                user_id: userId,
-                address: normalizedAddress,
-                on_chain: false,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id' });
+        // 🛑 REMOVED STEP 8: The separate upsert to 'profiles' is now redundant 
+        // as the primary upsert in step 6 now targets the 'profiles' table.
 
-        if (profileError) {
-            console.error('Error creating profile record:', profileError);
-        }
-
-        // 9. Return createProfile payload
+        // 8. Return createProfile payload
         return NextResponse.json({
             success: true,
             message: needsEmailVerification
@@ -195,14 +182,12 @@ export async function POST(request: NextRequest) {
                 age,
                 gender,
                 interests,
-                // 🚀 CRITICAL FIX: Send the short HASH, NOT the long URL, to the client 
-                // for the smart contract call.
                 photoUrl: photoHash, 
                 email: normalizedEmail,
                 photoHash: photoHash
             },
             userInfo: {
-                userId,
+                profileId, // 🛑 Use profileId
                 email: normalizedEmail,
                 walletAddress: normalizedAddress,
                 emailVerified: !needsEmailVerification
