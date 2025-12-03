@@ -16,13 +16,60 @@ export default function MintPage() {
     const [mintData, setMintData] = useState<any>(null);
     const [error, setError] = useState('');
     const [isMinting, setIsMinting] = useState(false);
-    
-    // State for checking profile status before minting
     const [isCheckingStatus, setIsCheckingStatus] = useState(true);
     const [statusError, setStatusError] = useState('');
+    
+    // New state to track the critical off-chain sync status
+    const [isSyncing, setIsSyncing] = useState(false); 
 
+    // Helper function to sync the profile off-chain after a successful mint
+    const syncProfileWithWallet = async (walletAddress: string) => {
+        setIsSyncing(true);
+        const emailFirstReg = localStorage.getItem('emailFirstMint');
+        
+        if (emailFirstReg) {
+            try {
+                const data = JSON.parse(emailFirstReg);
+                const profileId = data.profileId; // The ID created during email registration
+
+                if (!profileId) {
+                    console.error("Profile ID missing in localStorage. Cannot sync.");
+                    setIsSyncing(false);
+                    return; 
+                }
+
+                // 🛑 CRITICAL API CALL: Update Supabase profile with wallet address and verification status
+                const response = await fetch('/api/link-wallet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        profileId: profileId,
+                        walletAddress: walletAddress,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Failed to sync wallet address to profile in Supabase:', errorData);
+                    setError('Mint success, but failed to sync wallet to profile database. Contact support.');
+                } else {
+                    console.log('Successfully synced wallet address to existing profile.');
+                }
+
+            } catch (e) {
+                console.error("Error parsing emailFirstMint data or syncing profile:", e);
+                setError('Mint success, but internal error syncing profile. Contact support.');
+            } finally {
+                setIsSyncing(false);
+            }
+        } else {
+            // For Wallet-First flow, the profile is assumed to be created/synced during initial registration
+            setIsSyncing(false);
+        }
+    };
+
+    // --- EFFECT 1: Check Profile Status and Load Data ---
     useEffect(() => {
-        // Only run if wallet is connected and we have an address
         if (!address) {
             setIsCheckingStatus(false);
             setMintData(null);
@@ -34,7 +81,7 @@ export default function MintPage() {
             setStatusError('');
 
             try {
-                // 🛑 Step 1: Check if the user is already registered/minted
+                // Step 1: Check if the user is already registered/minted
                 const response = await fetch('/api/profile/status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -44,7 +91,6 @@ export default function MintPage() {
                 const statusData = await response.json();
 
                 if (response.ok && statusData.profileExists) {
-                    // ✅ FIX: User found! Redirect to the root dashboard ('/')
                     console.log('User profile found. Redirecting to dashboard.');
                     router.push('/'); 
                     return;
@@ -55,7 +101,6 @@ export default function MintPage() {
                 const emailFirstReg = localStorage.getItem('emailFirstMint');
                 const regString = walletReg || emailFirstReg;
 
-                // ✅ FIX: Safely parse localStorage item (prevents TypeScript error)
                 if (regString) {
                     try {
                         const data = JSON.parse(regString);
@@ -79,21 +124,30 @@ export default function MintPage() {
         checkProfileStatus();
     }, [address, router]); 
 
-    // Handle successful mint
+    // --- EFFECT 2: Handle Successful Mint and Sync ---
     useEffect(() => {
-        if (isSuccess && mintData) {
-            // Clear registration data
+        // This runs once the transaction is confirmed on-chain (isSuccess)
+        if (isSuccess && mintData && address) {
+            
+            // 1. CRITICAL STEP: Sync the profile in the database
+            syncProfileWithWallet(address);
+            
+            // 2. Clear registration data
             localStorage.removeItem('walletRegistration');
             localStorage.removeItem('emailFirstMint');
 
-            // Redirect to dashboard
+            // 3. Redirect to dashboard
             setTimeout(() => {
-                // ✅ FIX: After a successful mint, redirect to the root page ('/')
                 router.push('/'); 
-            }, 2000);
+            }, 3000); // Increased delay to allow syncProfileWithWallet to run and set status
         }
-    }, [isSuccess, mintData, router]);
+    }, [isSuccess, mintData, address, router]);
 
+
+    // ----------------------------------------------------------------------
+    // --- RENDER LOGIC ---
+    // ----------------------------------------------------------------------
+    
     // 🛑 Status Check Loading Screen
     if (isCheckingStatus) {
         return (
@@ -220,11 +274,13 @@ export default function MintPage() {
                     </div>
                 )}
 
-                {isSuccess ? (
+                {isSuccess || isSyncing ? (
                     <>
                         <div className="mb-6">
-                            <div className="text-6xl mb-4">🎉</div>
-                            <p className="text-gray-700 text-lg font-semibold">Profile Minted Successfully!</p>
+                            <div className="text-6xl mb-4">{isSyncing ? '⏳' : '🎉'}</div>
+                            <p className="text-gray-700 text-lg font-semibold">
+                                {isSyncing ? 'Synchronizing profile status...' : 'Profile Minted Successfully!'}
+                            </p>
                         </div>
                         <p className="text-gray-600 mb-6">Your NFT profile has been created on Base Sepolia.</p>
                         {mintData?.needsEmailVerification && (
@@ -267,7 +323,7 @@ export default function MintPage() {
                         </button>
 
                         <button
-                            onClick={() => router.push('/')}
+                            onClick={() => router.push('/')} 
                             className="text-gray-600 hover:text-gray-800 text-sm"
                         >
                             Back to home
