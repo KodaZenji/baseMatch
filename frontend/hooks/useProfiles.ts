@@ -3,7 +3,7 @@ import { useReadContract } from 'wagmi';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 
 interface Profile {
-    address: string;
+  wallet_address: string;
     name: string;
     age: number;
     gender: string;
@@ -46,7 +46,7 @@ export function useProfiles() {
 
                 const data = await response.json();
                 const fetchedProfiles: Profile[] = (data.profiles || []).map((profile: any) => ({
-                    address: profile.address,
+                    wallet_address: profile.wallet_address,
                     name: profile.name || '',
                     age: profile.age || 0,
                     gender: profile.gender || '',
