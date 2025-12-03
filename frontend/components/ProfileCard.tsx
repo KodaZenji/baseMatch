@@ -26,9 +26,9 @@ export default function ProfileCard({
 
     // Generate avatar based on wallet address
     useEffect(() => {
-        if (profile.address) {
+        if (profile.wallet_address) {
             const icon = blockies.create({
-                seed: profile.address.toLowerCase(),
+                seed: profile.wallet_address.toLowerCase(),
                 size: 8,
                 scale: 16,
             });
@@ -53,7 +53,7 @@ export default function ProfileCard({
 
         try {
             if (onExpressInterest) {
-                await onExpressInterest(profile.address);
+                await onExpressInterest(profile.wallet_address);
                 showNotification('Interest expressed successfully!', 'success');
             } else {
                 writeContract({
