@@ -1,6 +1,68 @@
 import { randomBytes } from 'crypto';
 import { verifyMessage } from 'viem';
 import * as brevo from '@getbrevo/brevo';
+import { createPublicClient, http, Address } from 'viem';
+import { baseSepolia } from 'viem/chains'; 
+
+const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS as Address;
+
+// Minimal ABI for checking ownership (balanceOf function)
+const PROFILE_NFT_ABI = [
+    {
+        name: 'balanceOf',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [{ type: 'address', name: 'owner' }],
+        outputs: [{ type: 'uint256', name: '' }],
+    },
+] as const;
+
+// Setup a Viem Public Client for server-side contract reads
+const publicClient = createPublicClient({
+  chain: baseSepolia, 
+  transport: http(),
+});
+
+/**
+ * ✅ FIX 1: Implement and export checkNftOwnership for /api/profile/status
+ * Check if the given address owns the Profile NFT (balance > 0).
+ */
+export async function checkNftOwnership(address: string): Promise<boolean> {
+    if (!PROFILE_NFT_ADDRESS) {
+        console.error("NFT Contract address is not set.");
+        return false;
+    }
+    
+    try {
+        const balance = await publicClient.readContract({
+            address: PROFILE_NFT_ADDRESS,
+            abi: PROFILE_NFT_ABI,
+            functionName: 'balanceOf',
+            args: [address as Address],
+        });
+
+        // Balance is a BigInt. Check if it's greater than 0.
+        return balance > 0n; 
+    } catch (error) {
+        console.error('Error checking NFT balance:', error);
+        // Return false if there's a contract read error
+        return false; 
+    }
+}
+
+
+/**.
+ */
+export function calculatePhotoHash(photoUrl: string): string {
+    // 🛑 Remove browser-specific code. Use 'crypto' module directly.
+    const crypto = require('crypto');
+    
+    // Hash the URL and return as a 64-character hex string with the '0x' prefix
+    const hash = crypto.createHash('sha256').update(photoUrl).digest('hex');
+    
+    // This is the format required for the 'bytes32' or 'string' type in most contracts
+    return '0x' + hash; 
+}
 
 /**
  * Verify a wallet signature using viem
@@ -31,7 +93,7 @@ export function generateToken(): string {
 }
 
 /**
- * Send email verification via Brevo
+ * Send email verification via Brevo (No changes needed here)
  */
 export async function sendVerificationEmail(email: string, token: string): Promise<void> {
     if (!process.env.BREVO_API_KEY) {
@@ -56,6 +118,7 @@ export async function sendVerificationEmail(email: string, token: string): Promi
     sendSmtpEmail.to = [{ email }];
     sendSmtpEmail.subject = 'Verify your email address - BaseMatch';
     sendSmtpEmail.htmlContent = `
+// ... (The HTML email content remains the same)
 <!DOCTYPE html>
 <html>
 <head>
@@ -113,18 +176,4 @@ export async function sendVerificationEmail(email: string, token: string): Promi
     `;
 
     await apiInstance.sendTransacEmail(sendSmtpEmail);
-}
-
-/**
- * Calculate photo hash using a simple hash function (compatible with contract)
- * Note: In production, ensure this matches the contract's hashing method
- */
-export function calculatePhotoHash(photoUrl: string): string {
-    // Using Web Crypto API for hashing
-    const encoder = new TextEncoder();
-    const data = encoder.encode(photoUrl);
-
-    // For Node.js environment, use crypto module
-    const crypto = require('crypto');
-    return '0x' + crypto.createHash('sha256').update(photoUrl).digest('hex');
 }
