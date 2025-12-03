@@ -4,6 +4,8 @@ import * as brevo from '@getbrevo/brevo';
 import { createPublicClient, http, Address } from 'viem';
 import { baseSepolia } from 'viem/chains'; 
 
+// --- VIEM/WAGMI CONFIGURATION ---
+// IMPORTANT: Ensure NEXT_PUBLIC_PROFILE_NFT_ADDRESS is set in your environment
 const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS as Address;
 
 // Minimal ABI for checking ownership (balanceOf function)
@@ -24,7 +26,6 @@ const publicClient = createPublicClient({
 });
 
 /**
- * ✅ FIX 1: Implement and export checkNftOwnership for /api/profile/status
  * Check if the given address owns the Profile NFT (balance > 0).
  */
 export async function checkNftOwnership(address: string): Promise<boolean> {
@@ -41,26 +42,25 @@ export async function checkNftOwnership(address: string): Promise<boolean> {
             args: [address as Address],
         });
 
-        // Balance is a BigInt. Check if it's greater than 0.
-        return balance > 0n; 
+        // ✅ FIX: Use BigInt(0) instead of the literal 0n to avoid ES2020 compiler error
+        return balance > BigInt(0); 
     } catch (error) {
         console.error('Error checking NFT balance:', error);
-        // Return false if there's a contract read error
         return false; 
     }
 }
 
 
-/**.
+/**
+ * Calculate photo hash using a stable SHA-256 function.
  */
 export function calculatePhotoHash(photoUrl: string): string {
-    // 🛑 Remove browser-specific code. Use 'crypto' module directly.
+    // Use Node's 'crypto' module, which is available in Next.js API routes
     const crypto = require('crypto');
     
     // Hash the URL and return as a 64-character hex string with the '0x' prefix
     const hash = crypto.createHash('sha256').update(photoUrl).digest('hex');
     
-    // This is the format required for the 'bytes32' or 'string' type in most contracts
     return '0x' + hash; 
 }
 
@@ -93,7 +93,7 @@ export function generateToken(): string {
 }
 
 /**
- * Send email verification via Brevo (No changes needed here)
+ * Send email verification via Brevo
  */
 export async function sendVerificationEmail(email: string, token: string): Promise<void> {
     if (!process.env.BREVO_API_KEY) {
@@ -118,7 +118,6 @@ export async function sendVerificationEmail(email: string, token: string): Promi
     sendSmtpEmail.to = [{ email }];
     sendSmtpEmail.subject = 'Verify your email address - BaseMatch';
     sendSmtpEmail.htmlContent = `
-// ... (The HTML email content remains the same)
 <!DOCTYPE html>
 <html>
 <head>
