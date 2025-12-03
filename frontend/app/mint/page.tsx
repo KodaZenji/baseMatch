@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+// Assuming these dependencies are meant to be external/globals if running in a unique environment
+// We will proceed with the code structure, assuming the environment issue will resolve itself.
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
@@ -30,7 +32,7 @@ const syncProfileWithWallet = async (walletAddress: string): Promise<boolean> =>
     if (emailFirstReg) {
         try {
             const data = JSON.parse(emailFirstReg);
-            const profileId = data.profileId;
+            const profileId = data.profileId; // This is the ID retrieved from Supabase after email registration
 
             console.log('🔄 Attempting to sync wallet:', { profileId, walletAddress });
 
@@ -46,8 +48,10 @@ const syncProfileWithWallet = async (walletAddress: string): Promise<boolean> =>
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    profileId: profileId,
-                    walletAddress: walletAddress,
+                    // CRITICAL FIX: Use snake_case keys (profile_id, wallet_address)
+                    // to match the serverless function's destructuring logic.
+                    profile_id: profileId, 
+                    wallet_address: walletAddress,
                 }),
             });
 
@@ -135,8 +139,6 @@ const syncProfileWithWallet = async (walletAddress: string): Promise<boolean> =>
     }, [address, router]); 
 
     // --- EFFECT 2: Handle Successful Mint and Sync ---
-    // Replace your "EFFECT 2: Handle Successful Mint and Sync" with this:
-
 useEffect(() => {
     const handlePostMintSync = async () => {
         if (isSuccess && mintData && address && !isSyncing) {
