@@ -135,24 +135,37 @@ const syncProfileWithWallet = async (walletAddress: string): Promise<boolean> =>
     }, [address, router]); 
 
     // --- EFFECT 2: Handle Successful Mint and Sync ---
-    useEffect(() => {
-        // This runs once the transaction is confirmed on-chain (isSuccess)
-        if (isSuccess && mintData && address) {
-            
-            // 1. CRITICAL STEP: Sync the profile in the database
-            syncProfileWithWallet(address);
-            
-            // 2. Clear registration data
-            localStorage.removeItem('walletRegistration');
-            localStorage.removeItem('emailFirstMint');
+    // Replace your "EFFECT 2: Handle Successful Mint and Sync" with this:
 
-            // 3. Redirect to dashboard
-            setTimeout(() => {
-                router.push('/'); 
-            }, 3000); // Increased delay to allow syncProfileWithWallet to run and set status
+useEffect(() => {
+    const handlePostMintSync = async () => {
+        if (isSuccess && mintData && address && !isSyncing) {
+            console.log('🎉 Mint successful, starting sync process...');
+            
+            // Wait for the sync to complete
+            const syncSuccess = await syncProfileWithWallet(address);
+            
+            if (syncSuccess) {
+                console.log('✅ Sync completed successfully, cleaning up...');
+                
+                // Clear registration data only after successful sync
+                localStorage.removeItem('walletRegistration');
+                localStorage.removeItem('emailFirstMint');
+
+                // Redirect after a short delay
+                setTimeout(() => {
+                    console.log('🔄 Redirecting to dashboard...');
+                    router.push('/'); 
+                }, 2000);
+            } else {
+                console.error('❌ Sync failed, not redirecting automatically');
+                // User can still manually navigate, but we don't auto-redirect
+            }
         }
-    }, [isSuccess, mintData, address, router]);
+    };
 
+    handlePostMintSync();
+}, [isSuccess, mintData, address]); // Removed router and isSyncing from deps to avoid loops
 
     // ----------------------------------------------------------------------
     // --- RENDER LOGIC ---
