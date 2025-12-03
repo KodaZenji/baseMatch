@@ -42,9 +42,17 @@ export default function ProfileEdit() {
     // Check if user registered via email first (no wallet yet)
     useEffect(() => {
         const checkUserStatus = async () => {
-            // Try to get user info from localStorage or API
+            // Check if wallet is connected
+            if (isConnected && address) {
+                setHasWallet(true);
+                return;
+            }
+
+            // For non-wallet users, try to get user info from localStorage
             const storedEmail = localStorage.getItem('userEmail');
-            if (storedEmail && !isConnected) {
+            console.log('Checking user status - storedEmail:', storedEmail, 'isConnected:', isConnected);
+            
+            if (storedEmail) {
                 setUserEmail(storedEmail);
                 setHasWallet(false);
                 
@@ -58,6 +66,7 @@ export default function ProfileEdit() {
                     
                     if (response.ok) {
                         const data = await response.json();
+                        console.log('Profile data fetched:', data);
                         if (data.profile) {
                             setFormData({
                                 name: data.profile.name || '',
@@ -68,6 +77,11 @@ export default function ProfileEdit() {
                                 email: data.profile.email || '',
                             });
                             setNewPhotoUrl(data.profile.photoUrl || '');
+                            
+                            // Check if user already has a wallet linked
+                            if (data.profile.walletAddress) {
+                                setHasWallet(true);
+                            }
                         }
                     }
                 } catch (error) {
@@ -77,7 +91,7 @@ export default function ProfileEdit() {
         };
         
         checkUserStatus();
-    }, [isConnected]);
+    }, [isConnected, address]);
 
     // Generate avatar based on wallet address
     useEffect(() => {
@@ -416,9 +430,29 @@ export default function ProfileEdit() {
                         <p className="text-gray-600 text-sm">Click the pencil to upload your photo (max 3MB)</p>
                     </div>
 
-                    {/* Wallet Connection Section - Only show if no wallet */}
-                    {!hasWallet && userEmail && (
-                        <WalletConnectionSection userEmail={userEmail} onWalletLinked={handleWalletLinked} />
+                    {/* Wallet Connection Section - Show if user has email but no wallet linked */}
+                    {!hasWallet && (formData.email || userEmail) && (
+                        <div>
+                            <WalletConnectionSection 
+                                userEmail={formData.email || userEmail} 
+                                onWalletLinked={handleWalletLinked} 
+                            />
+                            <p className="text-xs text-blue-600 mt-2">
+                                💡 Connect your wallet to mint your profile NFT
+                            </p>
+                        </div>
+                    )}
+                    
+                    {/* Debug info - Remove after testing */}
+                    {process.env.NODE_ENV === 'development' && (
+                        <div className="bg-gray-100 p-3 rounded text-xs">
+                            <p>Debug Info:</p>
+                            <p>hasWallet: {hasWallet ? 'true' : 'false'}</p>
+                            <p>userEmail: {userEmail || 'not set'}</p>
+                            <p>formData.email: {formData.email || 'not set'}</p>
+                            <p>isConnected: {isConnected ? 'true' : 'false'}</p>
+                            <p>address: {address || 'not set'}</p>
+                        </div>
                     )}
 
                     {/* Email Section */}
