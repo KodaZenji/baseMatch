@@ -53,7 +53,7 @@ export default function BrowseProfiles() {
             });
 
             // Show success message
-            const profileName = profiles.find(p => p.address === targetAddress)?.name || 'user';
+            const profileName = profiles.find(p => p.wallet_address === targetAddress)?.name || 'user';
             setSuccessMessage(`Interest expressed in ${profileName}! Transaction submitted.`);
             setShowSuccess(true);
 
