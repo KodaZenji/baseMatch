@@ -139,7 +139,7 @@ export default function BrowseProfiles() {
             <GiftingModal
                 isOpen={showGiftingModal}
                 onClose={() => setShowGiftingModal(false)}
-                recipientAddress={selectedRecipient.wallet_address}
+                recipientAddress={selectedRecipient.address}
                 recipientName={selectedRecipient.name}
             />
         </div>
