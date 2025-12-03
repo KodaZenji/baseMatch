@@ -5,6 +5,7 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagm
 import { useRouter } from 'next/navigation';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import Link from 'next/link';
 
 export default function MintPage() {
     const router = useRouter();
@@ -24,7 +25,6 @@ export default function MintPage() {
         // Only run if wallet is connected and we have an address
         if (!address) {
             setIsCheckingStatus(false);
-            // If disconnected, clear any pending data just in case
             setMintData(null);
             return;
         }
@@ -44,18 +44,18 @@ export default function MintPage() {
                 const statusData = await response.json();
 
                 if (response.ok && statusData.profileExists) {
-                    // 🛑 CRITICAL FIX: User found! Redirect to the main app dashboard
+                    // ✅ FIX: User found! Redirect to the root dashboard ('/')
                     console.log('User profile found. Redirecting to dashboard.');
-                    router.push('/browse'); // Change to your main app route
+                    router.push('/'); 
                     return;
                 }
 
-                // Step 2: If not existing, proceed to safely load minting payload
+                // Step 2: If not existing, proceed to safely load minting payload from localStorage
                 const walletReg = localStorage.getItem('walletRegistration');
                 const emailFirstReg = localStorage.getItem('emailFirstMint');
-                const regString = walletReg || emailFirstReg; // Will be string or null
+                const regString = walletReg || emailFirstReg;
 
-                // ✅ FIX 3: Safely parse localStorage item
+                // ✅ FIX: Safely parse localStorage item (prevents TypeScript error)
                 if (regString) {
                     try {
                         const data = JSON.parse(regString);
@@ -77,9 +77,9 @@ export default function MintPage() {
         };
 
         checkProfileStatus();
-    }, [address, router]); // Re-run if address changes
+    }, [address, router]); 
 
-    // Handle successful mint (No change needed)
+    // Handle successful mint
     useEffect(() => {
         if (isSuccess && mintData) {
             // Clear registration data
@@ -88,12 +88,13 @@ export default function MintPage() {
 
             // Redirect to dashboard
             setTimeout(() => {
-                router.push('/browse'); // Change to your main app route
+                // ✅ FIX: After a successful mint, redirect to the root page ('/')
+                router.push('/'); 
             }, 2000);
         }
     }, [isSuccess, mintData, router]);
 
-    // 🛑 NEW RENDER BLOCK: Status Check Loading
+    // 🛑 Status Check Loading Screen
     if (isCheckingStatus) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
@@ -114,7 +115,7 @@ export default function MintPage() {
         );
     }
     
-    // Original wallet connection check
+    // Wallet connection check
     if (!isConnected) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
@@ -137,7 +138,7 @@ export default function MintPage() {
         );
     }
 
-    // Original mintData check
+    // Mint Data Payload check
     if (!mintData) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
@@ -157,7 +158,6 @@ export default function MintPage() {
         );
     }
 
-    // Original handleMint function (No changes needed, relies on fixed API payload)
     const handleMint = async () => {
         if (!mintData?.createProfilePayload && !mintData?.mintingPayload && !mintData?.registerWithEmailPayload) {
             setError('No minting payload available');
@@ -170,7 +170,7 @@ export default function MintPage() {
         try {
             // Determine which function to call
             if (mintData.useRegisterWithEmail) {
-                // Email-first flow: use registerWithEmail (no photo)
+                // Email-first flow
                 const payload = mintData.registerWithEmailPayload;
                 writeContract({
                     address: (mintData.contractAddress || CONTRACTS.PROFILE_NFT) as `0x${string}`,
@@ -185,9 +185,9 @@ export default function MintPage() {
                     ],
                 });
             } else {
-                // Wallet-first flow: use createProfile (with photo)
+                // Wallet-first flow
                 const payload = mintData.createProfilePayload || mintData.mintingPayload;
-                // CRITICAL: payload.photoUrl now contains the SHORT HASH from the API
+                // CRITICAL: payload.photoUrl contains the SHORT HASH generated by the API
                 writeContract({
                     address: (mintData.contractAddress || CONTRACTS.PROFILE_NFT) as `0x${string}`,
                     abi: PROFILE_NFT_ABI,
@@ -207,7 +207,6 @@ export default function MintPage() {
         }
     };
 
-    // Original render block (No change needed)
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
