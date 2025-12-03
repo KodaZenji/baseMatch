@@ -47,9 +47,9 @@ export default function VerifyEmailPage() {
 
                 // Store verification status
                 localStorage.setItem('emailVerified', JSON.stringify({
-                    email,
-                    userId: data.userId,
-                    timestamp: Date.now(),
+    email,
+    profileId: data.profileId, // <-- New, correct key
+    timestamp: Date.now(),
                 }));
 
                 // Redirect to email profile completion page (Email-First flow step 2)
