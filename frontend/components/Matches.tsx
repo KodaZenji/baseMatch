@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useMatches } from '@/hooks/useMatches';
-import { useProfile } from '@/hooks/useProfile';
 import ProfileCard from './ProfileCard';
 import GiftingModal from './GiftingModal';
+import ChatWindow from './ChatWindow';
 
 export default function Matches() {
     const { address } = useAccount();
@@ -13,16 +13,18 @@ export default function Matches() {
     const [profiles, setProfiles] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showGiftingModal, setShowGiftingModal] = useState(false);
+    const [showChatWindow, setShowChatWindow] = useState(false);
     const [selectedRecipient, setSelectedRecipient] = useState({ address: '', name: '' });
+    const [selectedChatMatch, setSelectedChatMatch] = useState<{ address: string; name: string } | null>(null);
 
-   
+
     useEffect(() => {
         const fetchProfiles = async () => {
             if (matches && matches.length > 0) {
                 setLoading(true);
                 try {
                     const profilePromises = matches.map(async (matchAddress) => {
-                        
+
                         const response = await fetch(`/api/profile/${matchAddress}`);
                         if (response.ok) {
                             const profile = await response.json();
@@ -61,6 +63,11 @@ export default function Matches() {
         setShowGiftingModal(true);
     };
 
+    const handleChatClick = (matchAddress: string, matchName: string) => {
+        setSelectedChatMatch({ address: matchAddress, name: matchName });
+        setShowChatWindow(true);
+    };
+
     if (matchesLoading || loading) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -89,11 +96,18 @@ export default function Matches() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {profiles.map((profile) => (
-                        <ProfileCard
-                            key={profile.address}
-                            profile={profile}
-                            onGift={() => handleGiftClick(profile.address, profile.name)}
-                        />
+                        <div key={profile.address} className="relative">
+                            <ProfileCard
+                                profile={profile}
+                                onGift={() => handleGiftClick(profile.address, profile.name)}
+                            />
+                            <button
+                                onClick={() => handleChatClick(profile.address, profile.name)}
+                                className="absolute top-4 right-14 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-3 py-2 rounded-lg font-semibold hover:opacity-90 text-sm z-10"
+                            >
+                                Chat
+                            </button>
+                        </div>
                     ))}
                 </div>
             )}
@@ -105,6 +119,18 @@ export default function Matches() {
                 recipientAddress={selectedRecipient.address}
                 recipientName={selectedRecipient.name}
             />
+
+            {/* Chat Window */}
+            {showChatWindow && address && selectedChatMatch && (
+                <ChatWindow
+                    user1Address={address}
+                    user2Address={selectedChatMatch.address}
+                    user1Name="You"
+                    user2Name={selectedChatMatch.name}
+                    currentUserAddress={address}
+                    onClose={() => setShowChatWindow(false)}
+                />
+            )}
         </div>
     );
 }

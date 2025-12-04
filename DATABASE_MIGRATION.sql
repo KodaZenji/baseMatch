@@ -205,6 +205,49 @@ WHERE schemaname = 'public'
 -- LIMIT 10;
 
 -- ============================================================================
+-- TABLE 4: chat_messages (End-to-End Encrypted Messaging for Matched Users)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user1_address TEXT NOT NULL,
+    user2_address TEXT NOT NULL,
+    sender_address TEXT NOT NULL,
+    encrypted_message TEXT NOT NULL,
+    nonce TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    read_status BOOLEAN DEFAULT FALSE,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_chat_messages_users ON chat_messages(user1_address, user2_address);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON chat_messages(sender_address);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_read_status ON chat_messages(read_status);
+
+-- Add comments
+COMMENT ON TABLE chat_messages IS 'Stores chat messages between matched users';
+COMMENT ON COLUMN chat_messages.user1_address IS 'First user in the match (wallet address)';
+COMMENT ON COLUMN chat_messages.user2_address IS 'Second user in the match (wallet address)';
+COMMENT ON COLUMN chat_messages.sender_address IS 'Address of the user who sent the message';
+COMMENT ON COLUMN chat_messages.encrypted_message IS 'Base64-encoded encrypted message content';
+COMMENT ON COLUMN chat_messages.nonce IS 'Base64-encoded nonce/IV for AES-GCM decryption';
+COMMENT ON COLUMN chat_messages.read_status IS 'Whether the message has been read by recipient';
+
+-- Enable RLS on chat_messages
+ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Users can read messages they are part of
+CREATE POLICY chat_messages_select_policy ON chat_messages
+    FOR SELECT
+    USING (auth.role() = 'service_role');
+
+-- Policy: Service role can do everything
+CREATE POLICY chat_messages_service_role_policy ON chat_messages
+    FOR ALL
+    USING (auth.role() = 'service_role');
+
+-- ============================================================================
 -- MIGRATION COMPLETE
 -- ============================================================================
 

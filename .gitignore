@@ -3,3 +3,4 @@ setupSupabaseTables.js
 
 # Documentation files
 *.md
+DATABASE_MIGRATION.sql
