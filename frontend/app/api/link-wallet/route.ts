@@ -7,10 +7,10 @@ export const runtime = 'nodejs';
 export async function POST(req: Request) {
     try {
         // 1. Safely parse the JSON request body
-        const { profile_id, wallet_address } = await req.json();
+        const { id, wallet_address } = await req.json();
 
         // 2. Validate essential data
-        if (!profile_id) {
+        if (!id) {
             console.error('Validation Error: Profile ID is missing in the request body.');
             // Returning a specific error to the client
             return NextResponse.json({ error: 'Profile ID missing. Cannot link wallet.' }, { status: 400 });
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
                 wallet_address: wallet_address, 
                 wallet_verified: true // <-- THIS IS THE CRITICAL FLAG
             })
-            .eq('id', profile_id)
+            .eq('id', id)
             .select();
 
         if (error) {
@@ -36,11 +36,11 @@ export async function POST(req: Request) {
         }
         
         if (data && data.length === 0) {
-             console.error(`Update failed: No profile found with ID: ${profile_id}`);
+             console.error(`Update failed: No profile found with ID: ${id}`);
              return NextResponse.json({ error: 'Profile not found or already updated.' }, { status: 404 });
         }
 
-        console.log(`Successfully linked wallet ${wallet_address} to profile ID ${profile_id}`);
+        console.log(`Successfully linked wallet ${wallet_address} to profile ID ${id}`);
         
         // 4. Success Response
         return NextResponse.json({ success: true, profile: data[0] });
