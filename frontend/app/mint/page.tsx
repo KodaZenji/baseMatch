@@ -1,13 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// Assuming these dependencies are meant to be external/globals if running in a unique environment
-// We will proceed with the code structure, assuming the environment issue will resolve itself.
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import Link from 'next/link';
 
 export default function MintPage() {
     const router = useRouter();
@@ -20,67 +17,63 @@ export default function MintPage() {
     const [isMinting, setIsMinting] = useState(false);
     const [isCheckingStatus, setIsCheckingStatus] = useState(true);
     const [statusError, setStatusError] = useState('');
-    
-    // New state to track the critical off-chain sync status
-    const [isSyncing, setIsSyncing] = useState(false); 
+    const [isSyncing, setIsSyncing] = useState(false);
 
     // Helper function to sync the profile off-chain after a successful mint
-const syncProfileWithWallet = async (walletAddress: string): Promise<boolean> => {
-    setIsSyncing(true);
-    const emailFirstReg = localStorage.getItem('emailFirstMint');
-    
-    if (emailFirstReg) {
-        try {
-            const data = JSON.parse(emailFirstReg);
-            const profileId = data.profileId; // This is the ID retrieved from Supabase after email registration
+    const syncProfileWithWallet = async (walletAddress: string): Promise<boolean> => {
+        setIsSyncing(true);
+        const emailFirstReg = localStorage.getItem('emailFirstMint');
+        
+        if (emailFirstReg) {
+            try {
+                const data = JSON.parse(emailFirstReg);
+                const profileId = data.profileId;
 
-            console.log('🔄 Attempting to sync wallet:', { profileId, walletAddress });
+                console.log('🔄 Attempting to sync wallet:', { profileId, walletAddress });
 
-            if (!profileId) {
-                console.error("❌ Profile ID missing in localStorage. Cannot sync.");
-                setError('Profile ID missing. Please contact support.');
+                if (!profileId) {
+                    console.error("❌ Profile ID missing in localStorage. Cannot sync.");
+                    setError('Profile ID missing. Please contact support.');
+                    setIsSyncing(false);
+                    return false;
+                }
+
+                // Make the API call with correct field names
+                const response = await fetch('/api/link-wallet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        profile_id: profileId,
+                        wallet_address: walletAddress,
+                    }),
+                });
+
+                const responseData = await response.json();
+                console.log('📡 API Response:', responseData);
+
+                if (!response.ok) {
+                    console.error('❌ Failed to sync wallet:', responseData);
+                    setError(`Mint successful, but failed to sync wallet: ${responseData.error || 'Unknown error'}`);
+                    setIsSyncing(false);
+                    return false;
+                }
+
+                console.log('✅ Successfully synced wallet to profile');
+                setIsSyncing(false);
+                return true;
+
+            } catch (e) {
+                console.error("❌ Error syncing profile:", e);
+                setError('Mint successful, but internal error syncing profile. Please contact support.');
                 setIsSyncing(false);
                 return false;
             }
-
-            // Make the API call
-            const response = await fetch('/api/link-wallet', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    // CRITICAL FIX: Use snake_case keys (profile_id, wallet_address)
-                    // to match the serverless function's destructuring logic.
-                    profile_id: profileId, 
-                    wallet_address: walletAddress,
-                }),
-            });
-
-            const responseData = await response.json();
-            console.log('📡 API Response:', responseData);
-
-            if (!response.ok) {
-                console.error('❌ Failed to sync wallet:', responseData);
-                setError(`Mint successful, but failed to sync wallet: ${responseData.error || 'Unknown error'}`);
-                setIsSyncing(false);
-                return false;
-            }
-
-            console.log('✅ Successfully synced wallet to profile');
+        } else {
+            console.log('ℹ️ No emailFirstMint data - assuming wallet-first flow');
             setIsSyncing(false);
             return true;
-
-        } catch (e) {
-            console.error("❌ Error syncing profile:", e);
-            setError('Mint successful, but internal error syncing profile. Please contact support.');
-            setIsSyncing(false);
-            return false;
         }
-    } else {
-        console.log('ℹ️ No emailFirstMint data - assuming wallet-first flow');
-        setIsSyncing(false);
-        return true; // For wallet-first flow
-    }
-};
+    };
 
     // --- EFFECT 1: Check Profile Status and Load Data ---
     useEffect(() => {
@@ -95,7 +88,6 @@ const syncProfileWithWallet = async (walletAddress: string): Promise<boolean> =>
             setStatusError('');
 
             try {
-                // Step 1: Check if the user is already registered/minted
                 const response = await fetch('/api/profile/status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -106,11 +98,10 @@ const syncProfileWithWallet = async (walletAddress: string): Promise<boolean> =>
 
                 if (response.ok && statusData.profileExists) {
                     console.log('User profile found. Redirecting to dashboard.');
-                    router.push('/'); 
+                    router.push('/');
                     return;
                 }
 
-                // Step 2: If not existing, proceed to safely load minting payload from localStorage
                 const walletReg = localStorage.getItem('walletRegistration');
                 const emailFirstReg = localStorage.getItem('emailFirstMint');
                 const regString = walletReg || emailFirstReg;
@@ -136,44 +127,37 @@ const syncProfileWithWallet = async (walletAddress: string): Promise<boolean> =>
         };
 
         checkProfileStatus();
-    }, [address, router]); 
+    }, [address, router]);
 
     // --- EFFECT 2: Handle Successful Mint and Sync ---
-useEffect(() => {
-    const handlePostMintSync = async () => {
-        if (isSuccess && mintData && address && !isSyncing) {
-            console.log('🎉 Mint successful, starting sync process...');
-            
-            // Wait for the sync to complete
-            const syncSuccess = await syncProfileWithWallet(address);
-            
-            if (syncSuccess) {
-                console.log('✅ Sync completed successfully, cleaning up...');
+    useEffect(() => {
+        const handlePostMintSync = async () => {
+            if (isSuccess && mintData && address && !isSyncing) {
+                console.log('🎉 Mint successful, starting sync process...');
                 
-                // Clear registration data only after successful sync
-                localStorage.removeItem('walletRegistration');
-                localStorage.removeItem('emailFirstMint');
+                const syncSuccess = await syncProfileWithWallet(address);
+                
+                if (syncSuccess) {
+                    console.log('✅ Sync completed successfully, cleaning up...');
+                    
+                    localStorage.removeItem('walletRegistration');
+                    localStorage.removeItem('emailFirstMint');
 
-                // Redirect after a short delay
-                setTimeout(() => {
-                    console.log('🔄 Redirecting to dashboard...');
-                    router.push('/'); 
-                }, 2000);
-            } else {
-                console.error('❌ Sync failed, not redirecting automatically');
-                // User can still manually navigate, but we don't auto-redirect
+                    setTimeout(() => {
+                        console.log('🔄 Redirecting to dashboard...');
+                        router.push('/');
+                    }, 2000);
+                } else {
+                    console.error('❌ Sync failed, not redirecting automatically');
+                }
             }
-        }
-    };
+        };
 
-    handlePostMintSync();
-}, [isSuccess, mintData, address]); // Removed router and isSyncing from deps to avoid loops
+        handlePostMintSync();
+    }, [isSuccess, mintData, address, isSyncing, router]);
 
-    // ----------------------------------------------------------------------
     // --- RENDER LOGIC ---
-    // ----------------------------------------------------------------------
     
-    // 🛑 Status Check Loading Screen
     if (isCheckingStatus) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
@@ -194,7 +178,6 @@ useEffect(() => {
         );
     }
     
-    // Wallet connection check
     if (!isConnected) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
@@ -217,7 +200,6 @@ useEffect(() => {
         );
     }
 
-    // Mint Data Payload check
     if (!mintData) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
@@ -247,9 +229,7 @@ useEffect(() => {
         setIsMinting(true);
 
         try {
-            // Determine which function to call
             if (mintData.useRegisterWithEmail) {
-                // Email-first flow
                 const payload = mintData.registerWithEmailPayload;
                 writeContract({
                     address: (mintData.contractAddress || CONTRACTS.PROFILE_NFT) as `0x${string}`,
@@ -264,9 +244,7 @@ useEffect(() => {
                     ],
                 });
             } else {
-                // Wallet-first flow
                 const payload = mintData.createProfilePayload || mintData.mintingPayload;
-                // CRITICAL: payload.photoUrl contains the SHORT HASH generated by the API
                 writeContract({
                     address: (mintData.contractAddress || CONTRACTS.PROFILE_NFT) as `0x${string}`,
                     abi: PROFILE_NFT_ABI,
@@ -276,7 +254,7 @@ useEffect(() => {
                         payload.age,
                         payload.gender,
                         payload.interests,
-                        payload.photoUrl, // This is the short hash
+                        payload.photoUrl,
                     ],
                 });
             }
@@ -348,7 +326,7 @@ useEffect(() => {
                         </button>
 
                         <button
-                            onClick={() => router.push('/')} 
+                            onClick={() => router.push('/')}
                             className="text-gray-600 hover:text-gray-800 text-sm"
                         >
                             Back to home
