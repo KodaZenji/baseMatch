@@ -131,7 +131,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             success: true,
-            userId: targetProfileId, // Return the profile ID
+            profile_id: targetProfileId,
             message: 'Email verified successfully'
         });
     } catch (error) {
