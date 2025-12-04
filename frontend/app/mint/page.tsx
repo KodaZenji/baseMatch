@@ -16,6 +16,19 @@ export default function MintPage() {
   const [isMinting, setIsMinting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // --- LOAD MINT DATA FROM LOCALSTORAGE ---
+  useEffect(() => {
+    const storedData = localStorage.getItem('emailFirstMint') || localStorage.getItem('walletRegistration');
+    if (storedData) {
+      try {
+        setMintData(JSON.parse(storedData));
+      } catch (err) {
+        console.error('Failed to parse mint data from localStorage:', err);
+        setError('Failed to load minting data');
+      }
+    }
+  }, []);
+
   // --- HELPER: Sync wallet to Supabase ---
   const syncWalletWithProfile = async (walletAddress: string): Promise<boolean> => {
     setIsSyncing(true);

@@ -3,7 +3,7 @@ import { supabaseService } from '@/lib/supabase';
 
 export async function POST(req: Request) {
   try {
-    
+
     // Expect 'id' (UUID) and the new wallet address from the client
     const { id, wallet_address } = await req.json();
 
@@ -19,11 +19,11 @@ export async function POST(req: Request) {
     // Filtering by 'id' is the most efficient method (Primary Key lookup).
     const { data: profile, error } = await supabaseService
       .from("profiles")
-      .update({ 
-        wallet_address: wallet_address, 
+      .update({
+        wallet_address: wallet_address,
         wallet_verified: true // Setting the verified flag as requested
       })
-      .eq("id", id) 
+      .eq("id", id)
       .select()
       .single();
 
