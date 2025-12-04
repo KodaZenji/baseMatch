@@ -61,6 +61,10 @@ export default function MintPage() {
           body: JSON.stringify({
             id: profile_id,
             wallet_address: walletAddress,
+            name: data.registerWithEmailPayload?.name,
+            age: data.registerWithEmailPayload?.age,
+            gender: data.registerWithEmailPayload?.gender,
+            interests: data.registerWithEmailPayload?.interests,
           }),
         });
 
