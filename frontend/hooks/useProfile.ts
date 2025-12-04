@@ -36,6 +36,7 @@ export function useProfile(address?: string) {
         interests: (profileData as any).interests,
         photoUrl: (profileData as any).photoUrl,
         email: (profileData as any).email,
+        wallet_address: (profileData as any).walletAddress || effectiveAddress,
         exists: (profileData as any).exists,
     } : null;
 

@@ -74,6 +74,14 @@ export default function Dashboard() {
                                         </span>
                                     </div>
                                 )}
+                                {profile.wallet_address && (
+                                    <div className="flex items-center mt-2">
+                                        <span className="text-xs text-gray-500">{profile.wallet_address.slice(0, 6)}...{profile.wallet_address.slice(-4)}</span>
+                                        <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                                            Wallet Verified
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
