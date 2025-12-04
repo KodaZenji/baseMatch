@@ -43,7 +43,7 @@ export default function MintPage() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        profile_id: profileId,
+                        id: profileId,
                         wallet_address: walletAddress,
                     }),
                 });
