@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { supabaseService } from '@/lib/supabase';
 
 export async function POST(req: Request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
     
     // Expect 'id' (UUID) and the new wallet address from the client
     const { id, wallet_address } = await req.json();
@@ -19,7 +17,7 @@ export async function POST(req: Request) {
 
     // Update the profile row with the wallet information and verification status
     // Filtering by 'id' is the most efficient method (Primary Key lookup).
-    const { data: profile, error } = await supabase
+    const { data: profile, error } = await supabaseService
       .from("profiles")
       .update({ 
         wallet_address: wallet_address, 
