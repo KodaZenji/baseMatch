@@ -10,6 +10,7 @@ export default function CompleteEmailProfilePage() {
     const { address, isConnected } = useAccount();
 
     const [email, setEmail] = useState('');
+    const [profile_id, setProfile_id] = useState('');
     const [formData, setFormData] = useState({
         name: '',
         age: '',
@@ -22,11 +23,12 @@ export default function CompleteEmailProfilePage() {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        // Get email from localStorage (set after email verification)
+        // Get email and profile_id from localStorage (set after email verification)
         const emailVerified = localStorage.getItem('emailVerified');
         if (emailVerified) {
             const data = JSON.parse(emailVerified);
             setEmail(data.email);
+            setProfile_id(data.profile_id);
         }
     }, []);
 
@@ -82,6 +84,7 @@ export default function CompleteEmailProfilePage() {
 
         try {
             if (!address) throw new Error('Wallet not connected');
+            if (!profile_id) throw new Error('Profile ID not found. Please verify your email again.');
 
             // Validate form
             if (!formData.name || !formData.age || !formData.gender || !formData.interests) {
@@ -92,11 +95,10 @@ export default function CompleteEmailProfilePage() {
                 throw new Error('Age must be between 18 and 120');
             }
 
-            // For email-first, we don't call the API - we'll mint directly with registerWithEmail
-            // Just validate and prepare the payload
-
-            // Store for minting using registerWithEmail (no photo)
+            // Store for minting using registerWithEmail with profile_id
             localStorage.setItem('emailFirstMint', JSON.stringify({
+                profile_id: profile_id, // Store as profile_id (snake_case)
+                id: profile_id, // Also store as id for compatibility
                 email,
                 address,
                 useRegisterWithEmail: true,
