@@ -63,7 +63,16 @@ export default function BrowseProfiles() {
             }, 3000);
         } catch (error) {
             console.error('Error expressing interest:', error);
-            setSuccessMessage('Failed to express interest. Please try again.');
+            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+            
+            let userFriendlyMessage = 'Unable to express interest. ';
+            if (errorMsg.includes('profile does not exist')) {
+                userFriendlyMessage += 'Please ensure you have minted your profile.';
+            } else {
+                userFriendlyMessage += 'Please try again.';
+            }
+            
+            setSuccessMessage(userFriendlyMessage);
             setShowSuccess(true);
 
             // Hide error message after 3 seconds
@@ -80,7 +89,21 @@ export default function BrowseProfiles() {
 
     useEffect(() => {
         if (isError && error) {
-            setSuccessMessage(`Transaction error: ${error.message}`);
+            let userFriendlyMessage = 'Unable to express interest. ';
+            
+            if (error.message?.includes('profile does not exist')) {
+                userFriendlyMessage += 'Please ensure both users have minted their profiles.';
+            } else if (error.message?.includes('Already expressed interest')) {
+                userFriendlyMessage += 'You already liked this person.';
+            } else if (error.message?.includes('Already matched')) {
+                userFriendlyMessage += 'You are already matched with this person.';
+            } else if (error.message?.includes('Cannot express interest in yourself')) {
+                userFriendlyMessage += 'You cannot express interest in yourself.';
+            } else {
+                userFriendlyMessage += 'Please try again or contact support if the issue persists.';
+            }
+            
+            setSuccessMessage(userFriendlyMessage);
             setShowSuccess(true);
 
             // Hide error message after 5 seconds
