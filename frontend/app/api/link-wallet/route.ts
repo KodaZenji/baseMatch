@@ -4,23 +4,28 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 
 export async function POST(req: Request) {
   try {
-    const { email, wallet_address } = await req.json();
+    const supabase = createRouteHandlerClient({ cookies });
+    
+    // Expect 'id' (UUID) and the new wallet address from the client
+    const { id, wallet_address } = await req.json();
 
     // Validate input
-    if (!email || !wallet_address) {
+    if (!id || !wallet_address) {
       return NextResponse.json(
-        { error: "Missing email or wallet address" },
+        { error: "Missing profile ID (id) or wallet address" },
         { status: 400 }
       );
     }
 
-    const supabase = createRouteHandlerClient({ cookies });
-
-    // Update profile row and return the updated row
+    // Update the profile row with the wallet information and verification status
+    // Filtering by 'id' is the most efficient method (Primary Key lookup).
     const { data: profile, error } = await supabase
       .from("profiles")
-      .update({ wallet_address })
-      .eq("email", email)
+      .update({ 
+        wallet_address: wallet_address, 
+        wallet_verified: true // Setting the verified flag as requested
+      })
+      .eq("id", id) 
       .select()
       .single();
 
@@ -34,16 +39,14 @@ export async function POST(req: Request) {
 
     if (!profile) {
       return NextResponse.json(
-        { error: "Profile not found for the given email" },
+        { error: "Profile not found for the given ID" },
         { status: 404 }
       );
     }
 
-    // Profile updated and includes id, email, wallet_address etc.
-    return NextResponse.json({
-      success: true,
-      profile,
-    });
+    // Success response
+    return NextResponse.json({ success: true, profile });
+
   } catch (err: any) {
     console.error("Unhandled error:", err);
     return NextResponse.json(
