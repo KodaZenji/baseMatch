@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { encryptMessage, decryptMessage } from '@/lib/crypto';
-import { supabaseService } from '@/lib/supabase';
+import { supabaseClient } from '@/lib/supabase.client';
 
 export interface ChatMessage {
     id: string;
