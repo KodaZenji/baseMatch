@@ -21,25 +21,32 @@ export default function ChatWindow({
     currentUserAddress,
     onClose,
 }: ChatWindowProps) {
-    const { messages, loading, error, isSending, sendMessage } = useChat({
+    const { messages, loading, error, isSending, hasMore, sendMessage, deleteMessage, loadMore } = useChat({
         user1Address,
         user2Address,
         userAddress: currentUserAddress,
+        messagesPerPage: 50,
     });
 
     const [messageText, setMessageText] = useState('');
     const [sendError, setSendError] = useState<string | null>(null);
     const [showDateModal, setShowDateModal] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+    const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const isInitialLoadRef = useRef(true);
+
+    useEffect(() => {
+        if (isInitialLoadRef.current && messages.length > 0) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+            isInitialLoadRef.current = false;
+        }
+    }, [messages]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,9 +61,35 @@ export default function ChatWindow({
         if (success) {
             setMessageText('');
             setSendError(null);
+            scrollToBottom();
         } else {
             setSendError('Failed to send message. Please try again.');
         }
+    };
+
+    const handleScroll = () => {
+        const container = messagesContainerRef.current;
+        if (!container || loading || !hasMore) return;
+
+        if (container.scrollTop === 0) {
+            loadMore();
+        }
+    };
+
+    const handleDeleteMessage = async (messageId: string) => {
+        if (!confirm('Delete this message? This cannot be undone.')) return;
+
+        setDeletingMessageId(messageId);
+        const success = await deleteMessage(messageId);
+        
+        if (success) {
+            setSuccessMessage('Message deleted');
+            setTimeout(() => setSuccessMessage(''), 2000);
+        } else {
+            setSendError('Failed to delete message');
+            setTimeout(() => setSendError(null), 3000);
+        }
+        setDeletingMessageId(null);
     };
 
     const otherUserName = currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user2Name : user1Name;
@@ -81,16 +114,32 @@ export default function ChatWindow({
                             onClick={onClose}
                             className="text-gray-400 hover:text-gray-600 text-2xl"
                         >
-                            x
+                            ×
                         </button>
                     </div>
                 </div>
 
                 <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 text-xs text-blue-700">
-                    Secure end-to-end encrypted chat - Only you and your match can read messages
+                    🔒 End-to-end encrypted - Only you and your match can read these messages
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                <div 
+                    ref={messagesContainerRef}
+                    onScroll={handleScroll}
+                    className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
+                >
+                    {hasMore && (
+                        <div className="text-center py-2">
+                            <button 
+                                onClick={loadMore}
+                                disabled={loading}
+                                className="text-sm text-purple-600 hover:text-purple-700 disabled:opacity-50"
+                            >
+                                {loading ? 'Loading...' : '↑ Load older messages'}
+                            </button>
+                        </div>
+                    )}
+
                     {loading && messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
                             <div className="text-gray-500 text-center">
@@ -101,33 +150,49 @@ export default function ChatWindow({
                         <div className="flex items-center justify-center h-full">
                             <div className="text-gray-500 text-center">
                                 <div className="mb-2">No messages yet</div>
-                                <div className="text-sm">Start the conversation</div>
+                                <div className="text-sm">Start the conversation! 💬</div>
                             </div>
                         </div>
                     ) : (
                         messages.map((msg) => {
                             const isCurrentUser = msg.sender_address.toLowerCase() === currentUserAddress.toLowerCase();
+                            const isDeleting = deletingMessageId === msg.id;
+                            
                             return (
                                 <div
                                     key={msg.id}
-                                    className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                                    className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} group`}
                                 >
-                                    <div
-                                        className={`max-w-xs px-4 py-2 rounded-lg ${isCurrentUser
-                                            ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-br-none'
-                                            : 'bg-gray-200 text-gray-900 rounded-bl-none'
-                                            }`}
-                                    >
-                                        <p className="break-words">{msg.decrypted_text || msg.encrypted_message}</p>
-                                        <p
-                                            className={`text-xs mt-1 ${isCurrentUser ? 'text-pink-100' : 'text-gray-500'
-                                                }`}
+                                    <div className="relative">
+                                        <div
+                                            className={`max-w-xs px-4 py-2 rounded-lg ${
+                                                isCurrentUser
+                                                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-br-none'
+                                                    : 'bg-gray-200 text-gray-900 rounded-bl-none'
+                                            } ${isDeleting ? 'opacity-50' : ''}`}
                                         >
-                                            {new Date(msg.created_at).toLocaleTimeString([], {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                            })}
-                                        </p>
+                                            <p className="break-words">{msg.decrypted_text || '[Decrypting...]'}</p>
+                                            <p
+                                                className={`text-xs mt-1 ${
+                                                    isCurrentUser ? 'text-pink-100' : 'text-gray-500'
+                                                }`}
+                                            >
+                                                {new Date(msg.created_at).toLocaleTimeString([], {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                })}
+                                            </p>
+                                        </div>
+                                        
+                                        {isCurrentUser && !isDeleting && (
+                                            <button
+                                                onClick={() => handleDeleteMessage(msg.id)}
+                                                className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 text-sm"
+                                                title="Delete message"
+                                            >
+                                                🗑️
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             );
@@ -137,10 +202,13 @@ export default function ChatWindow({
                 </div>
 
                 {(error || sendError || successMessage) && (
-                    <div className={`px-4 py-3 text-sm ${successMessage
-                            ? 'bg-green-100 border border-green-300 text-green-700'
-                            : 'bg-red-100 border border-red-300 text-red-700'
-                        }`}>
+                    <div
+                        className={`px-4 py-3 text-sm ${
+                            successMessage
+                                ? 'bg-green-100 border border-green-300 text-green-700'
+                                : 'bg-red-100 border border-red-300 text-red-700'
+                        }`}
+                    >
                         {successMessage || error || sendError}
                     </div>
                 )}
@@ -153,12 +221,13 @@ export default function ChatWindow({
                             onChange={(e) => setMessageText(e.target.value)}
                             placeholder="Type your message..."
                             disabled={isSending}
+                            maxLength={1000}
                             className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-pink-500 disabled:bg-gray-100"
                         />
                         <button
                             type="submit"
                             disabled={isSending || !messageText.trim()}
-                            className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                         >
                             {isSending ? 'Sending...' : 'Send'}
                         </button>
@@ -166,7 +235,6 @@ export default function ChatWindow({
                 </div>
             </div>
 
-            {/* Date Stake Modal */}
             {showDateModal && (
                 <DateStakeModal
                     matchedUserAddress={otherUserAddress}
