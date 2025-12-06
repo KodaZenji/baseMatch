@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { encryptMessage, decryptMessage } from '@/lib/crypto';
+import { supabaseService } from '@/lib/supabase';
 
 export interface ChatMessage {
     id: string;
@@ -10,25 +11,40 @@ export interface ChatMessage {
     nonce: string;
     created_at: string;
     read_status: boolean;
-    decrypted_text?: string; // Client-side decrypted message
+    decrypted_text?: string;
 }
 
 interface UseChatProps {
     user1Address: string;
     user2Address: string;
-    userAddress?: string; // Current user's address for sending messages
+    userAddress?: string;
+    messagesPerPage?: number;
 }
 
-export function useChat({ user1Address, user2Address, userAddress }: UseChatProps) {
+export function useChat({ 
+    user1Address, 
+    user2Address, 
+    userAddress,
+    messagesPerPage = 50 
+}: UseChatProps) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSending, setIsSending] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const [page, setPage] = useState(0);
+    
+    const realtimeChannelRef = useRef<any>(null);
+    const decryptionCacheRef = useRef<Map<string, string>>(new Map());
 
-    // Decrypt all messages client-side
     const decryptMessages = useCallback(async (encryptedMessages: ChatMessage[]) => {
         const decrypted = await Promise.all(
             encryptedMessages.map(async (msg) => {
+                const cached = decryptionCacheRef.current.get(msg.id);
+                if (cached) {
+                    return { ...msg, decrypted_text: cached };
+                }
+
                 try {
                     const decryptedText = await decryptMessage(
                         msg.encrypted_message,
@@ -36,24 +52,25 @@ export function useChat({ user1Address, user2Address, userAddress }: UseChatProp
                         user1Address,
                         user2Address
                     );
+                    decryptionCacheRef.current.set(msg.id, decryptedText);
                     return { ...msg, decrypted_text: decryptedText };
                 } catch (err) {
                     console.error('Failed to decrypt message:', err);
-                    return { ...msg, decrypted_text: '[Failed to decrypt message]' };
+                    return { ...msg, decrypted_text: '[Failed to decrypt]' };
                 }
             })
         );
         return decrypted;
     }, [user1Address, user2Address]);
 
-    // Fetch messages
-    const fetchMessages = useCallback(async () => {
+    const fetchMessages = useCallback(async (pageNum: number = 0, append: boolean = false) => {
         try {
             setLoading(true);
             setError(null);
 
+            const offset = pageNum * messagesPerPage;
             const response = await fetch(
-                `/api/chat?user1=${encodeURIComponent(user1Address)}&user2=${encodeURIComponent(user2Address)}`
+                `/api/chat?user1=${encodeURIComponent(user1Address)}&user2=${encodeURIComponent(user2Address)}&limit=${messagesPerPage}&offset=${offset}`
             );
 
             if (!response.ok) {
@@ -62,38 +79,34 @@ export function useChat({ user1Address, user2Address, userAddress }: UseChatProp
 
             const data = await response.json();
             const encryptedMessages = data.messages || [];
+            
+            setHasMore(encryptedMessages.length === messagesPerPage);
 
-            // Decrypt all messages client-side
             const decryptedMessages = await decryptMessages(encryptedMessages);
-            setMessages(decryptedMessages);
 
-            // Mark unread messages from the other user as read
+            if (append) {
+                setMessages(prev => [...prev, ...decryptedMessages]);
+            } else {
+                setMessages(decryptedMessages);
+            }
+
             if (userAddress && encryptedMessages.length > 0) {
                 const unreadMessageIds = encryptedMessages
-                    .filter(
-                        (msg: ChatMessage) =>
-                            !msg.read_status &&
-                            msg.sender_address.toLowerCase() !== userAddress.toLowerCase()
+                    .filter((msg: ChatMessage) => 
+                        !msg.read_status && 
+                        msg.sender_address.toLowerCase() !== userAddress.toLowerCase()
                     )
                     .map((msg: ChatMessage) => msg.id);
 
                 if (unreadMessageIds.length > 0) {
-                    try {
-                        const markReadResponse = await fetch('/api/chat', {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                messageIds: unreadMessageIds,
-                                reader: userAddress,
-                            }),
-                        });
-
-                        if (!markReadResponse.ok) {
-                            console.warn('Failed to mark messages as read');
-                        }
-                    } catch (markReadError) {
-                        console.error('Error marking messages as read:', markReadError);
-                    }
+                    fetch('/api/chat', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            messageIds: unreadMessageIds,
+                            reader: userAddress,
+                        }),
+                    }).catch(err => console.error('Error marking messages as read:', err));
                 }
             }
         } catch (err) {
@@ -102,18 +115,62 @@ export function useChat({ user1Address, user2Address, userAddress }: UseChatProp
         } finally {
             setLoading(false);
         }
-    }, [user1Address, user2Address, userAddress, decryptMessages]);
+    }, [user1Address, user2Address, userAddress, messagesPerPage, decryptMessages]);
 
-    // Initial fetch and polling
+    const loadMore = useCallback(() => {
+        if (!loading && hasMore) {
+            const nextPage = page + 1;
+            setPage(nextPage);
+            fetchMessages(nextPage, true);
+        }
+    }, [loading, hasMore, page, fetchMessages]);
+
     useEffect(() => {
-        fetchMessages();
+        fetchMessages(0, false);
 
-        // Poll for new messages every 2 seconds
-        const interval = setInterval(fetchMessages, 2000);
-        return () => clearInterval(interval);
-    }, [fetchMessages]);
+        const addr1 = user1Address.toLowerCase();
+        const addr2 = user2Address.toLowerCase();
 
-    // Send message
+        const channel = supabaseService
+            .channel(`chat:${addr1}:${addr2}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'chat_messages',
+                    filter: `or(and(user1_address=eq.${addr1},user2_address=eq.${addr2}),and(user1_address=eq.${addr2},user2_address=eq.${addr1}))`,
+                },
+                async (payload) => {
+                    const newMessage = payload.new as ChatMessage;
+                    
+                    const decrypted = await decryptMessages([newMessage]);
+                    setMessages(prev => [decrypted[0], ...prev]);
+
+                    if (userAddress && 
+                        newMessage.sender_address.toLowerCase() !== userAddress.toLowerCase()) {
+                        fetch('/api/chat', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                messageIds: [newMessage.id],
+                                reader: userAddress,
+                            }),
+                        }).catch(err => console.error('Error marking message as read:', err));
+                    }
+                }
+            )
+            .subscribe();
+
+        realtimeChannelRef.current = channel;
+
+        return () => {
+            if (realtimeChannelRef.current) {
+                supabaseService.removeChannel(realtimeChannelRef.current);
+            }
+        };
+    }, [user1Address, user2Address, userAddress, fetchMessages, decryptMessages]);
+
     const sendMessage = useCallback(
         async (messageText: string) => {
             if (!userAddress) {
@@ -130,7 +187,6 @@ export function useChat({ user1Address, user2Address, userAddress }: UseChatProp
                 setIsSending(true);
                 setError(null);
 
-                // Encrypt message on client-side
                 const { encrypted, nonce } = await encryptMessage(
                     messageText,
                     user1Address,
@@ -154,8 +210,6 @@ export function useChat({ user1Address, user2Address, userAddress }: UseChatProp
                     throw new Error(data.error || 'Failed to send message');
                 }
 
-                // Refresh messages after sending
-                await fetchMessages();
                 return true;
             } catch (err) {
                 console.error('Error sending message:', err);
@@ -165,7 +219,32 @@ export function useChat({ user1Address, user2Address, userAddress }: UseChatProp
                 setIsSending(false);
             }
         },
-        [user1Address, user2Address, userAddress, fetchMessages]
+        [user1Address, user2Address, userAddress]
+    );
+
+    const deleteMessage = useCallback(
+        async (messageId: string) => {
+            try {
+                const response = await fetch(`/api/chat/message/${messageId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userAddress }),
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Failed to delete message');
+                }
+
+                setMessages(prev => prev.filter(msg => msg.id !== messageId));
+                return true;
+            } catch (err) {
+                console.error('Error deleting message:', err);
+                setError(err instanceof Error ? err.message : 'Failed to delete message');
+                return false;
+            }
+        },
+        [userAddress]
     );
 
     return {
@@ -173,7 +252,13 @@ export function useChat({ user1Address, user2Address, userAddress }: UseChatProp
         loading,
         error,
         isSending,
+        hasMore,
         sendMessage,
-        refreshMessages: fetchMessages,
+        deleteMessage,
+        loadMore,
+        refreshMessages: () => {
+            setPage(0);
+            fetchMessages(0, false);
+        },
     };
 }
