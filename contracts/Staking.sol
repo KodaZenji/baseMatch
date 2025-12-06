@@ -43,7 +43,7 @@ contract Staking is Ownable {
      */
     function createStake(address matchedUser, uint256 amount, uint256 meetingTime) external {
         require(matching.isMatched(msg.sender, matchedUser), "Not matched");
-        require(amount > 0, "Amount must be greater than 0");
+        require(amount >= 5 * 10**6, "Minimum stake is 5 USDC");
         require(meetingTime > block.timestamp, "Meeting time must be in the future");
         require(stakes[msg.sender][matchedUser].amount == 0, "Stake already exists");
 

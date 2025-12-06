@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { STAKING_ABI, CONTRACTS } from '@/lib/contracts';
-import { parseUnits } from 'viem';
+import { parseUnits, erc20Abi } from 'viem';
 
 interface DateStakeModalProps {
     matchedUserAddress: string;
@@ -26,14 +26,26 @@ export default function DateStakeModal({
     const [meetingDate, setMeetingDate] = useState('');
     const [meetingTime, setMeetingTime] = useState('');
     const [error, setError] = useState('');
-    const [step, setStep] = useState<'form' | 'confirm'>('form');
+    const [step, setStep] = useState<'form' | 'confirm' | 'approval'>('form');
+    const [isApprovingUSDC, setIsApprovingUSDC] = useState(false);
+
+    // Check USDC allowance
+    const { data: allowance } = useReadContract({
+        address: CONTRACTS.USDC as `0x${string}`,
+        abi: erc20Abi,
+        functionName: 'allowance',
+        account: address,
+        args: [address || '0x0', CONTRACTS.STAKING as `0x${string}`],
+    });
+
+    const { writeContract: approveUSDC, isPending: isApprovePending } = useWriteContract();
 
     const handleCreateStake = async () => {
         setError('');
 
         // Validation
-        if (!stakeAmount || parseFloat(stakeAmount) <= 0) {
-            setError('Please enter a valid stake amount');
+        if (!stakeAmount || parseFloat(stakeAmount) < 5) {
+            setError('Minimum stake amount is 5 USDC');
             return;
         }
         if (!meetingDate || !meetingTime) {
@@ -54,12 +66,19 @@ export default function DateStakeModal({
         // Convert amount to USDC (6 decimals)
         const amount = parseUnits(stakeAmount, 6);
 
-        try {
-            if (!CONTRACTS.STAKING || !address) {
-                setError('Staking contract not configured or wallet not connected');
-                return;
-            }
+        if (!CONTRACTS.STAKING || !address) {
+            setError('Unable to process. Please reconnect your wallet.');
+            return;
+        }
 
+        // Check if approval is needed
+        if (!allowance || allowance < amount) {
+            setStep('approval');
+            return;
+        }
+
+        // Proceed with stake creation
+        try {
             console.log('📤 Creating stake:', {
                 matchedUser: matchedUserAddress,
                 amount: amount.toString(),
@@ -75,7 +94,25 @@ export default function DateStakeModal({
 
             setStep('confirm');
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to create stake');
+            setError('Failed to create stake. Please try again.');
+        }
+    };
+
+    const handleApproveUSDC = () => {
+        setError('');
+        const amount = parseUnits(stakeAmount, 6);
+
+        try {
+            setIsApprovingUSDC(true);
+            approveUSDC({
+                address: CONTRACTS.USDC as `0x${string}`,
+                abi: erc20Abi,
+                functionName: 'approve',
+                args: [CONTRACTS.STAKING as `0x${string}`, amount],
+            });
+        } catch (err) {
+            setError('Failed to approve USDC. Please try again.');
+            setIsApprovingUSDC(false);
         }
     };
 
@@ -92,7 +129,39 @@ export default function DateStakeModal({
                     </button>
                 </div>
 
-                {isSuccess ? (
+                {step === 'approval' ? (
+                    // USDC Approval state
+                    <div className="text-center py-6">
+                        <p className="text-5xl mb-4">🔐</p>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Approve USDC</h3>
+                        <p className="text-gray-600 mb-6">
+                            To proceed with staking, you need to approve the Staking contract to spend {stakeAmount} USDC on your behalf.
+                        </p>
+                        {error && (
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+                                <p className="text-sm text-red-700">{error}</p>
+                            </div>
+                        )}
+                        <div className="flex gap-2 pt-4">
+                            <button
+                                onClick={() => {
+                                    setStep('form');
+                                    setError('');
+                                }}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50"
+                            >
+                                Back
+                            </button>
+                            <button
+                                onClick={handleApproveUSDC}
+                                disabled={isApprovePending || isApprovingUSDC}
+                                className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                            >
+                                {isApprovePending || isApprovingUSDC ? 'Approving...' : 'Approve USDC'}
+                            </button>
+                        </div>
+                    </div>
+                ) : isSuccess ? (
                     // Success state
                     <div className="text-center py-6">
                         <p className="text-5xl mb-4">🎉</p>
@@ -107,7 +176,7 @@ export default function DateStakeModal({
                             Done
                         </button>
                     </div>
-                ) : isConfirming ? (
+                ) : isConfirming || isApprovePending ? (
                     // Confirming state
                     <div className="text-center py-6">
                         <div className="inline-block">
@@ -132,7 +201,7 @@ export default function DateStakeModal({
                                 ></path>
                             </svg>
                         </div>
-                        <p className="text-gray-600">Confirming transaction...</p>
+                        <p className="text-gray-600">{isApprovePending ? 'Approving USDC...' : 'Confirming transaction...'}</p>
                     </div>
                 ) : (
                     // Form state

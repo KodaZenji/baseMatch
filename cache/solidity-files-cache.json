@@ -532,8 +532,8 @@
       ]
     },
     "C:\\Users\\ADMIN\\baseMatch\\contracts\\Staking.sol": {
-      "lastModificationDate": 1764418435250,
-      "contentHash": "6cc095f5ef76cafc71efdfa9898a0513",
+      "lastModificationDate": 1765022014080,
+      "contentHash": "ccb17450f3c6b56cf3292b6faea6957b",
       "sourceName": "contracts/Staking.sol",
       "solcConfig": {
         "version": "0.8.20",
