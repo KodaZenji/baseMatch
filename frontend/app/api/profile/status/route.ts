@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseService } from '@/lib/supabase';
+import { supabaseService } from '@/lib/supabase.server';
 // Assuming you have a utility function to check NFT ownership
 import { checkNftOwnership } from '@/lib/utils';
 
