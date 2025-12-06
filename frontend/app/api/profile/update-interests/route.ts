@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseService } from '@/lib/supabase';
-
+import { supabaseService } from '@/lib/supabase.server';
 export const runtime = 'nodejs';
 
 const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS;
