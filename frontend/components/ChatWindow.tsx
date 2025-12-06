@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from '@/hooks/useChat';
+import DateStakeModal from './DateStakeModal';
 
 interface ChatWindowProps {
     user1Address: string;
@@ -28,6 +29,8 @@ export default function ChatWindow({
 
     const [messageText, setMessageText] = useState('');
     const [sendError, setSendError] = useState<string | null>(null);
+    const [showDateModal, setShowDateModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -67,12 +70,20 @@ export default function ChatWindow({
                         <h2 className="text-xl font-bold text-gray-900">{otherUserName}</h2>
                         <p className="text-xs text-gray-500 truncate">{otherUserAddress}</p>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 text-2xl"
-                    >
-                        x
-                    </button>
+                    <div className="flex gap-2 items-center">
+                        <button
+                            onClick={() => setShowDateModal(true)}
+                            className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity text-sm whitespace-nowrap"
+                        >
+                            💕 Go on a Date
+                        </button>
+                        <button
+                            onClick={onClose}
+                            className="text-gray-400 hover:text-gray-600 text-2xl"
+                        >
+                            x
+                        </button>
+                    </div>
                 </div>
 
                 <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 text-xs text-blue-700">
@@ -103,8 +114,8 @@ export default function ChatWindow({
                                 >
                                     <div
                                         className={`max-w-xs px-4 py-2 rounded-lg ${isCurrentUser
-                                                ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-br-none'
-                                                : 'bg-gray-200 text-gray-900 rounded-bl-none'
+                                            ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-br-none'
+                                            : 'bg-gray-200 text-gray-900 rounded-bl-none'
                                             }`}
                                     >
                                         <p className="break-words">{msg.decrypted_text || msg.encrypted_message}</p>
@@ -125,9 +136,12 @@ export default function ChatWindow({
                     <div ref={messagesEndRef} />
                 </div>
 
-                {(error || sendError) && (
-                    <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 text-sm">
-                        {error || sendError}
+                {(error || sendError || successMessage) && (
+                    <div className={`px-4 py-3 text-sm ${successMessage
+                            ? 'bg-green-100 border border-green-300 text-green-700'
+                            : 'bg-red-100 border border-red-300 text-red-700'
+                        }`}>
+                        {successMessage || error || sendError}
                     </div>
                 )}
 
@@ -151,6 +165,20 @@ export default function ChatWindow({
                     </form>
                 </div>
             </div>
+
+            {/* Date Stake Modal */}
+            {showDateModal && (
+                <DateStakeModal
+                    matchedUserAddress={otherUserAddress}
+                    matchedUserName={otherUserName}
+                    onClose={() => setShowDateModal(false)}
+                    onSuccess={() => {
+                        setShowDateModal(false);
+                        setSuccessMessage('✅ Date staked! Waiting for your match to confirm.');
+                        setTimeout(() => setSuccessMessage(''), 4000);
+                    }}
+                />
+            )}
         </div>
     );
 }
