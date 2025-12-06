@@ -114,3 +114,44 @@ export async function POST(request: NextRequest) {
         );
     }
 }
+
+/**
+ * PATCH /api/chat - Mark messages as read
+ * Body: { messageIds: string[], reader: string }
+ */
+export async function PATCH(request: NextRequest) {
+    try {
+        const body = await request.json();
+        const { messageIds, reader } = body;
+
+        if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0 || !reader) {
+            return NextResponse.json(
+                { error: 'Missing required fields: messageIds (array), reader' },
+                { status: 400 }
+            );
+        }
+
+        // Mark messages as read (only if current reader is NOT the sender)
+        const { error } = await supabaseService
+            .from('chat_messages')
+            .update({ read_status: true })
+            .in('id', messageIds)
+            .neq('sender_address', reader.toLowerCase());
+
+        if (error) {
+            console.error('Supabase error marking messages as read:', error);
+            return NextResponse.json(
+                { error: 'Failed to mark messages as read' },
+                { status: 500 }
+            );
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('Error in PATCH /api/chat:', error);
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        );
+    }
+}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseService } from '@/lib/supabase'; // Assumed to be the Service Role client
+import { supabaseService } from '@/lib/supabase'; 
 
 export const runtime = 'nodejs';
 
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
         const normalizedEmail = email.toLowerCase().trim();
 
-        // 🛑 FIX: Use 'profiles' table instead of 'users'
+        
         const { data: profile, error } = await supabaseService
             .from('profiles')
             .select('*')

@@ -1,7 +1,4 @@
-/**
- * Environment variable validation
- * Checks that all required environment variables are set at startup
- */
+
 
 export interface EnvValidationResult {
     isValid: boolean;

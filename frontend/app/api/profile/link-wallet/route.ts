@@ -1,19 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase';
-import { verifyWalletSignature } from '@/lib/utils'; // Assumed to be imported
+import { verifyWalletSignature } from '@/lib/utils'; 
 
 export const runtime = 'nodejs';
 
-/**
- * POST /api/profile/link-wallet
- * Email-First Flow: Link a wallet to an existing email-registered profile
- * * Input: { email, address, signature, message }
- * Requirements:
- * - Verifies wallet signature
- * - Finds profile by email
- * - Links wallet to the profile account in the 'profiles' table
- * - Sets wallet_verified status to true
- */
+
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
@@ -40,8 +31,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 2. Find profile by email
-        // 🛑 FIX 1: Use 'profiles' table
+        
         const { data: existingProfile, error: profileLookupError } = await supabaseService
             .from('profiles')
             .select('id, email_verified')
@@ -56,7 +46,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 3. Check if wallet is already linked to another profile
-        // 🛑 FIX 2: Use 'profiles' table
+        
         const { data: walletProfile } = await supabaseService
             .from('profiles')
             .select('id, email')
@@ -71,7 +61,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 4. Link wallet to profile account
-        // 🛑 FIX 3: Use 'profiles' table
+       
         const { error: updateError } = await supabaseService
             .from('profiles')
             .update({
@@ -89,8 +79,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 🛑 REMOVED STEP 5: The separate upsert to 'profiles' is redundant
-        // since the main update in step 4 now handles the 'profiles' table.
+     
 
         return NextResponse.json({
             success: true,

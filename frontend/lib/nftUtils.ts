@@ -1,7 +1,5 @@
-/**
- * Utility functions for optimizing NFT metadata to be lightweight
- */
 
+ 
 // Function to generate a compact avatar representation
 export function generateCompactAvatar(seed: string): string {
     // Generate a simple hash-based color scheme

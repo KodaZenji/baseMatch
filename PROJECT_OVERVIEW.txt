@@ -11,45 +11,6 @@ BaseMatch is a Web3 dating app where:
 - Optional USDC staking encourages real meetups
 - Achievement badges reward good behavior
 
-## 📁 Project Structure
-
-```
-baseMatch/
-├── frontend/                    # Next.js application
-│   ├── app/
-│   │   ├── layout.tsx          # Root layout with Lexend font & Farcaster metadata
-│   │   ├── page.tsx            # Main app page with wallet connect
-│   │   ├── providers.tsx       # Web3 providers (Wagmi, RainbowKit, Farcaster SDK)
-│   │   └── globals.css         # Global styles
-│   ├── components/
-│   │   ├── ProfileSetup.tsx    # Create profile NFT form
-│   │   ├── BrowseProfiles.tsx  # Browse & express interest
-│   │   ├── ProfileCard.tsx     # Individual profile display
-│   │   ├── Matches.tsx         # View your matches
-│   │   ├── Dashboard.tsx       # User stats & achievements
-│   │   ├── StakingModal.tsx    # Setup date with USDC stake
-│   │   └── RatingModal.tsx     # Rate your date
-│   ├── hooks/
-│   │   └── useProfile.ts       # Hook to fetch user profile from blockchain
-│   ├── lib/
-│   │   ├── wagmi.ts            # Wagmi configuration for Base
-│   │   └── contracts.ts        # Contract ABIs and addresses
-│   ├── types/
-│   │   └── index.ts            # TypeScript interfaces
-│   ├── public/
-│   │   └── .well-known/
-│   │       └── farcaster.json  # Farcaster Mini App manifest
-│   ├── package.json
-│   ├── next.config.ts
-│   └── .env.example
-│
-└── contracts/                   # Solidity smart contracts
-    ├── ProfileNFT.sol          # Soulbound profile NFTs
-    ├── Matching.sol            # Express interest & matching logic
-    ├── Staking.sol             # USDC staking for dates
-    ├── Reputation.sol          # On-chain reputation & ratings
-    └── Achievement.sol         # Achievement NFT badges
-```
 
 ## 🔑 Key Features
 
@@ -93,7 +54,7 @@ baseMatch/
 - **Web**: Fixed 424x695 pixels
 - **Embed Image**: 3:2 aspect ratio, 600x400px minimum
 - **Splash Image**: 200x200px
-- **Icon**: PNG recommended
+- **Icon**: PNG styled
 - **Font**: Lexend (Google Font)
 - **Colors**: Pink (#FF1493) to Purple gradient
 
@@ -101,7 +62,7 @@ baseMatch/
 1. Connect wallet
 2. Create profile (mint Soulbound NFT)
 3. Browse other profiles
-4. Express interest (heart button)
+4. Express interest 
 5. Get matched when mutual
 6. (Optional) Setup date with USDC stake
 7. Meet IRL
@@ -126,81 +87,8 @@ baseMatch/
 - Solidity 0.8.20
 - OpenZeppelin contracts
 
-## 🚀 How to Run
-
-1. **Install dependencies:**
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-2. **Set up environment:**
-   ```bash
-   cp .env.example .env.local
-   # Edit .env.local with your WalletConnect Project ID
-   ```
-
-3. **Deploy contracts** to Base (Sepolia for testing)
-
-4. **Update contract addresses** in `frontend/lib/contracts.ts`
-
-5. **Run development server:**
-   ```bash
-   npm run dev
-   ```
-
-6. **Open** http://localhost:3000
-
-## 📝 Smart Contract Functions
-
-### ProfileNFT
-- `createProfile(name, age, interests, photoUrl)` - Create profile
-- `updateProfile(...)` - Update existing profile
-- `getProfile(address)` - View profile
-
-### Matching
-- `expressInterest(targetUser)` - Like someone
-- `getMatches(user)` - Get all matches
-- `isMatched(user1, user2)` - Check if matched
-
-### Staking
-- `createStake(matchedUser, amount, meetingTime)` - Create stake
-- `confirmMeeting(matchedUser)` - Confirm you showed up
-- `claimStake(matchedUser)` - Claim after window
-
-### Reputation
-- `rateUser(user, rating)` - Rate 1-5 stars
-- `getReputation(user)` - View reputation
-- `getAverageRating(user)` - Calculate average
-
-### Achievement
-- `mintAchievement(user, achievementType)` - Award badge
-- `getAchievements(user)` - View all badges
-
-## 🌐 Deployment
-
-### Contracts
-Deploy in this order:
-1. ProfileNFT
-2. Matching (needs ProfileNFT address)
-3. Staking (needs USDC + Matching addresses)
-4. Reputation (needs Matching address)
-5. Achievement
-
-### Frontend
-- Deploy to Vercel/Netlify
-- Set environment variables
-- Update farcaster.json with production URL
-- Generate Account Association at base.build
-- Test with Base Preview tool
-- Publish by posting in Base app
-
-## 🔐 Security Notes
-
 ⚠️ **Important:**
-- Smart contracts are NOT audited
-- Test thoroughly on testnet first
-- Use at your own risk
+
 - Soulbound NFTs cannot be transferred
 - All reputation data is public on-chain
 
@@ -220,11 +108,11 @@ Features:
 - Staking mechanism for serious daters
 - Achievement NFTs for milestones
 - In-app messaging for matches
-- Location-based matching
+- Location-based matching * location doxxing not yet implemeneted **
 - Profile editing functionality
 - Email verification with send verification link 
 - Profile picture upload
-- Premium gifting features (USDC/Base ETH) or flowers based on third party *vendor ( *this will be implemented soon)
+- Premium gifting features (USDC/Base ETH) onchain and flowers or other irl gifts through third party vendor
 
 Technical Implementation:
 - Next.js 14 with App Router
@@ -233,8 +121,7 @@ Technical Implementation:
 - Tailwind CSS for styling
 - RainbowKit for wallet connection UI
 - Blockies for avatar generation
-- Nodemailer for email sending
-- File-based database (mock implementation for prototype)
+- brevo stack for email sending
 - Real email verification with token-based system
 - Secure token expiration (24 hours)
 - Periodic cleanup of expired tokens

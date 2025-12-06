@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase';
-// Assuming verifyWalletSignature is a custom function imported from a utility file
+
 import { verifyWalletSignature } from '@/lib/utils'; 
 
 export const runtime = 'nodejs';
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 2. Find profile by email
-        // 🛑 FIX 1: Using 'profiles' table
+      
         const { data: profile, error: profileError } = await supabaseService
             .from('profiles')
             .select('*')
@@ -67,8 +67,6 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 4. Check if wallet is already connected to another profile
-        // 🛑 FIX 2: Using 'profiles' table
         const { data: existingWallet, error: walletCheckError } = await supabaseService
             .from('profiles')
             .select('id, email')

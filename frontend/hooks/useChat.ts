@@ -66,13 +66,43 @@ export function useChat({ user1Address, user2Address, userAddress }: UseChatProp
             // Decrypt all messages client-side
             const decryptedMessages = await decryptMessages(encryptedMessages);
             setMessages(decryptedMessages);
+
+            // Mark unread messages from the other user as read
+            if (userAddress && encryptedMessages.length > 0) {
+                const unreadMessageIds = encryptedMessages
+                    .filter(
+                        (msg: ChatMessage) =>
+                            !msg.read_status &&
+                            msg.sender_address.toLowerCase() !== userAddress.toLowerCase()
+                    )
+                    .map((msg: ChatMessage) => msg.id);
+
+                if (unreadMessageIds.length > 0) {
+                    try {
+                        const markReadResponse = await fetch('/api/chat', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                messageIds: unreadMessageIds,
+                                reader: userAddress,
+                            }),
+                        });
+
+                        if (!markReadResponse.ok) {
+                            console.warn('Failed to mark messages as read');
+                        }
+                    } catch (markReadError) {
+                        console.error('Error marking messages as read:', markReadError);
+                    }
+                }
+            }
         } catch (err) {
             console.error('Error fetching messages:', err);
             setError(err instanceof Error ? err.message : 'Failed to fetch messages');
         } finally {
             setLoading(false);
         }
-    }, [user1Address, user2Address, decryptMessages]);
+    }, [user1Address, user2Address, userAddress, decryptMessages]);
 
     // Initial fetch and polling
     useEffect(() => {

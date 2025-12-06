@@ -15,8 +15,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Update the profile row with the wallet information, verification status, and profile details
-    // Filtering by 'id' is the most efficient method (Primary Key lookup).
+    
     const { data: profile, error } = await supabaseService
       .from("profiles")
       .update({

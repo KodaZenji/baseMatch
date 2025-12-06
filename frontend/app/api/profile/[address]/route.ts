@@ -32,8 +32,6 @@ export async function GET(
             args: [address as `0x${string}`],
         });
 
-        // Transform the data to match our frontend expectations
-        // profileData is a tuple, so we need to access by index
         const profile = {
             tokenId: (profileData as any).tokenId?.toString() || '0',
             name: (profileData as any).name || '',

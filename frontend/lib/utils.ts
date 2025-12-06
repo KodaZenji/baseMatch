@@ -5,7 +5,7 @@ import { createPublicClient, http, Address } from 'viem';
 import { baseSepolia } from 'viem/chains'; 
 
 // --- VIEM/WAGMI CONFIGURATION ---
-// IMPORTANT: Ensure NEXT_PUBLIC_PROFILE_NFT_ADDRESS is set in your environment
+
 const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS as Address;
 
 // Minimal ABI for checking ownership (balanceOf function)
@@ -42,7 +42,6 @@ export async function checkNftOwnership(address: string): Promise<boolean> {
             args: [address as Address],
         });
 
-        // ✅ FIX: Use BigInt(0) instead of the literal 0n to avoid ES2020 compiler error
         return balance > BigInt(0); 
     } catch (error) {
         console.error('Error checking NFT balance:', error);

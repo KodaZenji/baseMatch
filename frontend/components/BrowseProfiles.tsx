@@ -45,6 +45,31 @@ export default function BrowseProfiles() {
 
         // For real mode, call the smart contract
         try {
+            // Validate wallet connection
+            if (!address) {
+                setSuccessMessage('Please connect your wallet first.');
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 3000);
+                return;
+            }
+
+            // Validate contract address
+            if (!CONTRACTS.MATCHING || !CONTRACTS.MATCHING.startsWith('0x')) {
+                console.error('❌ CONTRACTS object:', CONTRACTS);
+                console.error('❌ MATCHING address:', CONTRACTS.MATCHING);
+                setSuccessMessage('Matching contract not configured. Ensure .env.local has NEXT_PUBLIC_MATCHING_ADDRESS and dev server is restarted.');
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 5000);
+                return;
+            }
+
+            // Log transaction details
+            console.log('📤 Sending expressInterest transaction:', {
+                contract: CONTRACTS.MATCHING,
+                from: address,
+                to: targetAddress
+            });
+
             writeContract({
                 address: CONTRACTS.MATCHING as `0x${string}`,
                 abi: MATCHING_ABI,
@@ -54,7 +79,7 @@ export default function BrowseProfiles() {
 
             // Show success message
             const profileName = profiles.find(p => p.wallet_address === targetAddress)?.name || 'user';
-            setSuccessMessage(`Interest expressed in ${profileName}! Transaction submitted.`);
+            setSuccessMessage(`Interest expressed in ${profileName}! Check your wallet for the transaction.`);
             setShowSuccess(true);
 
             // Hide success message after 3 seconds
@@ -62,17 +87,11 @@ export default function BrowseProfiles() {
                 setShowSuccess(false);
             }, 3000);
         } catch (error) {
-            console.error('Error expressing interest:', error);
+            console.error('❌ Error expressing interest:', error);
             const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-            
-            let userFriendlyMessage = 'Unable to express interest. ';
-            if (errorMsg.includes('profile does not exist')) {
-                userFriendlyMessage += 'Please ensure you have minted your profile.';
-            } else {
-                userFriendlyMessage += 'Please try again.';
-            }
-            
-            setSuccessMessage(userFriendlyMessage);
+            console.error('Error details:', errorMsg);
+
+            setSuccessMessage('Unable to send transaction. Please check your wallet and try again.');
             setShowSuccess(true);
 
             // Hide error message after 3 seconds
@@ -90,7 +109,7 @@ export default function BrowseProfiles() {
     useEffect(() => {
         if (isError && error) {
             let userFriendlyMessage = 'Unable to express interest. ';
-            
+
             if (error.message?.includes('profile does not exist')) {
                 userFriendlyMessage += 'Please ensure both users have minted their profiles.';
             } else if (error.message?.includes('Already expressed interest')) {
@@ -102,7 +121,7 @@ export default function BrowseProfiles() {
             } else {
                 userFriendlyMessage += 'Please try again or contact support if the issue persists.';
             }
-            
+
             setSuccessMessage(userFriendlyMessage);
             setShowSuccess(true);
 

@@ -186,7 +186,6 @@ export default function MintPage() {
 
   // --- RENDER LOGIC ---
 
-  // 🛑 Status Check Loading Screen
   if (isCheckingStatus) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">

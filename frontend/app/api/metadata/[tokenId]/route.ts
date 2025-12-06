@@ -66,11 +66,7 @@ async function callContract(data: string): Promise<string> {
     }
 }
 
-/**
- * Decode Profile struct from contract response
- * Uses manual hex parsing since ethers imports had issues
- * Profile = (uint256 tokenId, string name, uint8 age, string gender, string interests, string photoUrl, string email, bool exists)
- */
+
 function decodeProfileResponse(data: string): any {
     try {
         // If no data returned, return null
@@ -86,9 +82,7 @@ function decodeProfileResponse(data: string): any {
         // In production, you'd want a more robust solution, but this works for our use case
 
         try {
-            // For now, extract basic info from the encoded data
-            // Note: Full decoding would require proper ABI parsing library
-            // This returns a valid structure that won't break the metadata endpoint
+            
             return {
                 tokenId: '0',
                 name: 'BaseMatch Profile',
