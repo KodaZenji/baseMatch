@@ -131,7 +131,7 @@ export function useChat({
         const addr1 = user1Address.toLowerCase();
         const addr2 = user2Address.toLowerCase();
 
-        const channel = supabaseService
+        const channel = supabaseClient
             .channel(`chat:${addr1}:${addr2}`)
             .on(
                 'postgres_changes',
@@ -166,7 +166,7 @@ export function useChat({
 
         return () => {
             if (realtimeChannelRef.current) {
-                supabaseService.removeChannel(realtimeChannelRef.current);
+                supabaseClient.removeChannel(realtimeChannelRef.current);
             }
         };
     }, [user1Address, user2Address, userAddress, fetchMessages, decryptMessages]);
