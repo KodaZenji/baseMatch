@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseService } from '@/lib/supabase';
+import { supabaseService } from '@/lib/supabase.server';
 import { verifyWalletSignature } from '@/lib/utils'; 
 
 export const runtime = 'nodejs';
