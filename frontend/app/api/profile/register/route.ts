@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseService } from '@/lib/supabase';
+import { supabaseService } from '@/lib/supabase.server';
 import { verifyWalletSignature, generateToken, sendVerificationEmail, calculatePhotoHash } from '@/lib/utils'; // Assumed to be imported
 
 export const runtime = 'nodejs';
