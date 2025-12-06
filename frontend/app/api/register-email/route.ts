@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseService } from '@/lib/supabase'; // Assumed to be the Service Role client
+import { supabaseService } from '@/lib/supabase.server'; // Assumed to be the Service Role client
 import { randomBytes } from 'crypto';
 import * as brevo from '@getbrevo/brevo';
 
