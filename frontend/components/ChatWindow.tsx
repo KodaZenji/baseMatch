@@ -33,9 +33,11 @@ export default function ChatWindow({
     const [showDateModal, setShowDateModal] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+    const [longPressMessageId, setLongPressMessageId] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const isInitialLoadRef = useRef(true);
+    const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         if (isInitialLoadRef.current && messages.length > 0) {
@@ -80,6 +82,7 @@ export default function ChatWindow({
         if (!confirm('Delete this message? This cannot be undone.')) return;
 
         setDeletingMessageId(messageId);
+        setLongPressMessageId(null);
         const success = await deleteMessage(messageId);
         
         if (success) {
@@ -90,6 +93,24 @@ export default function ChatWindow({
             setTimeout(() => setSendError(null), 3000);
         }
         setDeletingMessageId(null);
+    };
+
+    // Long press handlers for mobile
+    const handleTouchStart = (messageId: string) => {
+        longPressTimerRef.current = setTimeout(() => {
+            setLongPressMessageId(messageId);
+            // Haptic feedback if available
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }, 500); // 500ms long press
+    };
+
+    const handleTouchEnd = () => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
     };
 
     const otherUserName = currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user2Name : user1Name;
@@ -127,19 +148,10 @@ export default function ChatWindow({
                     ref={messagesContainerRef}
                     onScroll={handleScroll}
                     className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
+                    style={{ display: 'flex', flexDirection: 'column-reverse' }}
                 >
-                    {hasMore && (
-                        <div className="text-center py-2">
-                            <button 
-                                onClick={loadMore}
-                                disabled={loading}
-                                className="text-sm text-purple-600 hover:text-purple-700 disabled:opacity-50"
-                            >
-                                {loading ? 'Loading...' : '↑ Load older messages'}
-                            </button>
-                        </div>
-                    )}
-
+                    <div ref={messagesEndRef} />
+                    
                     {loading && messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
                             <div className="text-gray-500 text-center">
@@ -154,51 +166,77 @@ export default function ChatWindow({
                             </div>
                         </div>
                     ) : (
-                        messages.map((msg) => {
-                            const isCurrentUser = msg.sender_address.toLowerCase() === currentUserAddress.toLowerCase();
-                            const isDeleting = deletingMessageId === msg.id;
-                            
-                            return (
-                                <div
-                                    key={msg.id}
-                                    className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} group`}
-                                >
-                                    <div className="relative">
-                                        <div
-                                            className={`max-w-xs px-4 py-2 rounded-lg ${
-                                                isCurrentUser
-                                                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-br-none'
-                                                    : 'bg-gray-200 text-gray-900 rounded-bl-none'
-                                            } ${isDeleting ? 'opacity-50' : ''}`}
-                                        >
-                                            <p className="break-words">{msg.decrypted_text || '[Decrypting...]'}</p>
-                                            <p
-                                                className={`text-xs mt-1 ${
-                                                    isCurrentUser ? 'text-pink-100' : 'text-gray-500'
-                                                }`}
+                        <>
+                            {messages.slice().reverse().map((msg) => {
+                                const isCurrentUser = msg.sender_address.toLowerCase() === currentUserAddress.toLowerCase();
+                                const isDeleting = deletingMessageId === msg.id;
+                                const showDeleteButton = longPressMessageId === msg.id;
+                                
+                                return (
+                                    <div
+                                        key={msg.id}
+                                        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} group`}
+                                    >
+                                        <div className="relative flex items-center gap-2">
+                                            {/* Delete button - shows on hover (desktop) or long-press (mobile) */}
+                                            {isCurrentUser && !isDeleting && (
+                                                <button
+                                                    onClick={() => handleDeleteMessage(msg.id)}
+                                                    className={`
+                                                        text-red-500 hover:text-red-700 text-lg flex-shrink-0 transition-opacity
+                                                        ${showDeleteButton ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+                                                    `}
+                                                    title="Delete message"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            )}
+                                            
+                                            <div
+                                                onTouchStart={() => isCurrentUser && !isDeleting && handleTouchStart(msg.id)}
+                                                onTouchEnd={handleTouchEnd}
+                                                onTouchMove={handleTouchEnd}
+                                                className={`
+                                                    max-w-xs px-4 py-2 rounded-lg cursor-pointer select-none
+                                                    ${isCurrentUser
+                                                        ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-br-none'
+                                                        : 'bg-gray-200 text-gray-900 rounded-bl-none'
+                                                    } 
+                                                    ${isDeleting ? 'opacity-50' : ''}
+                                                    ${showDeleteButton ? 'scale-95' : ''}
+                                                    transition-transform
+                                                `}
                                             >
-                                                {new Date(msg.created_at).toLocaleTimeString([], {
-                                                    hour: '2-digit',
-                                                    minute: '2-digit',
-                                                })}
-                                            </p>
+                                                <p className="break-words">{msg.decrypted_text || '[Decrypting...]'}</p>
+                                                <p
+                                                    className={`text-xs mt-1 ${
+                                                        isCurrentUser ? 'text-pink-100' : 'text-gray-500'
+                                                    }`}
+                                                >
+                                                    {new Date(msg.created_at).toLocaleTimeString([], {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                    })}
+                                                </p>
+                                            </div>
                                         </div>
-                                        
-                                        {isCurrentUser && !isDeleting && (
-                                            <button
-                                                onClick={() => handleDeleteMessage(msg.id)}
-                                                className="absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 text-sm"
-                                                title="Delete message"
-                                            >
-                                                🗑️
-                                            </button>
-                                        )}
                                     </div>
-                                </div>
-                            );
-                        })
+                                );
+                            })}
+                        </>
                     )}
-                    <div ref={messagesEndRef} />
+
+                    {hasMore && (
+                        <div className="text-center py-2">
+                            <button 
+                                onClick={loadMore}
+                                disabled={loading}
+                                className="text-sm text-purple-600 hover:text-purple-700 disabled:opacity-50"
+                            >
+                                {loading ? 'Loading...' : '↑ Load older messages'}
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {(error || sendError || successMessage) && (
