@@ -22,12 +22,10 @@ export async function POST(request: Request) {
         // Check if profile already exists
         const { data: existingProfile } = await supabaseService
             .from('profiles') 
-            .select('id, name, wallet_address')
+            .select('id, name')
             .eq('email', normalizedEmail)
             .single();
 
-        // Determine if this is an existing user (has name) or new registration
-        const isExistingUser = existingProfile && existingProfile.name;
         let profileId = existingProfile?.id;
         
         if (!profileId) {
@@ -61,7 +59,7 @@ export async function POST(request: Request) {
             profileId = profile.id;
         }
 
-        // Create verification token with context
+        // Create verification token
         const token = randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
@@ -72,7 +70,6 @@ export async function POST(request: Request) {
                     token,
                     email: normalizedEmail,
                     profile_id: profileId,
-                    is_existing_user: isExistingUser, // NEW: Track if user already has profile
                     expires_at: expiresAt.toISOString(),
                     created_at: new Date().toISOString()
                 }
@@ -143,7 +140,7 @@ export async function POST(request: Request) {
         
         <p>Hello ${name || 'User'},</p>
         
-        <p>Thank you for ${isExistingUser ? 'updating your email with' : 'signing up with'} BaseMatch! Please verify your email address by clicking the button below:</p>
+        <p>Thank you for signing up with BaseMatch! Please verify your email address by clicking the button below:</p>
         
         <div style="text-align: center; margin: 30px 0;">
             <a href="${verificationUrl}" class="button">Verify Email Address</a>
@@ -155,7 +152,7 @@ export async function POST(request: Request) {
         <p>This link will expire in 24 hours.</p>
         
         <div class="footer">
-            <p>If you didn't ${isExistingUser ? 'update your email' : 'sign up'} for BaseMatch, please ignore this email.</p>
+            <p>If you didn't sign up for BaseMatch, please ignore this email.</p>
             <p>&copy; 2025 BaseMatch. All rights reserved.</p>
         </div>
     </div>
@@ -168,8 +165,7 @@ export async function POST(request: Request) {
             return NextResponse.json({
                 success: true,
                 message: 'Verification email sent! Please check your inbox.',
-                profileId: profileId,
-                isExistingUser: isExistingUser
+                profileId: profileId
             });
         } catch (emailError) {
             console.error('Error sending email:', emailError);
