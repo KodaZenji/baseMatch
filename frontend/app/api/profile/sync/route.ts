@@ -33,38 +33,56 @@ export async function POST(request: NextRequest) {
         // Normalize wallet address
         const normalizedAddress = walletAddress.toLowerCase();
 
-        // Check if profile exists in profiles table
-        const { data: existingProfile } = await supabaseService
+        // First, check if profile exists
+        const { data: existingProfile, error: fetchError } = await supabaseService
             .from('profiles')
-            .select('wallet_address')
+            .select('id, wallet_address')
             .eq('wallet_address', normalizedAddress)
-            .single();
+            .maybeSingle(); // Use maybeSingle instead of single to avoid errors if not found
+
+        if (fetchError) {
+            console.error('Error checking existing profile:', fetchError);
+            return NextResponse.json(
+                { error: 'Failed to check existing profile', details: fetchError.message },
+                { status: 500 }
+            );
+        }
 
         if (existingProfile) {
-            // Update existing profile
-            const { error: updateError } = await supabaseService
+            // Profile exists - UPDATE it using the id
+            const { data, error: updateError } = await supabaseService
                 .from('profiles')
                 .update({
-                    name: name || undefined,
-                    age: age || undefined,
-                    gender: gender || undefined,
-                    interests: interests || undefined,
-                    photoUrl: photoUrl || '',
-                    email: email || undefined,
+                    name: name || existingProfile.name,
+                    age: age || existingProfile.age,
+                    gender: gender || existingProfile.gender,
+                    interests: interests || existingProfile.interests,
+                    photoUrl: photoUrl !== undefined ? photoUrl : existingProfile.photoUrl,
+                    email: email || existingProfile.email,
                     updated_at: new Date().toISOString()
                 })
-                .eq('wallet_address', normalizedAddress);
+                .eq('id', existingProfile.id)
+                .select()
+                .single();
 
             if (updateError) {
-                console.error('Error updating profile in database:', updateError);
+                console.error('Error updating profile:', updateError);
                 return NextResponse.json(
-                    { error: 'Failed to sync profile to database', details: updateError.message },
+                    { error: 'Failed to update profile', details: updateError.message },
                     { status: 500 }
                 );
             }
+
+            console.log('Profile updated successfully:', data);
+
+            return NextResponse.json({
+                success: true,
+                message: 'Profile updated successfully',
+                profile: data
+            });
         } else {
-            // Insert new profile (shouldn't normally happen, but safe fallback)
-            const { error: insertError } = await supabaseService
+            // Profile doesn't exist - INSERT new one
+            const { data, error: insertError } = await supabaseService
                 .from('profiles')
                 .insert({
                     wallet_address: normalizedAddress,
@@ -77,21 +95,26 @@ export async function POST(request: NextRequest) {
                     wallet_verified: true,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
-                });
+                })
+                .select()
+                .single();
 
             if (insertError) {
-                console.error('Error inserting profile into database:', insertError);
+                console.error('Error inserting profile:', insertError);
                 return NextResponse.json(
-                    { error: 'Failed to create profile in database', details: insertError.message },
+                    { error: 'Failed to create profile', details: insertError.message },
                     { status: 500 }
                 );
             }
-        }
 
-        return NextResponse.json({
-            success: true,
-            message: 'Profile synced to database successfully'
-        });
+            console.log('Profile created successfully:', data);
+
+            return NextResponse.json({
+                success: true,
+                message: 'Profile created successfully',
+                profile: data
+            });
+        }
 
     } catch (error) {
         console.error('Error syncing profile:', error);
@@ -100,4 +123,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
-                  }
+}
