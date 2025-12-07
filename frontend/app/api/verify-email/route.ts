@@ -61,11 +61,16 @@ export async function GET(request: Request) {
         }
         
         // User is "existing" if they have a name (completed their profile)
-        const isExistingUser = !!(profile.name && profile.name.trim().length > 0);
+        const hasName = profile.name && typeof profile.name === 'string' && profile.name.trim().length > 0;
+        const isExistingUser = hasName;
 
-        console.log('User verification status:', { 
-            profileId: targetProfileId, 
-            hasName: !!profile.name, 
+        console.log('🔍 User verification status:', { 
+            profileId: targetProfileId,
+            rawName: profile.name,
+            nameType: typeof profile.name,
+            nameLength: profile.name?.length,
+            trimmedLength: profile.name?.trim()?.length,
+            hasName,
             isExistingUser,
             currentEmail: profile.email,
             newEmail: verificationEmail
@@ -94,8 +99,8 @@ export async function GET(request: Request) {
             .delete()
             .eq('token', token);
 
-        // Return success HTML with appropriate redirect
-        return new NextResponse(getSuccessHTML(verificationEmail, isExistingUser), {
+        // Return success HTML with appropriate redirect and localStorage setup
+        return new NextResponse(getSuccessHTML(verificationEmail, isExistingUser, targetProfileId), {
             headers: { 'Content-Type': 'text/html' }
         });
 
@@ -176,11 +181,22 @@ export async function POST(request: Request) {
 }
 
 // Helper function for success HTML with redirect logic
-function getSuccessHTML(email: string, isExistingUser: boolean): string {
-    const redirectUrl = isExistingUser ? '/dashboard' : '/complete-profile';
+function getSuccessHTML(email: string, isExistingUser: boolean, profileId: string): string {
+    // Use dashboard for existing users, complete-profile for new users
+    const redirectUrl = isExistingUser ? '/dashboard' : '/register/email/complete';
     const redirectMessage = isExistingUser 
         ? 'Redirecting to your dashboard...' 
         : 'Redirecting to complete your profile...';
+    
+    console.log('🔀 Redirecting:', { isExistingUser, redirectUrl, profileId });
+    
+    // For new users, set localStorage so the complete page can access it
+    const localStorageScript = !isExistingUser ? `
+        localStorage.setItem('emailVerified', JSON.stringify({
+            email: '${email}',
+            profile_id: '${profileId}'
+        }));
+    ` : '';
     
     return `
 <!DOCTYPE html>
@@ -195,6 +211,7 @@ function getSuccessHTML(email: string, isExistingUser: boolean): string {
         a { color: #4f46e5; text-decoration: none; font-weight: bold; }
         a:hover { text-decoration: underline; }
         .redirect-note { color: #666; font-size: 14px; margin-top: 10px; }
+        .debug { background: #f5f5f5; padding: 10px; margin-top: 20px; font-size: 12px; font-family: monospace; text-align: left; }
     </style>
 </head>
 <body>
@@ -203,7 +220,20 @@ function getSuccessHTML(email: string, isExistingUser: boolean): string {
         <p>Your email address <strong>${email}</strong> has been verified.</p>
         <p class="redirect-note">${redirectMessage}</p>
         <p><a href="${redirectUrl}">Click here if not redirected automatically</a></p>
+        <div class="debug">
+            Debug: isExistingUser = ${isExistingUser}<br>
+            Redirect URL: ${redirectUrl}<br>
+            Profile ID: ${profileId}
+        </div>
     </div>
+    <script>
+        ${localStorageScript}
+        console.log('Verification complete:', {
+            isExistingUser: ${isExistingUser},
+            redirectUrl: '${redirectUrl}',
+            profileId: '${profileId}'
+        });
+    </script>
 </body>
 </html>`;
 }
