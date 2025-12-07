@@ -25,8 +25,8 @@ export async function GET(request: Request) {
             .eq('token', token)
             .single();
 
-        if (tokenError || !verificationToken || verificationToken.email !== email) {
-            console.error('Token not found or email mismatch');
+        if (tokenError || !verificationToken) {
+            console.error('Token not found:', tokenError);
             return new NextResponse(getErrorHTML('The verification link is invalid or has expired.'), {
                 headers: { 'Content-Type': 'text/html' },
                 status: 400
@@ -43,21 +43,39 @@ export async function GET(request: Request) {
         }
 
         const targetProfileId = verificationToken.profile_id;
+        const verificationEmail = verificationToken.email;
 
-        // Check the profile to determine if user is existing (has completed profile)
-        const { data: profile } = await supabaseService
+        // Get the profile to check if user is existing
+        const { data: profile, error: profileError } = await supabaseService
             .from('profiles')
-            .select('name, wallet_address')
+            .select('name, email')
             .eq('id', targetProfileId)
             .single();
+
+        if (profileError || !profile) {
+            console.error('Profile not found:', profileError);
+            return new NextResponse(getErrorHTML('Profile not found.'), {
+                headers: { 'Content-Type': 'text/html' },
+                status: 400
+            });
+        }
         
         // User is "existing" if they have a name (completed their profile)
-        const isExistingUser = !!(profile?.name);
+        const isExistingUser = !!(profile.name && profile.name.trim().length > 0);
 
-        // Mark email as verified in PROFILES table
+        console.log('User verification status:', { 
+            profileId: targetProfileId, 
+            hasName: !!profile.name, 
+            isExistingUser,
+            currentEmail: profile.email,
+            newEmail: verificationEmail
+        });
+
+        // Update profile: mark email as verified AND update the email address
         const { error: updateError } = await supabaseService
             .from('profiles')
             .update({
+                email: verificationEmail, // Update to the verified email
                 email_verified: true,
                 updated_at: new Date().toISOString()
             })
@@ -68,7 +86,7 @@ export async function GET(request: Request) {
             throw updateError;
         }
 
-        console.log('Email verified successfully for profile:', targetProfileId);
+        console.log('Email verified and updated successfully for profile:', targetProfileId);
 
         // Cleanup: Delete the used token
         await supabaseService
@@ -77,7 +95,7 @@ export async function GET(request: Request) {
             .eq('token', token);
 
         // Return success HTML with appropriate redirect
-        return new NextResponse(getSuccessHTML(email, isExistingUser), {
+        return new NextResponse(getSuccessHTML(verificationEmail, isExistingUser), {
             headers: { 'Content-Type': 'text/html' }
         });
 
@@ -104,7 +122,6 @@ export async function POST(request: Request) {
             .from('email_verifications')
             .select('*')
             .eq('token', token)
-            .eq('email', email)
             .single();
 
         if (verifyError || !verification) {
@@ -117,20 +134,22 @@ export async function POST(request: Request) {
         }
 
         const targetProfileId = verification.profile_id;
+        const verificationEmail = verification.email;
 
-        // Check the profile to determine if user is existing
+        // Get the profile to check if user is existing
         const { data: profile } = await supabaseService
             .from('profiles')
-            .select('name, wallet_address')
+            .select('name, email')
             .eq('id', targetProfileId)
             .single();
         
-        const isExistingUser = !!(profile?.name);
+        const isExistingUser = !!(profile?.name && profile.name.trim().length > 0);
 
-        // Update PROFILES table
+        // Update profile: mark email as verified AND update the email address
         const { error: updateError } = await supabaseService
             .from('profiles')
             .update({
+                email: verificationEmail, // Update to the verified email
                 email_verified: true,
                 updated_at: new Date().toISOString()
             })
@@ -158,9 +177,9 @@ export async function POST(request: Request) {
 
 // Helper function for success HTML with redirect logic
 function getSuccessHTML(email: string, isExistingUser: boolean): string {
-    const redirectUrl = isExistingUser ? '/profile/edit' : '/complete-profile';
+    const redirectUrl = isExistingUser ? '/dashboard' : '/complete-profile';
     const redirectMessage = isExistingUser 
-        ? 'Redirecting back to your profile...' 
+        ? 'Redirecting to your dashboard...' 
         : 'Redirecting to complete your profile...';
     
     return `
