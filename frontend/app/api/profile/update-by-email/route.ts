@@ -1,6 +1,7 @@
+// frontend/app/api/profile/update-by-email/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
-import { calculatePhotoHash } from '@/lib/utils';
 
 export const runtime = 'nodejs';
 
@@ -36,17 +37,16 @@ export async function POST(request: NextRequest) {
         }
 
         const normalizedEmail = email.toLowerCase().trim();
-        const photoHash = photoUrl ? calculatePhotoHash(photoUrl) : '';
 
+        // Update the profiles table
         const { error: updateError } = await supabaseService
-            .from('users')
+            .from('profiles')
             .update({
                 name,
                 age,
                 gender,
                 interests,
-                photo_url: photoUrl || '',
-                photo_hash: photoHash,
+                photoUrl: photoUrl || '',
                 updated_at: new Date().toISOString()
             })
             .eq('email', normalizedEmail);
