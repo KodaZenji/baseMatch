@@ -78,8 +78,8 @@ export async function POST(request: Request) {
             // Profile exists - log for debugging
             console.log('Found existing profile:', {
                 profileId,
-                hasName: !!existingProfile.name,
-                currentEmail: existingProfile.email,
+                hasName: existingProfile ? !!existingProfile.name : false,
+                currentEmail: existingProfile?.email,
                 newEmail: normalizedEmail,
                 walletUsed: !!normalizedWallet
             });
