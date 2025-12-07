@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
 
 const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.SUPABASE_URL || '',
     process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
