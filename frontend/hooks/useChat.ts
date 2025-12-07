@@ -145,7 +145,8 @@ export function useChat({
                     const newMessage = payload.new as ChatMessage;
                     
                     const decrypted = await decryptMessages([newMessage]);
-                    setMessages(prev => [decrypted[0], ...prev]);
+                    // Add to end of array (bottom of chat) for correct order
+                    setMessages(prev => [...prev, decrypted[0]]);
 
                     if (userAddress && 
                         newMessage.sender_address.toLowerCase() !== userAddress.toLowerCase()) {
