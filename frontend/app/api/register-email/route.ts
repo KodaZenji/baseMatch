@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, age, gender, interests, email } = body;
+        const { name, age, gender, interests, email, walletAddress } = body;
 
         if (!email) {
             return NextResponse.json(
@@ -18,13 +18,29 @@ export async function POST(request: Request) {
         }
 
         const normalizedEmail = email.toLowerCase().trim();
+        const normalizedWallet = walletAddress ? walletAddress.toLowerCase().trim() : null;
 
-        // Check if profile already exists
-        const { data: existingProfile } = await supabaseService
-            .from('profiles') 
-            .select('id, name')
-            .eq('email', normalizedEmail)
-            .single();
+        let existingProfile = null;
+        
+        // First priority: Look up by wallet address if provided (for existing users updating email)
+        if (normalizedWallet) {
+            const { data } = await supabaseService
+                .from('profiles') 
+                .select('id, name, email')
+                .eq('wallet_address', normalizedWallet)
+                .single();
+            existingProfile = data;
+        }
+        
+        // Second priority: Look up by email (for new users or email-first users)
+        if (!existingProfile) {
+            const { data } = await supabaseService
+                .from('profiles') 
+                .select('id, name, email')
+                .eq('email', normalizedEmail)
+                .single();
+            existingProfile = data;
+        }
 
         let profileId = existingProfile?.id;
         
@@ -35,6 +51,7 @@ export async function POST(request: Request) {
                 .insert([
                     {
                         email: normalizedEmail,
+                        wallet_address: normalizedWallet || null,
                         name: name || null,
                         age: age ? parseInt(age) : null,
                         gender: gender || null,
@@ -57,6 +74,15 @@ export async function POST(request: Request) {
             }
 
             profileId = profile.id;
+        } else {
+            // Profile exists - log for debugging
+            console.log('Found existing profile:', {
+                profileId,
+                hasName: !!existingProfile.name,
+                currentEmail: existingProfile.email,
+                newEmail: normalizedEmail,
+                walletUsed: !!normalizedWallet
+            });
         }
 
         // Create verification token
@@ -138,9 +164,9 @@ export async function POST(request: Request) {
             <h2>Email Verification</h2>
         </div>
         
-        <p>Hello ${name || 'User'},</p>
+        <p>Hello${name ? ' ' + name : ''},</p>
         
-        <p>Thank you for signing up with BaseMatch! Please verify your email address by clicking the button below:</p>
+        <p>Please verify your email address by clicking the button below:</p>
         
         <div style="text-align: center; margin: 30px 0;">
             <a href="${verificationUrl}" class="button">Verify Email Address</a>
@@ -152,7 +178,7 @@ export async function POST(request: Request) {
         <p>This link will expire in 24 hours.</p>
         
         <div class="footer">
-            <p>If you didn't sign up for BaseMatch, please ignore this email.</p>
+            <p>If you didn't request this, please ignore this email.</p>
             <p>&copy; 2025 BaseMatch. All rights reserved.</p>
         </div>
     </div>
