@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseService } from '@/lib/supabase.server';
+import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
@@ -20,6 +20,13 @@ function checkRateLimit(identifier: string, maxRequests: number = 100, windowMs:
 
     record.count++;
     return true;
+}
+
+// Create Supabase client with service role for server-side operations
+function getSupabaseAdmin() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    return createClient(supabaseUrl, supabaseServiceKey);
 }
 
 export async function GET(request: NextRequest) {
@@ -55,13 +62,14 @@ export async function GET(request: NextRequest) {
         const addr1 = user1.toLowerCase();
         const addr2 = user2.toLowerCase();
 
-        const { data: messages, error, count } = await supabaseService
+        const supabase = getSupabaseAdmin();
+        const { data: messages, error, count } = await supabase
             .from('chat_messages')
             .select('*', { count: 'exact' })
             .or(
                 `and(user1_address.eq.${addr1},user2_address.eq.${addr2}),and(user1_address.eq.${addr2},user2_address.eq.${addr1})`
             )
-            .order('created_at', { ascending: false })
+            .order('created_at', { ascending: true })
             .range(offset, offset + limit - 1);
 
         if (error) {
@@ -132,7 +140,8 @@ export async function POST(request: NextRequest) {
         const addr2 = user2.toLowerCase();
         const senderAddr = sender.toLowerCase();
 
-        const { data, error } = await supabaseService
+        const supabase = getSupabaseAdmin();
+        const { data, error } = await supabase
             .from('chat_messages')
             .insert({
                 user1_address: addr1,
@@ -182,7 +191,8 @@ export async function PATCH(request: NextRequest) {
             );
         }
 
-        const { error } = await supabaseService
+        const supabase = getSupabaseAdmin();
+        const { error } = await supabase
             .from('chat_messages')
             .update({ read_status: true })
             .in('id', messageIds)
@@ -225,7 +235,8 @@ export async function DELETE(request: NextRequest) {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
-        const { error, count } = await supabaseService
+        const supabase = getSupabaseAdmin();
+        const { error, count } = await supabase
             .from('chat_messages')
             .delete({ count: 'exact' })
             .or(
