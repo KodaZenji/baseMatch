@@ -335,7 +335,8 @@ export default function ProfileEdit() {
         }
     };
 
-    const syncProfileToDatabase = async (profileData: {
+    
+const syncProfileToDatabase = async (profileData: {
     name: string;
     age: number;
     gender: string;
@@ -369,7 +370,6 @@ export default function ProfileEdit() {
     }
 };
     
-    
 
     const handleWalletLinked = () => {
         setHasWallet(true);
@@ -377,8 +377,7 @@ export default function ProfileEdit() {
         refreshProfile();
     };
 
-
- useEffect(() => {
+useEffect(() => {
     const handleTransactionSuccess = async () => {
         if (isSuccess) {
             if (isDeleting) {
