@@ -9,6 +9,7 @@ export const runtime = 'nodejs';
  * POST /api/profile/sync
  * Sync profile data to database after blockchain update
  * Called after successful wallet-based profile updates
+ * Handles both wallet-based and email-based lookups
  */
 export async function POST(request: NextRequest) {
     try {
@@ -23,22 +24,30 @@ export async function POST(request: NextRequest) {
             email 
         } = body;
 
-        if (!walletAddress) {
+        // Must have either wallet address or email to identify the profile
+        if (!walletAddress && !email) {
             return NextResponse.json(
-                { error: 'Wallet address is required' },
+                { error: 'Either wallet address or email is required' },
                 { status: 400 }
             );
         }
 
-        // Normalize wallet address
-        const normalizedAddress = walletAddress.toLowerCase();
+        // Normalize wallet address to lowercase if provided
+        const normalizedAddress = walletAddress ? walletAddress.toLowerCase() : null;
+        const normalizedEmail = email ? email.toLowerCase().trim() : null;
 
-        // First, check if profile exists
-        const { data: existingProfile, error: fetchError } = await supabaseService
+        // Build query to find existing profile by wallet OR email
+        let query = supabaseService
             .from('profiles')
-            .select('id, wallet_address')
-            .eq('wallet_address', normalizedAddress)
-            .maybeSingle(); // Use maybeSingle instead of single to avoid errors if not found
+            .select('id');
+
+        if (normalizedAddress) {
+            query = query.eq('wallet_address', normalizedAddress);
+        } else if (normalizedEmail) {
+            query = query.eq('email', normalizedEmail);
+        }
+
+        const { data: existingProfile, error: fetchError } = await query.maybeSingle();
 
         if (fetchError) {
             console.error('Error checking existing profile:', fetchError);
@@ -50,17 +59,22 @@ export async function POST(request: NextRequest) {
 
         if (existingProfile) {
             // Profile exists - UPDATE it using the id
+            const updateData: any = {
+                updated_at: new Date().toISOString()
+            };
+
+            // Only update fields that are provided
+            if (normalizedAddress !== null) updateData.wallet_address = normalizedAddress;
+            if (name !== undefined) updateData.name = name;
+            if (age !== undefined) updateData.age = age;
+            if (gender !== undefined) updateData.gender = gender;
+            if (interests !== undefined) updateData.interests = interests;
+            if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
+            if (normalizedEmail !== null) updateData.email = normalizedEmail;
+
             const { data, error: updateError } = await supabaseService
                 .from('profiles')
-                .update({
-                    name: name || existingProfile.name,
-                    age: age || existingProfile.age,
-                    gender: gender || existingProfile.gender,
-                    interests: interests || existingProfile.interests,
-                    photoUrl: photoUrl !== undefined ? photoUrl : existingProfile.photoUrl,
-                    email: email || existingProfile.email,
-                    updated_at: new Date().toISOString()
-                })
+                .update(updateData)
                 .eq('id', existingProfile.id)
                 .select()
                 .single();
@@ -85,14 +99,14 @@ export async function POST(request: NextRequest) {
             const { data, error: insertError } = await supabaseService
                 .from('profiles')
                 .insert({
-                    wallet_address: normalizedAddress,
+                    wallet_address: normalizedAddress || '',
                     name: name || '',
                     age: age || 0,
                     gender: gender || '',
                     interests: interests || '',
                     photoUrl: photoUrl || '',
-                    email: email || '',
-                    wallet_verified: true,
+                    email: normalizedEmail || '',
+                    wallet_verified: !!normalizedAddress,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 })
