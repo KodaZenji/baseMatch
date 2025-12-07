@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseService } from '@/lib/supabase.server'; // Assumed to be the Service Role client
+import { supabaseService } from '@/lib/supabase.server';
 import { randomBytes } from 'crypto';
 import * as brevo from '@getbrevo/brevo';
 
@@ -8,10 +8,8 @@ export const runtime = 'nodejs';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        // Destructure all expected fields, even if some might be null initially
         const { name, age, gender, interests, email } = body;
 
-        // Validate input
         if (!email) {
             return NextResponse.json(
                 { error: 'Email is required' },
@@ -19,24 +17,23 @@ export async function POST(request: Request) {
             );
         }
 
-        // Normalize email to lowercase
         const normalizedEmail = email.toLowerCase().trim();
 
-        // --- 1. Profile Lookup and Creation (Upsert Logic) ---
-        
-        // Check if profile already exists in the 'profiles' table
+        // Check if profile already exists
         const { data: existingProfile } = await supabaseService
             .from('profiles') 
-            .select('id')
+            .select('id, name, wallet_address')
             .eq('email', normalizedEmail)
             .single();
 
-        // Determine profileId; create profile if it doesn't exist
+        // Determine if this is an existing user (has name) or new registration
+        const isExistingUser = existingProfile && existingProfile.name;
         let profileId = existingProfile?.id;
         
         if (!profileId) {
+            // New profile - create it
             const { data: profile, error: insertError } = await supabaseService
-                .from('profiles') // Correctly using 'profiles' table
+                .from('profiles')
                 .insert([
                     {
                         email: normalizedEmail,
@@ -44,9 +41,8 @@ export async function POST(request: Request) {
                         age: age ? parseInt(age) : null,
                         gender: gender || null,
                         interests: interests || null,
-                        email_verified: false, // Initial state is FALSE
-                        wallet_verified: false, // Initial state is FALSE
-                        // wallet_address is omitted here (must be NULLABLE in DB)
+                        email_verified: false,
+                        wallet_verified: false,
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
                     }
@@ -65,19 +61,18 @@ export async function POST(request: Request) {
             profileId = profile.id;
         }
 
-        // --- 2. Token Creation and Database Insert ---
-
+        // Create verification token with context
         const token = randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-        // Insert token into the email_verifications table
         const { error: tokenError } = await supabaseService
             .from('email_verifications')
             .insert([
                 {
                     token,
                     email: normalizedEmail,
-                    profile_id: profileId, // 🛑 FIX: Use profile_id to match the renamed database column
+                    profile_id: profileId,
+                    is_existing_user: isExistingUser, // NEW: Track if user already has profile
                     expires_at: expiresAt.toISOString(),
                     created_at: new Date().toISOString()
                 }
@@ -90,8 +85,6 @@ export async function POST(request: Request) {
                 { status: 500 }
             );
         }
-
-        // --- 3. Email Sending (Brevo) ---
 
         // Create verification URL
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
@@ -113,7 +106,6 @@ export async function POST(request: Request) {
             sendSmtpEmail.to = [{ email: normalizedEmail, name }];
             sendSmtpEmail.subject = 'Verify your email address - BaseMatch';
             
-            // HTML Content remains the same, using the dynamically generated verificationUrl
             sendSmtpEmail.htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -151,7 +143,7 @@ export async function POST(request: Request) {
         
         <p>Hello ${name || 'User'},</p>
         
-        <p>Thank you for signing up with BaseMatch! Please verify your email address by clicking the button below:</p>
+        <p>Thank you for ${isExistingUser ? 'updating your email with' : 'signing up with'} BaseMatch! Please verify your email address by clicking the button below:</p>
         
         <div style="text-align: center; margin: 30px 0;">
             <a href="${verificationUrl}" class="button">Verify Email Address</a>
@@ -163,7 +155,7 @@ export async function POST(request: Request) {
         <p>This link will expire in 24 hours.</p>
         
         <div class="footer">
-            <p>If you didn't sign up for BaseMatch, please ignore this email.</p>
+            <p>If you didn't ${isExistingUser ? 'update your email' : 'sign up'} for BaseMatch, please ignore this email.</p>
             <p>&copy; 2025 BaseMatch. All rights reserved.</p>
         </div>
     </div>
@@ -176,11 +168,11 @@ export async function POST(request: Request) {
             return NextResponse.json({
                 success: true,
                 message: 'Verification email sent! Please check your inbox.',
-                profileId: profileId
+                profileId: profileId,
+                isExistingUser: isExistingUser
             });
         } catch (emailError) {
             console.error('Error sending email:', emailError);
-            // Return success for profile creation but warn about email failure
             return NextResponse.json({
                 success: true,
                 message: 'Profile created! Please check your inbox for the verification link.',
