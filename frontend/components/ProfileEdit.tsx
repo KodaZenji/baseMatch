@@ -335,31 +335,69 @@ export default function ProfileEdit() {
         }
     };
 
+    const syncProfileToDatabase = async (profileData: {
+    name: string;
+    age: number;
+    gender: string;
+    interests: string;
+    photoUrl: string;
+    email: string;
+}) => {
+    try {
+        const response = await fetch('/api/profile/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                walletAddress: address,
+                name: profileData.name,
+                age: profileData.age,
+                gender: profileData.gender,
+                interests: profileData.interests,
+                photoUrl: profileData.photoUrl,
+                email: profileData.email,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Failed to sync profile to database:', errorData);
+        } else {
+            console.log('Profile synced to database successfully');
+        }
+    } catch (error) {
+        console.error('Error syncing profile to database:', error);
+    }
+};
+    
+    
+
     const handleWalletLinked = () => {
         setHasWallet(true);
         showNotification('Wallet linked! You can now mint your profile NFT.', 'success');
         refreshProfile();
     };
 
-    // Handle transaction errors
-    useEffect(() => {
-        if (isError && error) {
-            console.error('Transaction error:', error);
-            showNotification(`Transaction error: ${error.message}`, 'error');
-        }
-    }, [isError, error]);
 
-    // Handle transaction success
-    useEffect(() => {
+ useEffect(() => {
+    const handleTransactionSuccess = async () => {
         if (isSuccess) {
             if (isDeleting) {
                 showNotification('✅ Profile deleted successfully!', 'success');
-                // Clear local state
                 localStorage.clear();
                 setTimeout(() => {
                     window.location.href = '/';
                 }, 2000);
             } else {
+                // Sync the updated profile data to the database
+                await syncProfileToDatabase({
+                    name: formData.name,
+                    age: parseInt(formData.age),
+                    gender: formData.gender,
+                    interests: formData.interests,
+                    photoUrl: newPhotoUrl || formData.photoUrl,
+                    email: formData.email,
+                });
+
                 showNotification('✅ Profile updated successfully!', 'success');
                 refreshProfile();
                 setTimeout(() => {
@@ -367,8 +405,12 @@ export default function ProfileEdit() {
                 }, 2000);
             }
         }
-    }, [isSuccess, isDeleting, refreshProfile]);
+    };
 
+    handleTransactionSuccess();
+}, [isSuccess, isDeleting, refreshProfile, formData, newPhotoUrl, address]);
+
+    
     if (profileLoading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center">
