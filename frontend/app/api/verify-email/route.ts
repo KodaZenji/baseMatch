@@ -171,7 +171,6 @@ export async function POST(request: Request) {
         return NextResponse.json({
             success: true,
             profile_id: targetProfileId,
-            is_existing_user: isExistingUser,
             message: 'Email verified successfully'
         });
     } catch (error) {
@@ -182,10 +181,10 @@ export async function POST(request: Request) {
 
 // Helper function for success HTML with redirect logic
 function getSuccessHTML(email: string, isExistingUser: boolean, profileId: string): string {
-    // Use dashboard for existing users, complete-profile for new users
-    const redirectUrl = isExistingUser ? '/dashboard' : '/register/email/complete';
+    // Use profile/edit for existing users (they were updating email), complete-profile for new users
+    const redirectUrl = isExistingUser ? '/profile/edit' : '/register/email/complete';
     const redirectMessage = isExistingUser 
-        ? 'Redirecting to your dashboard...' 
+        ? 'Email updated! Redirecting back to your profile...' 
         : 'Redirecting to complete your profile...';
     
     console.log('🔀 Redirecting:', { isExistingUser, redirectUrl, profileId });
