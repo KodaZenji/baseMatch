@@ -142,7 +142,7 @@ export async function POST(request: Request) {
 
         if (new Date(verification.expires_at) < new Date()) {
             await supabaseService.from('email_verifications').delete().eq('token', token);
-            return NextResponse.json({ error: 'Link expired' }, { status: 400 });
+            return NextResponse.json({ error: 'Link expired, please return to homepage' }, { status: 400 });
         }
 
         const targetProfileId = verification.profile_id;
@@ -155,7 +155,8 @@ export async function POST(request: Request) {
             .eq('id', targetProfileId)
             .single();
         
-        const isExistingUser = !!(profile?.name && profile.name.trim().length > 0);
+        const hasName = profile?.name && typeof profile.name === 'string' && profile.name.trim().length > 0;
+        const isExistingUser = hasName;
 
         // Update profile: mark email as verified AND update the email address
         const { error: updateError } = await supabaseService
@@ -178,6 +179,7 @@ export async function POST(request: Request) {
         return NextResponse.json({
             success: true,
             profile_id: targetProfileId,
+            is_existing_user: isExistingUser, // ← RETURN THIS!
             message: 'Email verified successfully'
         });
     } catch (error) {
