@@ -175,39 +175,41 @@ export default function ProfileEdit() {
         fileInputRef.current?.click();
     };
 
-    const handleSendVerification = async () => {
-        if (!formData.email || !formData.email.includes('@')) {
-            showNotification('Please enter a valid email address', 'error');
-            return;
+
+const handleSendVerification = async () => {
+    if (!formData.email || !formData.email.includes('@')) {
+        showNotification('Please enter a valid email address', 'error');
+        return;
+    }
+
+    setIsSendingVerification(true);
+
+    try {
+        const response = await fetch('/api/register-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: formData.email,
+                walletAddress: address, // ← CRITICAL: Pass wallet address
+            }),
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            showNotification('Verification email sent! Check your inbox.', 'success');
+        } else {
+            showNotification(result.error || 'Failed to send verification email', 'error');
         }
-
-        setIsSendingVerification(true);
-
-        try {
-            const response = await fetch('/api/register-email', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email: formData.email,
-                }),
-            });
-
-            const result = await response.json();
-
-            if (response.ok && result.success) {
-                showNotification('Verification email sent! Check your inbox.', 'success');
-            } else {
-                showNotification(result.error || 'Failed to send verification email', 'error');
-            }
-        } catch (error) {
-            console.error('Error sending verification email:', error);
-            showNotification('Failed to send verification email. Please check your network connection.', 'error');
-        } finally {
-            setIsSendingVerification(false);
-        }
-    };
+    } catch (error) {
+        console.error('Error sending verification email:', error);
+        showNotification('Failed to send verification email. Please check your network connection.', 'error');
+    } finally {
+        setIsSendingVerification(false);
+    }
+};
 
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
