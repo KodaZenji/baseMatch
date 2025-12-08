@@ -48,7 +48,7 @@ export async function GET(request: Request) {
         // Get the profile to check if user is existing
         const { data: profile, error: profileError } = await supabaseService
             .from('profiles')
-            .select('name, email')
+            .select('*') // Select ALL fields to see everything
             .eq('id', targetProfileId)
             .single();
 
@@ -59,6 +59,9 @@ export async function GET(request: Request) {
                 status: 400
             });
         }
+
+        // Log EVERYTHING about the profile
+        console.log('📋 FULL PROFILE DATA:', JSON.stringify(profile, null, 2));
         
         // User is "existing" if they have a name (completed their profile)
         const hasName = profile.name && typeof profile.name === 'string' && profile.name.trim().length > 0;
@@ -68,12 +71,16 @@ export async function GET(request: Request) {
             profileId: targetProfileId,
             rawName: profile.name,
             nameType: typeof profile.name,
+            nameIsNull: profile.name === null,
+            nameIsUndefined: profile.name === undefined,
+            nameIsEmptyString: profile.name === '',
             nameLength: profile.name?.length,
             trimmedLength: profile.name?.trim()?.length,
             hasName,
             isExistingUser,
             currentEmail: profile.email,
-            newEmail: verificationEmail
+            newEmail: verificationEmail,
+            allProfileKeys: Object.keys(profile)
         });
 
         // Update profile: mark email as verified AND update the email address
