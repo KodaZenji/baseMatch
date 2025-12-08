@@ -45,17 +45,28 @@ export default function VerifyEmailPage() {
                 setVerificationStatus('success');
                 setMessage('✅ Email verified successfully!');
 
-                // Store verification status
-                localStorage.setItem('emailVerified', JSON.stringify({
-                    email,
-                    profile_id: data.profile_id,
-                    timestamp: Date.now(),
-                }));
+                // Check if user is existing or new
+                const isExistingUser = data.is_existing_user;
 
-                // Redirect to email profile completion page (Email-First flow step 2)
-                setTimeout(() => {
-                    router.push('/register/email/complete');
-                }, 2000);
+                if (isExistingUser) {
+                    // Existing user - redirect to profile edit
+                    setMessage('✅ Email verified! Redirecting to your profile...');
+                    setTimeout(() => {
+                        router.push('/profile/edit');
+                    }, 2000);
+                } else {
+                    // New user - store verification and redirect to complete profile
+                    localStorage.setItem('emailVerified', JSON.stringify({
+                        email,
+                        profile_id: data.profile_id,
+                        timestamp: Date.now(),
+                    }));
+
+                    setMessage('✅ Email verified! Redirecting to complete your profile...');
+                    setTimeout(() => {
+                        router.push('/register/email/complete');
+                    }, 2000);
+                }
             } catch (error) {
                 setVerificationStatus('error');
                 setMessage('An error occurred during verification. Please try again.');
@@ -85,8 +96,9 @@ export default function VerifyEmailPage() {
                 {verificationStatus === 'success' && (
                     <>
                         <p className="text-gray-700 text-lg mb-4">{message}</p>
-                        <p className="text-gray-600 mb-4">Redirecting to profile completion...</p>
-                        <div className="text-sm text-gray-600">Next step: Connect your wallet and complete your profile.</div>
+                        <div className="mb-4">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        </div>
                     </>
                 )}
 
