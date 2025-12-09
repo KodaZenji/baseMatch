@@ -6,7 +6,9 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import BrowseProfiles from '@/components/BrowseProfiles';
 import Matches from '@/components/Matches';
 import Dashboard from '@/components/Dashboard';
+import Notifications from '@/components/Notifications';
 import { useProfile } from '@/hooks/useProfile';
+import { useNotifications } from '@/hooks/useNotifications';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -14,8 +16,14 @@ export default function Home() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const { profile, isLoading } = useProfile();
-  const [activeTab, setActiveTab] = useState<'browse' | 'matches' | 'profile'>('browse');
+  const [activeTab, setActiveTab] = useState<'browse' | 'matches' | 'profile' | 'notifications'>('browse');
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  // Get unread notification count
+  const { unreadCount } = useNotifications({ 
+    userAddress: address,
+    autoRefresh: true 
+  });
 
   // Handle loading timeout
   useEffect(() => {
@@ -170,6 +178,20 @@ export default function Home() {
             >
               Dashboard
             </button>
+            <button
+              onClick={() => setActiveTab('notifications')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm relative ${activeTab === 'notifications'
+                ? 'border-pink-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              Notifications
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </nav>
@@ -179,6 +201,7 @@ export default function Home() {
         {activeTab === 'browse' && <BrowseProfiles />}
         {activeTab === 'matches' && <Matches />}
         {activeTab === 'profile' && <Dashboard />}
+        {activeTab === 'notifications' && <Notifications />}
       </main>
     </div>
   );
