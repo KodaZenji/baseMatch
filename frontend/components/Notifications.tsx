@@ -81,6 +81,70 @@ export default function Notifications() {
     }
   };
 
+    const renderGiftDetails = (notification: any) => {
+    if (notification.type !== 'gift' || !notification.metadata) return null;
+
+    const { gift_type, crypto_type, amount, gift_name, gift_emoji, tx_hash, order_id } = notification.metadata;
+
+    return (
+      <div className="mt-3 space-y-2">
+        {gift_type === 'crypto' && (
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3 border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-gray-900">
+                  {gift_emoji || '🪙'} {amount} {crypto_type?.toUpperCase()}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">
+                  Crypto Gift Received
+                </div>
+              </div>
+              {tx_hash && (
+                <a
+                  href={`https://basescan.org/tx/${tx_hash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  View TX
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {gift_type === 'physical' && (
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3 border border-purple-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">{gift_emoji || '📦'}</span>
+                <div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {gift_name}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    Physical Gift • Delivery in 2-7 days
+                  </div>
+                </div>
+              </div>
+              {order_id && (
+                <div className="text-xs text-gray-500">
+                  Order #{order_id.slice(0, 8)}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {notification.metadata.sender_address && (
+          <div className="text-xs text-gray-500">
+            From: {truncateAddress(notification.metadata.sender_address)}
+          </div>
+        )}
+      </div>
+    );
+  };
   if (loading && notifications.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -167,6 +231,9 @@ export default function Notifications() {
                       <p className="text-sm text-gray-600 mt-1">
                         {notification.message}
                       </p>
+                      {/* Enhanced gift details */}
+                      {renderGiftDetails(notification)}
+                      
                       {notification.type === 'message' && notification.metadata?.sender_address && (
                         <p className="text-xs text-gray-500 mt-2">
                           From: {truncateAddress(notification.metadata.sender_address)}
