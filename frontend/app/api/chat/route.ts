@@ -162,6 +162,33 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // ============ CREATE NOTIFICATION FOR RECIPIENT ============
+        if (data) {
+            const recipientAddress = senderAddr === addr1 ? addr2 : addr1;
+            
+            try {
+                await supabase
+                    .from('notifications')
+                    .insert({
+                        user_address: recipientAddress,
+                        type: 'message',
+                        title: 'New Message',
+                        message: 'You have a new message from a match',
+                        metadata: {
+                            sender_address: senderAddr,
+                            message_id: data.id,
+                            user1_address: addr1,
+                            user2_address: addr2
+                        }
+                    });
+                
+                console.log('✅ Notification created for:', recipientAddress);
+            } catch (notifError) {
+                console.error('Failed to create message notification:', notifError);
+            }
+        }
+        // ============ END NOTIFICATION CODE ============
+
         return NextResponse.json({ message: data }, { status: 201 });
     } catch (error) {
         console.error('Error in POST /api/chat:', error);
