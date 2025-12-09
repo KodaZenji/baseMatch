@@ -15,6 +15,7 @@ export default function BrowseProfiles() {
     const [isTestMode, setIsTestMode] = useState(true);
     const [showGiftingModal, setShowGiftingModal] = useState(false);
     const [selectedRecipient, setSelectedRecipient] = useState({ address: '', name: '' });
+    const [isExpressingInterest, setIsExpressingInterest] = useState(false);
 
     const { writeContract, isPending, isError, error } = useWriteContract();
 
@@ -27,77 +28,70 @@ export default function BrowseProfiles() {
     }, []);
 
     const handleExpressInterest = async (targetAddress: string) => {
-        // For test mode with mock profiles, just show a success message
-        if (isTestMode) {
-            console.log('Expressing interest in mock profile:', targetAddress);
-
-            // Show success message
-            const profileName = profiles.find(p => p.wallet_address === targetAddress)?.name || 'user';
-            setSuccessMessage(`Interest expressed in ${profileName}! (Test mode - no blockchain interaction)`);
+        if (!address) {
+            setSuccessMessage('Please connect your wallet first.');
             setShowSuccess(true);
-
-            // Hide success message after 3 seconds
-            setTimeout(() => {
-                setShowSuccess(false);
-            }, 3000);
+            setTimeout(() => setShowSuccess(false), 3000);
             return;
         }
 
-        // For real mode, call the smart contract
+        if (isExpressingInterest) {
+            return; // Prevent double-clicking
+        }
+
+        setIsExpressingInterest(true);
+
         try {
-            // Validate wallet connection
-            if (!address) {
-                setSuccessMessage('Please connect your wallet first.');
-                setShowSuccess(true);
-                setTimeout(() => setShowSuccess(false), 3000);
-                return;
-            }
-
-            // Validate contract address
-            if (!CONTRACTS.MATCHING || !CONTRACTS.MATCHING.startsWith('0x')) {
-                console.error('❌ CONTRACTS object:', CONTRACTS);
-                console.error('❌ MATCHING address:', CONTRACTS.MATCHING);
-                setSuccessMessage('Matching contract not configured. Ensure .env.local has NEXT_PUBLIC_MATCHING_ADDRESS and dev server is restarted.');
-                setShowSuccess(true);
-                setTimeout(() => setShowSuccess(false), 5000);
-                return;
-            }
-
-            // Log transaction details
-            console.log('📤 Sending expressInterest transaction:', {
-                contract: CONTRACTS.MATCHING,
-                from: address,
-                to: targetAddress
+            // Call our API to record interest and check for match
+            const response = await fetch('/api/match/express-interest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fromAddress: address,
+                    toAddress: targetAddress
+                })
             });
 
-            writeContract({
-                address: CONTRACTS.MATCHING as `0x${string}`,
-                abi: MATCHING_ABI,
-                functionName: 'expressInterest',
-                args: [targetAddress as `0x${string}`],
-            });
+            const data = await response.json();
 
-            // Show success message
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to express interest');
+            }
+
             const profileName = profiles.find(p => p.wallet_address === targetAddress)?.name || 'user';
-            setSuccessMessage(`Interest expressed in ${profileName}! Check your wallet for the transaction.`);
-            setShowSuccess(true);
 
-            // Hide success message after 3 seconds
-            setTimeout(() => {
-                setShowSuccess(false);
-            }, 3000);
+            if (data.matched) {
+                // It's a match!
+                setSuccessMessage(`🎉 It's a match with ${profileName}! Check your notifications.`);
+            } else {
+                // Interest recorded
+                setSuccessMessage(`❤️ Interest sent to ${profileName}!`);
+            }
+
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 4000);
+
+            // If not in test mode, also call the smart contract
+            if (!isTestMode && CONTRACTS.MATCHING) {
+                try {
+                    writeContract({
+                        address: CONTRACTS.MATCHING as `0x${string}`,
+                        abi: MATCHING_ABI,
+                        functionName: 'expressInterest',
+                        args: [targetAddress as `0x${string}`],
+                    });
+                } catch (contractError) {
+                    console.warn('Smart contract call failed, but API call succeeded:', contractError);
+                }
+            }
         } catch (error) {
-            console.error('❌ Error expressing interest:', error);
+            console.error('Error expressing interest:', error);
             const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-            console.error('Error details:', errorMsg);
-
-            setSuccessMessage('Unable to send transaction. Please check your wallet and try again.');
+            setSuccessMessage(`Failed to express interest: ${errorMsg}`);
             setShowSuccess(true);
-
-            // Hide error message after 3 seconds
-            setTimeout(() => {
-                setShowSuccess(false);
-            }, 3000);
+            setTimeout(() => setShowSuccess(false), 4000);
+        } finally {
+            setIsExpressingInterest(false);
         }
     };
 
@@ -124,11 +118,7 @@ export default function BrowseProfiles() {
 
             setSuccessMessage(userFriendlyMessage);
             setShowSuccess(true);
-
-            // Hide error message after 5 seconds
-            setTimeout(() => {
-                setShowSuccess(false);
-            }, 5000);
+            setTimeout(() => setShowSuccess(false), 5000);
         }
     }, [isError, error]);
 
@@ -147,13 +137,19 @@ export default function BrowseProfiles() {
             {/* Test mode indicator */}
             {isTestMode && (
                 <div className="mb-4 p-3 bg-yellow-100 text-yellow-700 rounded-lg">
-                    Test Mode: Using mock profiles. Express interest functionality is simulated.
+                    Test Mode: Using mock profiles. Express interest functionality will create notifications.
                 </div>
             )}
 
             {/* Success/error message */}
             {showSuccess && (
-                <div className={`mb-4 p-3 rounded-lg ${successMessage.includes('Failed') || successMessage.includes('error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                <div className={`mb-4 p-3 rounded-lg ${
+                    successMessage.includes('Failed') || successMessage.includes('error') 
+                        ? 'bg-red-100 text-red-700' 
+                        : successMessage.includes('match') 
+                        ? 'bg-green-100 text-green-700 font-semibold text-lg' 
+                        : 'bg-blue-100 text-blue-700'
+                }`}>
                     {successMessage}
                 </div>
             )}
@@ -165,7 +161,7 @@ export default function BrowseProfiles() {
                         profile={profile}
                         onExpressInterest={handleExpressInterest}
                         onGift={() => handleGift(profile.wallet_address, profile.name)}
-                        isPending={isPending}
+                        isPending={isPending || isExpressingInterest}
                     />
                 ))}
             </div>
