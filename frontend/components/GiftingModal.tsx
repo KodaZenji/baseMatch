@@ -150,6 +150,27 @@ export default function GiftingModal({
         }, 3000);
     };
 
+    // Create notification after successful crypto gift send
+    const createCryptoGiftNotification = async (txHash: string) => {
+        try {
+            await fetch('/api/notifications/gift', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    recipientAddress,
+                    senderAddress: address,
+                    senderName: 'Your Match', // 
+                    giftType: 'crypto',
+                    cryptoType,
+                    giftAmount,
+                    txHash,
+                }),
+            });
+        } catch (error) {
+            console.error('Error creating notification:', error);
+        }
+    };
+
     const handleCryptoGiftSend = async () => {
         if (!giftAmount || parseFloat(giftAmount) <= 0) {
             showNotification('Please enter a valid amount', 'error');
@@ -189,7 +210,6 @@ export default function GiftingModal({
     const handlePhysicalGiftPurchase = async () => {
         if (!selectedPhysicalGift) return;
 
-        // Validate delivery info
         if (!deliveryInfo.address || !deliveryInfo.city || !deliveryInfo.state || !deliveryInfo.zip || !deliveryInfo.phone) {
             showNotification('Please fill in all delivery details', 'error');
             return;
@@ -198,33 +218,14 @@ export default function GiftingModal({
         setIsProcessing(true);
 
         try {
-            // Send payment to your platform first (in USDC)
             const amount = parseUnits(selectedPhysicalGift.price.toString(), 6);
-            
-            // This would be your platform's wallet that handles vendor orders
-            const platformWallet = CONTRACTS.PLATFORM_WALLET || CONTRACTS.MATCHING; // Use your platform wallet
+            const platformWallet = CONTRACTS.PLATFORM_WALLET || CONTRACTS.MATCHING;
             
             writeUSDC({
                 address: CONTRACTS.USDC as `0x${string}`,
                 abi: USDC_ABI,
                 functionName: 'transfer',
                 args: [platformWallet as `0x${string}`, amount],
-            });
-
-            // After successful payment, create the order
-            // This would call your backend API to process with the vendor
-            await fetch('/api/gifts/physical-order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    giftId: selectedPhysicalGift.id,
-                    recipientAddress,
-                    recipientName,
-                    deliveryInfo,
-                    senderAddress: address,
-                    amount: selectedPhysicalGift.price,
-                    txHash: usdcHash,
-                })
             });
 
         } catch (error) {
@@ -237,11 +238,34 @@ export default function GiftingModal({
     // Handle successful transfers
     useEffect(() => {
         if (isUSDCTransferred || isETHTransferred) {
+            const txHash = (usdcHash || ethHash) as string;
+            
             if (giftType === 'crypto') {
+                // Create notification for crypto gift
+                createCryptoGiftNotification(txHash);
                 showNotification(`Successfully sent ${giftAmount} ${cryptoType.toUpperCase()} to ${recipientName}!`, 'success');
             } else if (giftType === 'physical' && selectedPhysicalGift) {
-                showNotification(`${selectedPhysicalGift.name} ordered! Delivery in 2-5 days.`, 'success');
+                // Physical gift order is created in the API route which also creates notification
+                fetch('/api/gifts/physical-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        giftId: selectedPhysicalGift.id,
+                        recipientAddress,
+                        recipientName,
+                        deliveryInfo,
+                        senderAddress: address,
+                        amount: selectedPhysicalGift.price,
+                        txHash,
+                    })
+                }).then(() => {
+                    showNotification(`${selectedPhysicalGift.name} ordered! Delivery in 2-5 days.`, 'success');
+                }).catch((error) => {
+                    console.error('Error creating order:', error);
+                    showNotification('Gift sent but order creation failed', 'error');
+                });
             }
+            
             setIsProcessing(false);
             setTimeout(() => {
                 onClose();
@@ -260,49 +284,28 @@ export default function GiftingModal({
             <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-2xl w-full my-8">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-2xl font-bold text-gray-900">🎁 Gift to {recipientName}</h3>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-500 hover:text-gray-700 text-2xl"
-                    >
-                        ✕
-                    </button>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
                 </div>
 
-                {/* Notification */}
                 {notification && (
                     <div className={`mb-4 p-3 rounded-lg ${notification.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {notification.message}
                     </div>
                 )}
 
-                {/* Gift Type Selection */}
                 <div className="mb-6">
                     <div className="grid grid-cols-2 gap-3">
                         <button
-                            onClick={() => {
-                                setGiftType('crypto');
-                                setShowDeliveryForm(false);
-                            }}
-                            className={`py-4 px-6 rounded-xl border-2 transition ${
-                                giftType === 'crypto'
-                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                    : 'border-gray-300 hover:bg-gray-50'
-                            }`}
+                            onClick={() => { setGiftType('crypto'); setShowDeliveryForm(false); }}
+                            className={`py-4 px-6 rounded-xl border-2 transition ${giftType === 'crypto' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 hover:bg-gray-50'}`}
                         >
-                            <div className="text-3xl mb-1">💰</div>
+                            <div className="text-3xl mb-1">🪙</div>
                             <div className="font-semibold">Crypto Gift</div>
                             <div className="text-xs text-gray-500">Instant transfer</div>
                         </button>
                         <button
-                            onClick={() => {
-                                setGiftType('physical');
-                                setShowDeliveryForm(false);
-                            }}
-                            className={`py-4 px-6 rounded-xl border-2 transition ${
-                                giftType === 'physical'
-                                    ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                    : 'border-gray-300 hover:bg-gray-50'
-                            }`}
+                            onClick={() => { setGiftType('physical'); setShowDeliveryForm(false); }}
+                            className={`py-4 px-6 rounded-xl border-2 transition ${giftType === 'physical' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-300 hover:bg-gray-50'}`}
                         >
                             <div className="text-3xl mb-1">📦</div>
                             <div className="font-semibold">Physical Gift</div>
@@ -311,43 +314,23 @@ export default function GiftingModal({
                     </div>
                 </div>
 
-                {/* CRYPTO GIFT SECTION */}
                 {giftType === 'crypto' && (
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Currency
-                            </label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
                             <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    onClick={() => setCryptoType('usdc')}
-                                    className={`py-3 px-4 rounded-xl border ${
-                                        cryptoType === 'usdc'
-                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                            : 'border-gray-300 hover:bg-gray-50'
-                                    }`}
-                                >
+                                <button onClick={() => setCryptoType('usdc')} className={`py-3 px-4 rounded-xl border ${cryptoType === 'usdc' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 hover:bg-gray-50'}`}>
                                     <div className="font-medium">USDC</div>
                                     <div className="text-xs text-gray-500">Stablecoin</div>
                                 </button>
-                                <button
-                                    onClick={() => setCryptoType('eth')}
-                                    className={`py-3 px-4 rounded-xl border ${
-                                        cryptoType === 'eth'
-                                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                            : 'border-gray-300 hover:bg-gray-50'
-                                    }`}
-                                >
+                                <button onClick={() => setCryptoType('eth')} className={`py-3 px-4 rounded-xl border ${cryptoType === 'eth' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 hover:bg-gray-50'}`}>
                                     <div className="font-medium">ETH</div>
                                     <div className="text-xs text-gray-500">Native Token</div>
                                 </button>
                             </div>
                         </div>
-
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Amount
-                            </label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
                             <div className="relative">
                                 <input
                                     type="number"
@@ -359,43 +342,25 @@ export default function GiftingModal({
                                     min="0"
                                 />
                                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                    <span className="text-gray-500 font-medium">
-                                        {cryptoType.toUpperCase()}
-                                    </span>
+                                    <span className="text-gray-500 font-medium">{cryptoType.toUpperCase()}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* PHYSICAL GIFT SECTION */}
                 {giftType === 'physical' && !showDeliveryForm && (
                     <div className="space-y-4">
-                        {/* Category Filter */}
                         <div className="flex gap-2 overflow-x-auto pb-2">
                             {(['all', 'flowers', 'teddy', 'giftbox', 'food'] as const).map((cat) => (
-                                <button
-                                    key={cat}
-                                    onClick={() => setFilterCategory(cat)}
-                                    className={`px-4 py-2 rounded-full whitespace-nowrap transition ${
-                                        filterCategory === cat
-                                            ? 'bg-purple-500 text-white'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    }`}
-                                >
+                                <button key={cat} onClick={() => setFilterCategory(cat)} className={`px-4 py-2 rounded-full whitespace-nowrap transition ${filterCategory === cat ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                                     {cat.charAt(0).toUpperCase() + cat.slice(1)}
                                 </button>
                             ))}
                         </div>
-
-                        {/* Gift Grid */}
                         <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">
                             {filteredGifts.map((gift) => (
-                                <button
-                                    key={gift.id}
-                                    onClick={() => handlePhysicalGiftSelect(gift)}
-                                    className="border-2 border-gray-200 rounded-xl p-4 hover:border-purple-500 hover:bg-purple-50 transition text-left"
-                                >
+                                <button key={gift.id} onClick={() => handlePhysicalGiftSelect(gift)} className="border-2 border-gray-200 rounded-xl p-4 hover:border-purple-500 hover:bg-purple-50 transition text-left">
                                     <div className="text-4xl mb-2">{gift.emoji}</div>
                                     <div className="font-semibold text-sm mb-1">{gift.name}</div>
                                     <div className="text-xs text-gray-500 mb-2">{gift.description}</div>
@@ -409,7 +374,6 @@ export default function GiftingModal({
                     </div>
                 )}
 
-                {/* DELIVERY FORM */}
                 {giftType === 'physical' && showDeliveryForm && selectedPhysicalGift && (
                     <div className="space-y-4">
                         <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 flex items-start gap-3">
@@ -419,119 +383,29 @@ export default function GiftingModal({
                                 <div className="text-sm text-gray-600">{selectedPhysicalGift.description}</div>
                                 <div className="text-lg font-bold text-purple-600 mt-1">${selectedPhysicalGift.price}</div>
                             </div>
-                            <button
-                                onClick={() => setShowDeliveryForm(false)}
-                                className="text-gray-400 hover:text-gray-600"
-                            >
-                                ✕
-                            </button>
+                            <button onClick={() => setShowDeliveryForm(false)} className="text-gray-400 hover:text-gray-600">✕</button>
                         </div>
-
                         <div className="space-y-3">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Delivery Address *
-                                </label>
-                                <input
-                                    type="text"
-                                    value={deliveryInfo.address}
-                                    onChange={(e) => setDeliveryInfo({...deliveryInfo, address: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                                    placeholder="123 Main St"
-                                />
-                            </div>
-
+                            <input type="text" value={deliveryInfo.address} onChange={(e) => setDeliveryInfo({...deliveryInfo, address: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Delivery Address" />
                             <div className="grid grid-cols-3 gap-2">
-                                <input
-                                    type="text"
-                                    value={deliveryInfo.city}
-                                    onChange={(e) => setDeliveryInfo({...deliveryInfo, city: e.target.value})}
-                                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                                    placeholder="City"
-                                />
-                                <input
-                                    type="text"
-                                    value={deliveryInfo.state}
-                                    onChange={(e) => setDeliveryInfo({...deliveryInfo, state: e.target.value})}
-                                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                                    placeholder="State"
-                                />
-                                <input
-                                    type="text"
-                                    value={deliveryInfo.zip}
-                                    onChange={(e) => setDeliveryInfo({...deliveryInfo, zip: e.target.value})}
-                                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                                    placeholder="ZIP"
-                                />
+                                <input type="text" value={deliveryInfo.city} onChange={(e) => setDeliveryInfo({...deliveryInfo, city: e.target.value})} className="px-3 py-2 border border-gray-300 rounded-lg" placeholder="City" />
+                                <input type="text" value={deliveryInfo.state} onChange={(e) => setDeliveryInfo({...deliveryInfo, state: e.target.value})} className="px-3 py-2 border border-gray-300 rounded-lg" placeholder="State" />
+                                <input type="text" value={deliveryInfo.zip} onChange={(e) => setDeliveryInfo({...deliveryInfo, zip: e.target.value})} className="px-3 py-2 border border-gray-300 rounded-lg" placeholder="ZIP" />
                             </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Phone Number *
-                                </label>
-                                <input
-                                    type="tel"
-                                    value={deliveryInfo.phone}
-                                    onChange={(e) => setDeliveryInfo({...deliveryInfo, phone: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                                    placeholder="(555) 123-4567"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Special Instructions (Optional)
-                                </label>
-                                <textarea
-                                    value={deliveryInfo.notes}
-                                    onChange={(e) => setDeliveryInfo({...deliveryInfo, notes: e.target.value})}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                                    rows={2}
-                                    placeholder="e.g., Leave at door, Ring bell"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
-                            ⚠️ Payment will be processed before delivery. Estimated delivery: 2-5 business days.
+                            <input type="tel" value={deliveryInfo.phone} onChange={(e) => setDeliveryInfo({...deliveryInfo, phone: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Phone Number" />
+                            <textarea value={deliveryInfo.notes} onChange={(e) => setDeliveryInfo({...deliveryInfo, notes: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg" rows={2} placeholder="Special Instructions (Optional)" />
                         </div>
                     </div>
                 )}
 
-                {/* Action Buttons */}
                 <div className="flex space-x-3 pt-6 border-t mt-6">
-                    <button
-                        onClick={onClose}
-                        className="flex-1 py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50"
-                    >
-                        Cancel
-                    </button>
+                    <button onClick={onClose} className="flex-1 py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50">Cancel</button>
                     <button
                         onClick={giftType === 'crypto' ? handleCryptoGiftSend : handlePhysicalGiftPurchase}
-                        disabled={
-                            isProcessing || 
-                            isUSDCConfirming || 
-                            isETHConfirming ||
-                            (giftType === 'crypto' && (!giftAmount || parseFloat(giftAmount) <= 0)) ||
-                            (giftType === 'physical' && !showDeliveryForm)
-                        }
+                        disabled={isProcessing || isUSDCConfirming || isETHConfirming || (giftType === 'crypto' && (!giftAmount || parseFloat(giftAmount) <= 0)) || (giftType === 'physical' && !showDeliveryForm)}
                         className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:opacity-90 disabled:opacity-50"
                     >
-                        {isProcessing || isUSDCConfirming || isETHConfirming ? (
-                            <span className="flex items-center justify-center">
-                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Processing...
-                            </span>
-                        ) : giftType === 'crypto' ? (
-                            'Send Gift'
-                        ) : showDeliveryForm ? (
-                            `Pay $${selectedPhysicalGift?.price} & Order`
-                        ) : (
-                            'Select a Gift'
-                        )}
+                        {isProcessing || isUSDCConfirming || isETHConfirming ? 'Processing...' : giftType === 'crypto' ? 'Send Gift' : showDeliveryForm ? `Pay $${selectedPhysicalGift?.price} & Order` : 'Select a Gift'}
                     </button>
                 </div>
             </div>
