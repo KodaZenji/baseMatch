@@ -47,6 +47,40 @@ export default function Notifications() {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'message':
+        return '💬';
+      case 'match':
+        return '💖';
+      case 'gift':
+        return '🎁';
+      case 'profile_complete':
+        return '☑️';
+      case 'match_deleted':
+        return '🗑️';
+      default:
+        return '🔔';
+    }
+  };
+
+  const getNotificationColor = (type: string) => {
+    switch (type) {
+      case 'message':
+        return 'from-purple-500 to-pink-600';
+      case 'match':
+        return 'from-pink-500 to-red-600';
+      case 'gift':
+        return 'from-yellow-500 to-orange-600';
+      case 'profile_complete':
+        return 'from-gray-500 to-gray-600';
+      case 'match_deleted':
+        return 'from-gray-500 to-gray-600';
+      default:
+        return 'from-blue-500 to-indigo-600';
+    }
+  };
+
   if (loading && notifications.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -102,7 +136,7 @@ export default function Notifications() {
           <div className="text-4xl mb-4">🔔</div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">No notifications yet</h3>
           <p className="text-gray-600">
-            When you receive messages, they'll appear here
+            When you receive messages or get new matches, they'll appear here
           </p>
         </div>
       ) : (
@@ -118,8 +152,8 @@ export default function Notifications() {
               <div className="flex items-start gap-4">
                 {/* Icon */}
                 <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-2xl">
-                    💬
+                  <div className={`w-12 h-12 bg-gradient-to-br ${getNotificationColor(notification.type)} rounded-full flex items-center justify-center text-2xl`}>
+                    {getNotificationIcon(notification.type)}
                   </div>
                 </div>
 
@@ -133,9 +167,14 @@ export default function Notifications() {
                       <p className="text-sm text-gray-600 mt-1">
                         {notification.message}
                       </p>
-                      {notification.metadata?.sender_address && (
+                      {notification.type === 'message' && notification.metadata?.sender_address && (
                         <p className="text-xs text-gray-500 mt-2">
                           From: {truncateAddress(notification.metadata.sender_address)}
+                        </p>
+                      )}
+                      {notification.type === 'match' && notification.metadata?.match_name && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Matched with: {notification.metadata.match_name}
                         </p>
                       )}
                     </div>
