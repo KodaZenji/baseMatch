@@ -3,6 +3,7 @@
 import { useAccount } from 'wagmi';
 import { useProfile } from '@/hooks/useProfile';
 import { useReputation } from '@/hooks/useReputation';
+import { useAchievements } from '@/hooks/useAchievements';
 import { generateAvatar } from '@/lib/avatarUtils';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -11,6 +12,7 @@ export default function Dashboard() {
     const { address } = useAccount();
     const { profile } = useProfile(address);
     const { reputation, loading: reputationLoading } = useReputation(address);
+    const { achievements, loading: achievementsLoading } = useAchievements(address);
     const [avatarUrl, setAvatarUrl] = useState('');
 
     // Generate avatar based on wallet address
@@ -21,11 +23,16 @@ export default function Dashboard() {
         }
     }, [address]);
 
-    // Mock achievements data - In production, fetch from blockchain
-    const achievements = [
-        { id: 1, type: 'First Date', description: 'Completed your first date!' },
-        { id: 2, type: '5 Star Rating', description: 'Received a 5-star rating!' },
-    ];
+    // Get achievement emoji based on type
+    const getAchievementEmoji = (type: string) => {
+        if (type.includes('First Date')) return '🎉';
+        if (type.includes('5 Dates')) return '🔥';
+        if (type.includes('10 Dates')) return '💎';
+        if (type.includes('5 Star')) return '⭐';
+        if (type.includes('Perfect Week')) return '🗓️';
+        if (type.includes('Match Maker')) return '💘';
+        return '🏆';
+    };
 
     return (
         <div className="space-y-6">
@@ -113,38 +120,71 @@ export default function Dashboard() {
                             <div className="text-3xl font-bold text-green-600">
                                 {reputation ? reputation.ratingCount : 0}
                             </div>
-                            <div className="text-sm text-gray-600 mt-1"> Ratings</div>
+                            <div className="text-sm text-gray-600 mt-1">👍 Ratings</div>
                         </div>
                         <div className="text-center p-4 bg-red-50 rounded-xl">
                             <div className="text-3xl font-bold text-red-600">
                                 {reputation ? reputation.noShows : 0}
                             </div>
-                            <div className="text-sm text-gray-600 mt-1"> No-Shows</div>
+                            <div className="text-sm text-gray-600 mt-1">❌ No-Shows</div>
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Achievements */}
+            {/* Achievement NFTs - Live from Blockchain */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Achievement NFTs 🏆</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {achievements.map((achievement) => (
-                        <div
-                            key={achievement.id}
-                            className="p-4 border-2 border-blue-200 rounded-xl bg-gradient-to-br from-blue-50 to-purple-50"
-                        >
-                            <div className="text-2xl mb-2">🏆</div>
-                            <h4 className="font-bold text-gray-900">{achievement.type}</h4>
-                            <p className="text-sm text-gray-600">{achievement.description}</p>
-                        </div>
-                    ))}
-                    {achievements.length === 0 && (
-                        <p className="text-gray-500 col-span-2 text-center py-4">
-                            No achievements yet. Go on dates to earn badges!
-                        </p>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-gray-900">Achievement NFTs 🏆</h3>
+                    {!achievementsLoading && achievements.length > 0 && (
+                        <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full">
+                            {achievements.length} {achievements.length === 1 ? 'Badge' : 'Badges'}
+                        </span>
                     )}
                 </div>
+
+                {achievementsLoading ? (
+                    <div className="flex justify-center items-center h-32">
+                        <div className="flex items-center space-x-2">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+                            <span className="text-gray-500">Loading achievements from blockchain...</span>
+                        </div>
+                    </div>
+                ) : achievements.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {achievements.map((achievement) => (
+                            <div
+                                key={achievement.tokenId}
+                                className="group relative p-6 border-2 border-purple-200 rounded-xl bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 hover:shadow-lg transition-all duration-300 hover:scale-105"
+                            >
+                                {/* NFT Badge */}
+                                <div className="absolute top-2 right-2 px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">
+                                    NFT #{achievement.tokenId}
+                                </div>
+                                
+                                <div className="text-4xl mb-3">{getAchievementEmoji(achievement.type)}</div>
+                                <h4 className="font-bold text-gray-900 mb-1">{achievement.type}</h4>
+                                <p className="text-sm text-gray-600">{achievement.description}</p>
+                                
+                                {/* On-chain indicator */}
+                                <div className="mt-3 flex items-center text-xs text-purple-600">
+                                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="font-medium">Verified On-Chain</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-12 space-y-3">
+                        <div className="text-6xl opacity-50">🎯</div>
+                        <p className="text-gray-500 font-medium">No achievement NFTs yet</p>
+                        <p className="text-sm text-gray-400">
+                            Go on dates and earn blockchain-verified badges!
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     );
