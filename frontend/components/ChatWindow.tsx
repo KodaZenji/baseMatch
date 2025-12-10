@@ -260,7 +260,7 @@ export default function ChatWindow({
                             placeholder="Type your message..."
                             disabled={isSending}
                             maxLength={1000}
-                            className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-pink-500 disabled:bg-gray-100"
+                            className="flex-1 text-gray-800 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-pink-500 disabled:bg-gray-100"
                         />
                         <button
                             type="submit"
