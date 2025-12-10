@@ -68,7 +68,7 @@ export default function Dashboard() {
                                 <div className="bg-gray-200 border-2 border-dashed rounded-full w-24 h-24" />
                             )}
                             <div>
-                                <h4 className="text-2xl font-bold">{profile.name}, {profile.age}</h4>
+                                <h4 className="text-2xl text-gray-600 font-bold">{profile.name}, {profile.age}</h4>
                                 <p className="text-gray-600">{profile.interests}</p>
                                 <p className="text-xs text-gray-400 mt-1">
                                     PROFILE ID: #{profile.tokenId.toString()}
