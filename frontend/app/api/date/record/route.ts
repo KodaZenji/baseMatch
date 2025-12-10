@@ -1,3 +1,6 @@
+// frontend/app/api/date/record/route.ts
+// Records that a date occurred for Perfect Week tracking
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
