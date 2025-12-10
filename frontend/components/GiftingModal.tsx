@@ -336,7 +336,7 @@ export default function GiftingModal({
                                     type="number"
                                     value={giftAmount}
                                     onChange={(e) => setGiftAmount(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-4 py-3 border text-gray-600 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     placeholder="0.00"
                                     step="0.01"
                                     min="0"
@@ -362,7 +362,7 @@ export default function GiftingModal({
                             {filteredGifts.map((gift) => (
                                 <button key={gift.id} onClick={() => handlePhysicalGiftSelect(gift)} className="border-2 border-gray-200 rounded-xl p-4 hover:border-purple-500 hover:bg-purple-50 transition text-left">
                                     <div className="text-4xl mb-2">{gift.emoji}</div>
-                                    <div className="font-semibold text-sm mb-1">{gift.name}</div>
+                                    <div className="font-semibold text-gray-500 text-sm mb-1">{gift.name}</div>
                                     <div className="text-xs text-gray-500 mb-2">{gift.description}</div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-purple-600 font-bold">${gift.price}</span>
@@ -379,21 +379,21 @@ export default function GiftingModal({
                         <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 flex items-start gap-3">
                             <div className="text-3xl">{selectedPhysicalGift.emoji}</div>
                             <div className="flex-1">
-                                <div className="font-semibold">{selectedPhysicalGift.name}</div>
+                                <div className="font-semibold text-gray-400">{selectedPhysicalGift.name}</div>
                                 <div className="text-sm text-gray-600">{selectedPhysicalGift.description}</div>
                                 <div className="text-lg font-bold text-purple-600 mt-1">${selectedPhysicalGift.price}</div>
                             </div>
                             <button onClick={() => setShowDeliveryForm(false)} className="text-gray-400 hover:text-gray-600">✕</button>
                         </div>
                         <div className="space-y-3">
-                            <input type="text" value={deliveryInfo.address} onChange={(e) => setDeliveryInfo({...deliveryInfo, address: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Delivery Address" />
+                            <input type="text" value={deliveryInfo.address} onChange={(e) => setDeliveryInfo({...deliveryInfo, address: e.target.value})} className="w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-lg" placeholder="Delivery Address" />
                             <div className="grid grid-cols-3 gap-2">
-                                <input type="text" value={deliveryInfo.city} onChange={(e) => setDeliveryInfo({...deliveryInfo, city: e.target.value})} className="px-3 py-2 border border-gray-300 rounded-lg" placeholder="City" />
-                                <input type="text" value={deliveryInfo.state} onChange={(e) => setDeliveryInfo({...deliveryInfo, state: e.target.value})} className="px-3 py-2 border border-gray-300 rounded-lg" placeholder="State" />
-                                <input type="text" value={deliveryInfo.zip} onChange={(e) => setDeliveryInfo({...deliveryInfo, zip: e.target.value})} className="px-3 py-2 border border-gray-300 rounded-lg" placeholder="ZIP" />
+                                <input type="text" value={deliveryInfo.city} onChange={(e) => setDeliveryInfo({...deliveryInfo, city: e.target.value})} className="px-3 py-2 border border-gray-300 text-gray-500 rounded-lg" placeholder="City" />
+                                <input type="text" value={deliveryInfo.state} onChange={(e) => setDeliveryInfo({...deliveryInfo, state: e.target.value})} className="px-3 py-2 border border-gray-300 text-gray-500 rounded-lg" placeholder="State" />
+                                <input type="text" value={deliveryInfo.zip} onChange={(e) => setDeliveryInfo({...deliveryInfo, zip: e.target.value})} className="px-3 py-2 border border-gray-300 text-gray-500 rounded-lg" placeholder="ZIP" />
                             </div>
-                            <input type="tel" value={deliveryInfo.phone} onChange={(e) => setDeliveryInfo({...deliveryInfo, phone: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Phone Number" />
-                            <textarea value={deliveryInfo.notes} onChange={(e) => setDeliveryInfo({...deliveryInfo, notes: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg" rows={2} placeholder="Special Instructions (Optional)" />
+                            <input type="tel" value={deliveryInfo.phone} onChange={(e) => setDeliveryInfo({...deliveryInfo, phone: e.target.value})} className="w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-lg" placeholder="Phone Number" />
+                            <textarea value={deliveryInfo.notes} onChange={(e) => setDeliveryInfo({...deliveryInfo, notes: e.target.value})} className="w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-lg" rows={2} placeholder="Special Instructions (Optional)" />
                         </div>
                     </div>
                 )}
