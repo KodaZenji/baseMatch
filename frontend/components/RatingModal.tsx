@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { REPUTATION_ABI, CONTRACTS } from '@/lib/contracts';
 
 interface RatingModalProps {
@@ -10,6 +10,7 @@ interface RatingModalProps {
 }
 
 export default function RatingModal({ matchAddress, onClose }: RatingModalProps) {
+    const { address } = useAccount();
     const [rating, setRating] = useState(0);
     const [hoveredRating, setHoveredRating] = useState(0);
     const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
@@ -45,14 +46,54 @@ export default function RatingModal({ matchAddress, onClose }: RatingModalProps)
         }, 3000);
     };
 
+    // After successful rating
     useEffect(() => {
-        if (isSuccess) {
+        if (isSuccess && address) {
             showNotification('Rating submitted successfully!', 'success');
+            
+            // Record that a date occurred (for Perfect Week tracking)
+            recordDateOccurred(matchAddress);
+            
+            // Check for achievements for the person being rated
+            checkAndMintAchievements(matchAddress);
+            
             setTimeout(() => {
                 onClose();
             }, 2000);
         }
-    }, [isSuccess, onClose]);
+    }, [isSuccess, onClose, matchAddress, address]);
+
+    // NEW: Record that a date occurred
+    const recordDateOccurred = async (ratedUserAddress: string) => {
+        try {
+            await fetch('/api/date/record', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userAddress: ratedUserAddress }),
+            });
+        } catch (error) {
+            console.error('Failed to record date:', error);
+        }
+    };
+
+    // Trigger auto-mint check
+    const checkAndMintAchievements = async (userAddress: string) => {
+        try {
+            const response = await fetch('/api/achievements/auto-mint', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userAddress }),
+            });
+
+            const data = await response.json();
+            
+            if (data.mintedAchievements && data.mintedAchievements.length > 0) {
+                console.log('🏆 New achievements minted!', data.mintedAchievements);
+            }
+        } catch (error) {
+            console.error('Failed to check achievements:', error);
+        }
+    };
 
     useEffect(() => {
         if (isError && error) {
@@ -68,7 +109,6 @@ export default function RatingModal({ matchAddress, onClose }: RatingModalProps)
                     Help build a trustworthy community by rating your experience
                 </p>
 
-                {/* Notification */}
                 {notification && (
                     <div className={`mb-4 p-3 rounded-lg ${notification.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {notification.message}
@@ -105,7 +145,7 @@ export default function RatingModal({ matchAddress, onClose }: RatingModalProps)
                     <div className="bg-yellow-50 rounded-xl p-4 text-sm text-gray-700">
                         <p className="font-semibold mb-1">💡 Tip:</p>
                         <p className="text-xs">
-                            Your rating will be stored on the blockchain and contribute to their reputation score.
+                            Your rating will be stored on the blockchain and may unlock achievements!
                         </p>
                     </div>
 
