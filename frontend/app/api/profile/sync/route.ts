@@ -1,4 +1,5 @@
 // frontend/app/api/profile/sync/route.ts
+// REPLACE your entire file with this updated version
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
@@ -10,6 +11,7 @@ export const runtime = 'nodejs';
  * Sync profile data to database after blockchain update
  * Called after successful wallet-based profile updates
  * Handles both wallet-based and email-based lookups
+ * Creates notification when profile is completed
  */
 export async function POST(request: NextRequest) {
     try {
@@ -57,6 +59,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        let isNewProfile = false;
+        let profileData: any;
+
         if (existingProfile) {
             // Profile exists - UPDATE it using the id
             const updateData: any = {
@@ -88,12 +93,8 @@ export async function POST(request: NextRequest) {
             }
 
             console.log('Profile updated successfully:', data);
-
-            return NextResponse.json({
-                success: true,
-                message: 'Profile updated successfully',
-                profile: data
-            });
+            profileData = data;
+            isNewProfile = false;
         } else {
             // Profile doesn't exist - INSERT new one
             const { data, error: insertError } = await supabaseService
@@ -122,13 +123,60 @@ export async function POST(request: NextRequest) {
             }
 
             console.log('Profile created successfully:', data);
-
-            return NextResponse.json({
-                success: true,
-                message: 'Profile created successfully',
-                profile: data
-            });
+            profileData = data;
+            isNewProfile = true;
         }
+
+        // ============ CREATE PROFILE COMPLETION NOTIFICATION ============
+        // Check if profile is complete (has all required fields)
+        const isProfileComplete = !!(
+            profileData.name && 
+            profileData.age && 
+            profileData.gender && 
+            profileData.interests &&
+            (profileData.wallet_address || profileData.email)
+        );
+
+        if (isProfileComplete) {
+            try {
+                const userAddress = profileData.wallet_address || profileData.email;
+                
+                await supabaseService
+                    .from('notifications')
+                    .insert({
+                        user_address: userAddress.toLowerCase(),
+                        type: 'profile_complete',
+                        title: isNewProfile ? '✅ Profile Created!' : '✅ Profile Updated!',
+                        message: isNewProfile 
+                            ? 'Your profile has been successfully created and is now visible to others!'
+                            : 'Your profile has been successfully updated!',
+                        metadata: {
+                            profile_id: profileData.id,
+                            is_new: isNewProfile,
+                            updated_fields: {
+                                name: !!name,
+                                age: !!age,
+                                gender: !!gender,
+                                interests: !!interests,
+                                photoUrl: !!photoUrl
+                            }
+                        }
+                    });
+                
+                console.log('✅ Profile completion notification created for:', userAddress);
+            } catch (notifError) {
+                // Don't fail the sync if notification fails
+                console.error('Failed to create profile notification:', notifError);
+            }
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: isNewProfile ? 'Profile created successfully' : 'Profile updated successfully',
+            profile: profileData,
+            isNewProfile,
+            isComplete: isProfileComplete
+        });
 
     } catch (error) {
         console.error('Error syncing profile:', error);
