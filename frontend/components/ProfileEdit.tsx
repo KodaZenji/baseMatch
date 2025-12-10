@@ -603,7 +603,7 @@ export default function ProfileEdit() {
                                 Updating & Verifying on Blockchain...
                             </span>
                         ) : (
-                            '🔒 Update Profile (Blockchain Verified)'
+                            'Update Profile'
                         )}
                     </button>
 
