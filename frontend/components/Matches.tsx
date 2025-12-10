@@ -62,36 +62,6 @@ export default function Matches() {
                 </div>
             </div>
 
-            {/* DEBUG INFO - Remove in production */}
-            {matches && matches.length > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
-                    <div className="font-semibold text-blue-900 mb-2">🔍 Debug Info:</div>
-                    <div className="space-y-1 text-blue-800 font-mono text-xs">
-                        {matches.map((match, i) => (
-                            <div key={i} className="border-b border-blue-200 pb-1">
-                                <div>Match {i + 1}: {match.address}</div>
-                                <div className="ml-4">Name: "{match.name}"</div>
-                                <div className="ml-4">Age: {match.age}</div>
-                            </div>
-                        ))}
-                    </div>
-                    <button 
-                        onClick={async () => {
-                            if (matches[0]) {
-                                const testUrl = `/api/profile/${matches[0].address}`;
-                                console.log('Testing API call:', testUrl);
-                                const response = await fetch(testUrl);
-                                const data = await response.json();
-                                console.log('API Response:', data);
-                                alert(JSON.stringify(data, null, 2));
-                            }
-                        }}
-                        className="mt-2 text-xs bg-blue-500 text-white px-2 py-1 rounded"
-                    >
-                        Test API for First Match
-                    </button>
-                </div>
-            )}
 
             {/* Warning for Unknown Users */}
             {matches && matches.some(m => m.name === 'Unknown User' || m.name === 'User') && (
