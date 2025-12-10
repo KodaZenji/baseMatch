@@ -9,12 +9,26 @@ export interface Notification {
   message: string;
   read: boolean;
   metadata?: {
+    // Message notifications
     sender_address?: string;
     message_id?: string;
     user1_address?: string;
     user2_address?: string;
-    match_address?: string;  
-    match_name?: string;    
+    // Match notifications
+    match_address?: string;
+    match_name?: string;
+    // Profile update notifications
+    profile_id?: string;
+    is_new?: boolean;
+    updated_field?: string;
+    updated_fields?: {
+      name?: boolean;
+      age?: boolean;
+      gender?: boolean;
+      interests?: boolean;
+      photoUrl?: boolean;
+    };
+    new_interests?: string;
   };
   created_at: string;
 }
