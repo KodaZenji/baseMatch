@@ -145,7 +145,7 @@ export default function CompleteEmailProfilePage() {
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             required
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="Your name"
                         />
                     </div>
@@ -160,7 +160,7 @@ export default function CompleteEmailProfilePage() {
                             min="18"
                             max="120"
                             required
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="18"
                         />
                     </div>
@@ -192,7 +192,7 @@ export default function CompleteEmailProfilePage() {
                             onChange={(e) => setFormData({ ...formData, interests: e.target.value })}
                             required
                             rows={3}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="Hiking, Photography, Crypto..."
                         />
                     </div>
