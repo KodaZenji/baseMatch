@@ -178,7 +178,7 @@ export default function Dashboard() {
                     </div>
                 ) : (
                     <div className="text-center py-12 space-y-3">
-                        <div className="text-6xl opacity-50">🎯</div>
+                        
                         <p className="text-gray-500 font-medium">No achievement NFTs yet</p>
                         <p className="text-sm text-gray-400">
                             Go on dates and earn blockchain-verified badges!
