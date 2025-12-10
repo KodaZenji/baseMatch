@@ -13,6 +13,8 @@ export interface Notification {
     message_id?: string;
     user1_address?: string;
     user2_address?: string;
+    match_address?: string;  
+    match_name?: string;    
   };
   created_at: string;
 }
