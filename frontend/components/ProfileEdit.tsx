@@ -12,7 +12,6 @@ export default function ProfileEdit() {
     const { address, isConnected } = useAccount();
     const { profile, isLoading: profileLoading, refreshProfile } = useProfile(address);
     
-    // State for user info (for email-first users without wallet)
     const [userEmail, setUserEmail] = useState('');
     const [hasWallet, setHasWallet] = useState(false);
     
@@ -37,26 +36,20 @@ export default function ProfileEdit() {
     const { writeContract, data: hash, isPending, isError, error } = useWriteContract();
     const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-    console.log('Component render - formData:', formData);
-
-    // Check if user registered via email first (no wallet yet)
+    // Check user status on mount
     useEffect(() => {
         const checkUserStatus = async () => {
-            // Check if wallet is connected
             if (isConnected && address) {
                 setHasWallet(true);
                 return;
             }
 
-            // For non-wallet users, try to get user info from localStorage
             const storedEmail = localStorage.getItem('userEmail');
-            console.log('Checking user status - storedEmail:', storedEmail, 'isConnected:', isConnected);
             
             if (storedEmail) {
                 setUserEmail(storedEmail);
                 setHasWallet(false);
                 
-                // Fetch user profile data by email
                 try {
                     const response = await fetch('/api/profile/get-by-email', {
                         method: 'POST',
@@ -66,7 +59,6 @@ export default function ProfileEdit() {
                     
                     if (response.ok) {
                         const data = await response.json();
-                        console.log('Profile data fetched:', data);
                         if (data.profile) {
                             setFormData({
                                 name: data.profile.name || '',
@@ -78,7 +70,6 @@ export default function ProfileEdit() {
                             });
                             setNewPhotoUrl(data.profile.photoUrl || '');
                             
-                            // Check if user already has a wallet linked
                             if (data.profile.walletAddress) {
                                 setHasWallet(true);
                             }
@@ -93,7 +84,7 @@ export default function ProfileEdit() {
         checkUserStatus();
     }, [isConnected, address]);
 
-    // Generate avatar based on wallet address
+    // Generate avatar
     useEffect(() => {
         if (address) {
             setAvatarUrl(generateAvatar(address));
@@ -101,24 +92,41 @@ export default function ProfileEdit() {
         }
     }, [address]);
 
-    // Populate form with existing profile data - only on initial load
+    // Populate form with merged profile data (blockchain + database)
     useEffect(() => {
-        if (profile && !formData.name && !formData.age && !formData.gender && !formData.interests && !formData.email) {
-            console.log('Initializing form with profile data:', profile);
-            setFormData({
-                name: profile.name || '',
-                age: profile.age ? profile.age.toString() : '',
-                gender: profile.gender || '',
-                interests: profile.interests || '',
-                photoUrl: profile.photoUrl || '',
-                email: profile.email || '',
-            });
-            setNewPhotoUrl(profile.photoUrl || '');
-            if (profile.email) {
-                setUserEmail(profile.email);
+        const fetchMergedProfile = async () => {
+            if (!address) return;
+            
+            try {
+                const response = await fetch(`/api/profile/edit?address=${address}`);
+                if (response.ok) {
+                    const mergedProfile = await response.json();
+                    
+                    // Only populate if form is empty (first load)
+                    if (!formData.name && !formData.age && !formData.gender && !formData.interests) {
+                        setFormData({
+                            name: mergedProfile.name || '',
+                            age: mergedProfile.age ? mergedProfile.age.toString() : '',
+                            gender: mergedProfile.gender || '',
+                            interests: mergedProfile.interests || '',
+                            photoUrl: mergedProfile.photoUrl || '',
+                            email: mergedProfile.email || '', // From database, not blockchain
+                        });
+                        setNewPhotoUrl(mergedProfile.photoUrl || '');
+                        if (mergedProfile.email) {
+                            setUserEmail(mergedProfile.email);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching merged profile:', error);
             }
+        };
+
+        if (address && isConnected) {
+            fetchMergedProfile();
         }
-    }, [profile]);
+    }, [address, isConnected]);
 
     const showNotification = (message: string, type: 'success' | 'error') => {
         setNotification({ message, type });
@@ -130,20 +138,17 @@ export default function ProfileEdit() {
     const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Check file size (max 3MB)
             if (file.size > 3 * 1024 * 1024) {
                 showNotification('Image must be smaller than 3MB', 'error');
                 return;
             }
 
-            // Check file type
             if (!file.type.startsWith('image/')) {
                 showNotification('Please upload a valid image file', 'error');
                 return;
             }
 
             try {
-                // Upload to Supabase Storage
                 const formData = new FormData();
                 formData.append('file', file);
 
@@ -175,70 +180,58 @@ export default function ProfileEdit() {
         fileInputRef.current?.click();
     };
 
-
-const handleSendVerification = async () => {
-    if (!formData.email || !formData.email.includes('@')) {
-        showNotification('Please enter a valid email address', 'error');
-        return;
-    }
-
-    setIsSendingVerification(true);
-
-    try {
-        const response = await fetch('/api/register-email', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                email: formData.email,
-                walletAddress: address, // ← CRITICAL: Pass wallet address
-            }),
-        });
-
-        const result = await response.json();
-
-        if (response.ok && result.success) {
-            showNotification('Verification email sent! Check your inbox.', 'success');
-        } else {
-            showNotification(result.error || 'Failed to send verification email', 'error');
+    const handleSendVerification = async () => {
+        if (!formData.email || !formData.email.includes('@')) {
+            showNotification('Please enter a valid email address', 'error');
+            return;
         }
-    } catch (error) {
-        console.error('Error sending verification email:', error);
-        showNotification('Failed to send verification email. Please check your network connection.', 'error');
-    } finally {
-        setIsSendingVerification(false);
-    }
-};
 
+        setIsSendingVerification(true);
+
+        try {
+            const response = await fetch('/api/register-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: formData.email,
+                    walletAddress: address,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                showNotification('Verification email sent! Check your inbox.', 'success');
+            } else {
+                showNotification(result.error || 'Failed to send verification email', 'error');
+            }
+        } catch (error) {
+            console.error('Error sending verification email:', error);
+            showNotification('Failed to send verification email. Please check your network connection.', 'error');
+        } finally {
+            setIsSendingVerification(false);
+        }
+    };
+
+    // UPDATED: Two-step process - Database first, then blockchain for verification
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validate form data
         if (!formData.name || !formData.age || !formData.gender || !formData.interests) {
             showNotification('Please fill in all required fields', 'error');
             return;
         }
 
         const age = parseInt(formData.age);
-        console.log(`Validating age: ${age} (type: ${typeof age})`);
 
-        if (isNaN(age)) {
-            showNotification('Please enter a valid age', 'error');
-            return;
-        }
-
-        if (age < 18) {
-            showNotification('You must be at least 18 years old', 'error');
-            return;
-        }
-
-        if (age > 100) {
+        if (isNaN(age) || age < 18 || age > 100) {
             showNotification('Please enter a valid age between 18 and 100', 'error');
             return;
         }
 
-        // For email-first users without wallet, update via API
+        // For email-first users without wallet
         if (!hasWallet || !isConnected) {
             try {
                 const response = await fetch('/api/profile/update-by-email', {
@@ -268,23 +261,43 @@ const handleSendVerification = async () => {
             return;
         }
 
-        // Check if profile exists for wallet users
         if (!profile?.exists) {
             showNotification('Profile does not exist. Please create a profile first.', 'error');
             return;
         }
 
         try {
-            // Determine if image was changed
+            // STEP 1: Update database immediately (for mutable fields like email)
+            console.log('Step 1: Updating database...');
+            const dbResponse = await fetch('/api/profile/edit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    wallet_address: address,
+                    email: formData.email,
+                    name: formData.name,
+                    age,
+                    gender: formData.gender,
+                    interests: formData.interests,
+                }),
+            });
+
+            if (!dbResponse.ok) {
+                const errorData = await dbResponse.json();
+                throw new Error(errorData.error || 'Failed to update database');
+            }
+
+            console.log('✅ Database updated successfully');
+
+            // STEP 2: Update blockchain (source of truth for profile verification)
+            console.log('Step 2: Updating blockchain...');
             const imageChanged = newPhotoUrl && newPhotoUrl !== formData.photoUrl;
             let newImageFile: File | undefined;
 
-            // If user uploaded a new image, get the file from the input
             if (imageChanged && fileInputRef.current?.files?.[0]) {
                 newImageFile = fileInputRef.current.files[0];
             }
 
-            // Use the unified update handler
             const updateData = await handleProfileTextUpdate(
                 profile.tokenId.toString(),
                 {
@@ -298,15 +311,14 @@ const handleSendVerification = async () => {
                 newImageFile
             );
 
-            console.log('Update handler returned:', updateData);
-            console.log('Executing updateProfile contract transaction...');
-
+            console.log('Executing blockchain transaction...');
             writeContract({
                 address: CONTRACTS.PROFILE_NFT as `0x${string}`,
                 abi: PROFILE_NFT_ABI,
                 functionName: 'updateProfile',
                 args: updateData.contractArgs,
             });
+
         } catch (error) {
             console.error('Error updating profile:', error);
             showNotification(error instanceof Error ? error.message : 'Failed to update profile', 'error');
@@ -337,41 +349,42 @@ const handleSendVerification = async () => {
         }
     };
 
-    
-const syncProfileToDatabase = async (profileData: {
-    name: string;
-    age: number;
-    gender: string;
-    interests: string;
-    photoUrl: string;
-    email: string;
-}) => {
-    try {
-        const response = await fetch('/api/profile/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                walletAddress: address,
-                name: profileData.name,
-                age: profileData.age,
-                gender: profileData.gender,
-                interests: profileData.interests,
-                photoUrl: profileData.photoUrl,
-                email: profileData.email,
-            }),
-        });
+    // CRITICAL: Sync blockchain back to database after successful transaction
+    // This ensures database matches blockchain (anti-catfish verification)
+    const syncProfileToDatabase = async (profileData: {
+        name: string;
+        age: number;
+        gender: string;
+        interests: string;
+        photoUrl: string;
+        email: string;
+    }) => {
+        try {
+            console.log('Step 3: Syncing blockchain confirmation back to database...');
+            const response = await fetch('/api/profile/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    walletAddress: address,
+                    name: profileData.name,
+                    age: profileData.age,
+                    gender: profileData.gender,
+                    interests: profileData.interests,
+                    photoUrl: profileData.photoUrl,
+                    email: profileData.email,
+                }),
+            });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Failed to sync profile to database:', errorData);
-        } else {
-            console.log('Profile synced to database successfully');
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Failed to sync profile to database:', errorData);
+            } else {
+                console.log('✅ Profile synced to database successfully - blockchain verified!');
+            }
+        } catch (error) {
+            console.error('Error syncing profile to database:', error);
         }
-    } catch (error) {
-        console.error('Error syncing profile to database:', error);
-    }
-};
-    
+    };
 
     const handleWalletLinked = () => {
         setHasWallet(true);
@@ -379,39 +392,40 @@ const syncProfileToDatabase = async (profileData: {
         refreshProfile();
     };
 
-useEffect(() => {
-    const handleTransactionSuccess = async () => {
-        if (isSuccess) {
-            if (isDeleting) {
-                showNotification('✅ Profile deleted successfully!', 'success');
-                localStorage.clear();
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 2000);
-            } else {
-                // Sync the updated profile data to the database
-                await syncProfileToDatabase({
-                    name: formData.name,
-                    age: parseInt(formData.age),
-                    gender: formData.gender,
-                    interests: formData.interests,
-                    photoUrl: newPhotoUrl || formData.photoUrl,
-                    email: formData.email,
-                });
+    // Handle transaction success - sync back to database for verification
+    useEffect(() => {
+        const handleTransactionSuccess = async () => {
+            if (isSuccess) {
+                if (isDeleting) {
+                    showNotification('✅ Profile deleted successfully!', 'success');
+                    localStorage.clear();
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    // STEP 3: After blockchain confirms, sync back to database
+                    // This creates a verified record that blockchain and database match
+                    await syncProfileToDatabase({
+                        name: formData.name,
+                        age: parseInt(formData.age),
+                        gender: formData.gender,
+                        interests: formData.interests,
+                        photoUrl: newPhotoUrl || formData.photoUrl,
+                        email: formData.email,
+                    });
 
-                showNotification('✅ Profile updated successfully!', 'success');
-                refreshProfile();
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
+                    showNotification('✅ Profile updated and verified on blockchain!', 'success');
+                    refreshProfile();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
             }
-        }
-    };
+        };
 
-    handleTransactionSuccess();
-}, [isSuccess, isDeleting, refreshProfile, formData, newPhotoUrl, address]);
+        handleTransactionSuccess();
+    }, [isSuccess, isDeleting, refreshProfile, formData, newPhotoUrl, address]);
 
-    
     if (profileLoading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center">
@@ -427,7 +441,6 @@ useEffect(() => {
                     Edit Your Profile
                 </h2>
 
-                {/* Notification */}
                 {notification && (
                     <div className={`mb-4 p-3 rounded-lg ${notification.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {notification.message}
@@ -435,7 +448,7 @@ useEffect(() => {
                 )}
 
                 <form onSubmit={handleUpdateProfile} className="space-y-6">
-                    {/* Profile Picture Section */}
+                    {/* Profile Picture */}
                     <div className="flex flex-col items-center">
                         <div className="relative mb-4">
                             {newPhotoUrl ? (
@@ -473,7 +486,7 @@ useEffect(() => {
                         <p className="text-gray-600 text-sm">Click the pencil to upload your photo (max 3MB)</p>
                     </div>
 
-                    {/* Wallet Connection Section - Show if user has email but no wallet linked */}
+                    {/* Wallet Connection */}
                     {!hasWallet && (formData.email || userEmail) && (
                         <div>
                             <WalletConnectionSection 
@@ -485,77 +498,46 @@ useEffect(() => {
                             </p>
                         </div>
                     )}
-                    
-                    {/* Debug info - Remove after testing */}
-                    {process.env.NODE_ENV === 'development' && (
-                        <div className="bg-gray-100 p-3 rounded text-xs">
-                            <p>Debug Info:</p>
-                            <p>hasWallet: {hasWallet ? 'true' : 'false'}</p>
-                            <p>userEmail: {userEmail || 'not set'}</p>
-                            <p>formData.email: {formData.email || 'not set'}</p>
-                            <p>isConnected: {isConnected ? 'true' : 'false'}</p>
-                            <p>address: {address || 'not set'}</p>
-                        </div>
-                    )}
 
-                    {/* Email Section */}
+                    {/* Email Section with Blockchain Verification Badge */}
                     <div className="bg-blue-50 rounded-xl p-4 border-2 border-blue-200">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             📧 Email Address
+                            {profile?.email && formData.email === profile.email && (
+                                <span className="ml-2 text-xs bg-green-500 text-white px-2 py-1 rounded-full">
+                                    ✓ Blockchain Verified
+                                </span>
+                            )}
                         </label>
                         <div className="space-y-2">
                             <input
                                 type="email"
                                 value={formData.email}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, email: e.target.value });
-                                }}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 className="w-full px-4 py-2 bg-white text-gray-700 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 placeholder="your@email.com"
                             />
-
                             <button
                                 type="button"
                                 onClick={handleSendVerification}
                                 disabled={isSendingVerification || !formData.email || !formData.email.includes('@')}
                                 className="w-full px-3 py-2 bg-green-400 text-white text-sm rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                {isSendingVerification ? (
-                                    <span className="flex items-center justify-center">
-                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Sending...
-                                    </span>
-                                ) : (
-                                    '📨 Send Verification Email'
-                                )}
+                                {isSendingVerification ? 'Sending...' : '📨 Send Verification Email'}
                             </button>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
-                            Email is stored on blockchain. Click verify to confirm your email address.
+                            🔒 Email stored in database + synced to blockchain for anti-catfish verification
                         </p>
-                        {formData.email !== profile?.email && formData.email && (
-                            <p className="text-xs text-yellow-600 mt-1 font-medium">
-                                Email will be updated when you save your profile
-                            </p>
-                        )}
                     </div>
 
                     {/* Name */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Name *
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
                         <input
                             type="text"
                             value={formData.name}
-                            onChange={(e) => {
-                                const newValue = e.target.value;
-                                console.log('Name input change:', { newValue, prev: formData.name });
-                                setFormData(prev => ({ ...prev, name: newValue }));
-                            }}
+                            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                             className="w-full px-4 py-3 text-gray-700 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="Your name"
                             required
@@ -564,16 +546,11 @@ useEffect(() => {
 
                     {/* Age */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Age *
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Age *</label>
                         <input
                             type="number"
                             value={formData.age}
-                            onChange={(e) => {
-                                const newValue = e.target.value;
-                                setFormData(prev => ({ ...prev, age: newValue }));
-                            }}
+                            onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
                             className="w-full px-4 py-3 border text-gray-700 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="18"
                             min="18"
@@ -584,14 +561,10 @@ useEffect(() => {
 
                     {/* Gender */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Gender *
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
                         <select
                             value={formData.gender}
-                            onChange={(e) => {
-                                setFormData(prev => ({ ...prev, gender: e.target.value }));
-                            }}
+                            onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
                             className="w-full px-4 py-3 border text-gray-700 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             required
                         >
@@ -604,15 +577,10 @@ useEffect(() => {
 
                     {/* Interests */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Interests *
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Interests *</label>
                         <textarea
                             value={formData.interests}
-                            onChange={(e) => {
-                                const newValue = e.target.value;
-                                setFormData(prev => ({ ...prev, interests: newValue }));
-                            }}
+                            onChange={(e) => setFormData(prev => ({ ...prev, interests: e.target.value }))}
                             className="w-full px-4 py-3 text-gray-700 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="Hiking, Photography, Crypto, Art"
                             rows={3}
@@ -632,20 +600,20 @@ useEffect(() => {
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                Updating Profile...
+                                Updating & Verifying on Blockchain...
                             </span>
                         ) : (
-                            'Update Profile'
+                            '🔒 Update Profile (Blockchain Verified)'
                         )}
                     </button>
 
-                    {/* Delete Account Section - RESTORED */}
+                    {/* Delete Account Section */}
                     {hasWallet && profile?.exists && (
                         <div className="mt-8 pt-6 border-t-2 border-gray-200">
                             <div className="bg-red-50 rounded-xl p-4 border-2 border-red-200">
                                 <h3 className="text-lg font-semibold text-red-800 mb-2">⚠️ Danger Zone</h3>
                                 <p className="text-sm text-red-700 mb-4">
-                                    Deleting your account will permanently remove your profile NFT and all associated data from the blockchain. This action cannot be undone.
+                                    Deleting your account will permanently remove your profile NFT and all associated data. This action cannot be undone.
                                 </p>
 
                                 {!showDeleteConfirm ? (
@@ -662,14 +630,8 @@ useEffect(() => {
                                         <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-3">
                                             <p className="text-sm font-semibold text-yellow-800 mb-2">⚠️ First Confirmation</p>
                                             <p className="text-sm text-yellow-700 mb-3">
-                                                Are you sure you want to delete your account? This will:
+                                                Are you sure? This will permanently delete everything.
                                             </p>
-                                            <ul className="text-xs text-yellow-700 list-disc list-inside space-y-1 mb-3">
-                                                <li>Burn your Profile NFT permanently</li>
-                                                <li>Remove all your profile data from blockchain</li>
-                                                <li>Delete your email registration</li>
-                                                <li>Cannot be recovered or undone</li>
-                                            </ul>
                                         </div>
                                         <div className="flex gap-2">
                                             <button
@@ -695,12 +657,7 @@ useEffect(() => {
                                     <div className="space-y-3">
                                         <div className="bg-red-100 border-2 border-red-500 rounded-lg p-3">
                                             <p className="text-sm font-bold text-red-900 mb-2">🚨 FINAL CONFIRMATION</p>
-                                            <p className="text-sm text-red-800 mb-2 font-semibold">
-                                                This is your last chance. Type your confirmation below:
-                                            </p>
-                                            <p className="text-xs text-red-700 mb-3">
-                                                Once you click "Permanently Delete Account", your profile NFT will be burned and all data will be permanently removed from the blockchain.
-                                            </p>
+                                            <p className="text-sm text-red-800">This is your last chance!</p>
                                         </div>
                                         <div className="flex gap-2">
                                             <button
@@ -720,17 +677,7 @@ useEffect(() => {
                                                 disabled={isPending || isConfirming || isDeleting}
                                                 className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
                                             >
-                                                {isDeleting ? (
-                                                    <span className="flex items-center justify-center">
-                                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                        </svg>
-                                                        Deleting...
-                                                    </span>
-                                                ) : (
-                                                    '🗑️ Permanently Delete Account'
-                                                )}
+                                                {isDeleting ? 'Deleting...' : '🗑️ Permanently Delete'}
                                             </button>
                                         </div>
                                     </div>
