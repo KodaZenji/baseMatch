@@ -48,7 +48,7 @@ export async function GET(request: Request) {
         // Get the profile to check if user is existing
         const { data: profile, error: profileError } = await supabaseService
             .from('profiles')
-            .select('*') // Select ALL fields to see everything
+            .select('*')
             .eq('id', targetProfileId)
             .single();
 
@@ -60,34 +60,26 @@ export async function GET(request: Request) {
             });
         }
 
-        // Log EVERYTHING about the profile
         console.log('📋 FULL PROFILE DATA:', JSON.stringify(profile, null, 2));
         
-        // User is "existing" if they have a name (completed their profile)
         const hasName = profile.name && typeof profile.name === 'string' && profile.name.trim().length > 0;
         const isExistingUser = hasName;
+        const wasAlreadyVerified = profile.email_verified;
 
         console.log('🔍 User verification status:', { 
             profileId: targetProfileId,
-            rawName: profile.name,
-            nameType: typeof profile.name,
-            nameIsNull: profile.name === null,
-            nameIsUndefined: profile.name === undefined,
-            nameIsEmptyString: profile.name === '',
-            nameLength: profile.name?.length,
-            trimmedLength: profile.name?.trim()?.length,
             hasName,
             isExistingUser,
+            wasAlreadyVerified,
             currentEmail: profile.email,
-            newEmail: verificationEmail,
-            allProfileKeys: Object.keys(profile)
+            newEmail: verificationEmail
         });
 
         // Update profile: mark email as verified AND update the email address
         const { error: updateError } = await supabaseService
             .from('profiles')
             .update({
-                email: verificationEmail, // Update to the verified email
+                email: verificationEmail,
                 email_verified: true,
                 updated_at: new Date().toISOString()
             })
@@ -100,13 +92,43 @@ export async function GET(request: Request) {
 
         console.log('Email verified and updated successfully for profile:', targetProfileId);
 
+        // ============ CREATE EMAIL VERIFICATION NOTIFICATION ============
+        // Only create notification if this is a new verification (not re-verifying)
+        if (!wasAlreadyVerified) {
+            try {
+                const userAddress = profile.wallet_address || verificationEmail;
+                
+                await supabaseService
+                    .from('notifications')
+                    .insert({
+                        user_address: userAddress.toLowerCase(),
+                        type: 'profile_complete',
+                        title: '✅ Email Verified!',
+                        message: isExistingUser 
+                            ? 'Your email has been successfully verified!'
+                            : 'Your email has been verified! Complete your profile to start matching.',
+                        metadata: {
+                            profile_id: targetProfileId,
+                            email: verificationEmail,
+                            is_new_user: !isExistingUser
+                        }
+                    });
+                
+                console.log('✅ Email verification notification created for:', userAddress);
+            } catch (notifError) {
+                console.error('Failed to create email verification notification:', notifError);
+            }
+        } else {
+            console.log('⏭️ Skipping notification - email was already verified');
+        }
+        // ============ END NOTIFICATION CODE ============
+
         // Cleanup: Delete the used token
         await supabaseService
             .from('email_verifications')
             .delete()
             .eq('token', token);
 
-        // Return success HTML with appropriate redirect and localStorage setup
         return new NextResponse(getSuccessHTML(verificationEmail, isExistingUser, targetProfileId), {
             headers: { 'Content-Type': 'text/html' }
         });
@@ -148,27 +170,56 @@ export async function POST(request: Request) {
         const targetProfileId = verification.profile_id;
         const verificationEmail = verification.email;
 
-        // Get the profile to check if user is existing
+        // Get the profile
         const { data: profile } = await supabaseService
             .from('profiles')
-            .select('name, email')
+            .select('*')
             .eq('id', targetProfileId)
             .single();
         
         const hasName = profile?.name && typeof profile.name === 'string' && profile.name.trim().length > 0;
         const isExistingUser = hasName;
+        const wasAlreadyVerified = profile?.email_verified;
 
-        // Update profile: mark email as verified AND update the email address
+        // Update profile
         const { error: updateError } = await supabaseService
             .from('profiles')
             .update({
-                email: verificationEmail, // Update to the verified email
+                email: verificationEmail,
                 email_verified: true,
                 updated_at: new Date().toISOString()
             })
             .eq('id', targetProfileId);
 
         if (updateError) throw updateError;
+
+        // ============ CREATE EMAIL VERIFICATION NOTIFICATION ============
+        if (!wasAlreadyVerified) {
+            try {
+                const userAddress = profile?.wallet_address || verificationEmail;
+                
+                await supabaseService
+                    .from('notifications')
+                    .insert({
+                        user_address: userAddress.toLowerCase(),
+                        type: 'profile_complete',
+                        title: '✅ Email Verified!',
+                        message: isExistingUser 
+                            ? 'Your email has been successfully verified!'
+                            : 'Your email has been verified! Complete your profile to start matching.',
+                        metadata: {
+                            profile_id: targetProfileId,
+                            email: verificationEmail,
+                            is_new_user: !isExistingUser
+                        }
+                    });
+                
+                console.log('✅ Email verification notification created');
+            } catch (notifError) {
+                console.error('Failed to create email verification notification:', notifError);
+            }
+        }
+        // ============ END NOTIFICATION CODE ============
 
         // Cleanup
         await supabaseService
@@ -179,7 +230,7 @@ export async function POST(request: Request) {
         return NextResponse.json({
             success: true,
             profile_id: targetProfileId,
-            is_existing_user: isExistingUser, // ← RETURN THIS!
+            is_existing_user: isExistingUser,
             message: 'Email verified successfully'
         });
     } catch (error) {
@@ -190,7 +241,6 @@ export async function POST(request: Request) {
 
 // Helper function for success HTML with redirect logic
 function getSuccessHTML(email: string, isExistingUser: boolean, profileId: string): string {
-    // Use profile/edit for existing users (they were updating email), complete-profile for new users
     const redirectUrl = isExistingUser ? '/profile/edit' : '/register/email/complete';
     const redirectMessage = isExistingUser 
         ? 'Email updated! Redirecting back to your profile...' 
@@ -198,7 +248,6 @@ function getSuccessHTML(email: string, isExistingUser: boolean, profileId: strin
     
     console.log('🔀 Redirecting:', { isExistingUser, redirectUrl, profileId });
     
-    // For new users, set localStorage so the complete page can access it
     const localStorageScript = !isExistingUser ? `
         localStorage.setItem('emailVerified', JSON.stringify({
             email: '${email}',
