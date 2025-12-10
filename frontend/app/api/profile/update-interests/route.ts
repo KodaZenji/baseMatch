@@ -1,3 +1,6 @@
+// frontend/app/api/profile/update-interests/route.ts
+// REPLACE your entire file with this updated version
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
 export const runtime = 'nodejs';
@@ -7,11 +10,12 @@ const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS;
 /**
  * POST /api/profile/update-interests
  * Update user interests on-chain
- * * Input: { walletAddress, newInterests }
+ * Input: { walletAddress, newInterests }
  * Requirements:
  * - Profile must be fully verified (email_verified AND wallet_verified)
  * - Updates DB optimistically (UX optimization)
  * - Returns encoded transaction data for on-chain update
+ * - Creates notification when interests are updated
  */
 export async function POST(request: NextRequest) {
     try {
@@ -37,7 +41,6 @@ export async function POST(request: NextRequest) {
         }
 
         // 1. Lookup profile by walletAddress
-        // 🛑 FIX 1: Use 'profiles' table
         const { data: profile, error: profileError } = await supabaseService
             .from('profiles')
             .select('*')
@@ -64,14 +67,13 @@ export async function POST(request: NextRequest) {
         }
 
         // 3. Update DB (UX Optimization) - Update interests optimistically
-        // 🛑 FIX 2: Use 'profiles' table
         const { error: updateError } = await supabaseService
             .from('profiles')
             .update({
                 interests: newInterests,
                 updated_at: new Date().toISOString()
             })
-            .eq('id', profile.id); // Use profile.id
+            .eq('id', profile.id);
 
         if (updateError) {
             console.error('Error updating interests in DB:', updateError);
@@ -81,10 +83,29 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 4. Encode Transaction Data using viem
-        // The contract has updateProfile(name, age, gender, interests, photoUrl, email)
-
-        // Using viem's encodeFunctionData
+        // ============ CREATE PROFILE UPDATE NOTIFICATION ============
+        try {
+            await supabaseService
+                .from('notifications')
+                .insert({
+                    user_address: normalizedAddress,
+                    type: 'profile_complete',
+                    title: '✅ Interests Updated!',
+                    message: 'Your interests have been successfully updated!',
+                    metadata: {
+                        profile_id: profile.id,
+                        updated_field: 'interests',
+                        new_interests: newInterests
+                    }
+                });
+            
+            console.log('✅ Interests update notification created for:', normalizedAddress);
+        } catch (notifError) {
+            // Don't fail the update if notification fails
+            console.error('Failed to create interests notification:', notifError);
+        }
+        
+        
         const { encodeFunctionData } = await import('viem');
 
         const callData = encodeFunctionData({
@@ -123,10 +144,9 @@ export async function POST(request: NextRequest) {
                 to: PROFILE_NFT_ADDRESS,
                 data: callData
             },
-            // Additional info for confirmation
             updatedInterests: newInterests,
             userInfo: {
-                profileId: profile.id, // Consistent naming
+                profileId: profile.id,
                 walletAddress: normalizedAddress
             }
         });
