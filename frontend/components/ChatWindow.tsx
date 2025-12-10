@@ -103,7 +103,7 @@ export default function ChatWindow({
             if (navigator.vibrate) {
                 navigator.vibrate(50);
             }
-        }, 500); // 500ms long press
+        }, 500); 
     };
 
     const handleTouchEnd = () => {
