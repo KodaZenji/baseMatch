@@ -225,7 +225,7 @@ export default function DateStakeModal({
                                     placeholder="10"
                                     min="0"
                                     step="1"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                                    className="w-full px-4 py-2 text-gray-500 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">Suggested: 10 USDC</p>
                             </div>
@@ -239,7 +239,7 @@ export default function DateStakeModal({
                                     type="date"
                                     value={meetingDate}
                                     onChange={(e) => setMeetingDate(e.target.value)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                                    className="w-full px-4 py-2 text-gray-500 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                 />
                             </div>
 
@@ -252,7 +252,7 @@ export default function DateStakeModal({
                                     type="time"
                                     value={meetingTime}
                                     onChange={(e) => setMeetingTime(e.target.value)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                                    className="w-full px-4 py-2 text-gray-500 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                 />
                             </div>
 
