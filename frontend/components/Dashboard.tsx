@@ -36,12 +36,12 @@ export default function Dashboard() {
 
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900">Your Dashboard</h2>
+            <h2 className="text-2xl font-bold text-gray-800">Your Dashboard</h2>
 
             {/* Profile Card */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="flex justify-between items-start">
-                    <h3 className="text-xl font-bold text-gray-900 mb-4">Profile</h3>
+                    <h3 className="text-xl font-bold text-gray-800 mb-4">Profile</h3>
                     <Link
                         href="/profile/edit"
                         className="text-sm text-blue-600 hover:text-blue-800 font-medium"
@@ -68,14 +68,14 @@ export default function Dashboard() {
                                 <div className="bg-gray-200 border-2 border-dashed rounded-full w-24 h-24" />
                             )}
                             <div>
-                                <h4 className="text-2xl text-gray-400 font-bold">{profile.name}, {profile.age}</h4>
+                                <h4 className="text-2xl text-gray-500 font-bold">{profile.name}, {profile.age}</h4>
                                 <p className="text-gray-600">{profile.interests}</p>
-                                <p className="text-xs text-gray-400 mt-1">
+                                <p className="text-xs text-gray-300 mt-1">
                                     PROFILE ID: #{profile.tokenId.toString()}
                                 </p>
                                 {profile.email && (
                                     <div className="flex items-center mt-2">
-                                        <span className="text-xs text-gray-500">{profile.email}</span>
+                                        <span className="text-xs text-gray-400">{profile.email}</span>
                                         <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
                                             Verified
                                         </span>
@@ -83,7 +83,7 @@ export default function Dashboard() {
                                 )}
                                 {profile.wallet_address && (
                                     <div className="flex items-center mt-2">
-                                        <span className="text-xs text-gray-500">{profile.wallet_address.slice(0, 6)}...{profile.wallet_address.slice(-4)}</span>
+                                        <span className="text-xs text-gray-400">{profile.wallet_address.slice(0, 6)}...{profile.wallet_address.slice(-4)}</span>
                                         <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
                                             Wallet Verified
                                         </span>
@@ -97,7 +97,7 @@ export default function Dashboard() {
 
             {/* Reputation Stats */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Reputation</h3>
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Reputation</h3>
                 {reputationLoading ? (
                     <div className="flex justify-center items-center h-32">
                         <div className="text-gray-500">Loading reputation...</div>
@@ -171,7 +171,7 @@ export default function Dashboard() {
                                     <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                     </svg>
-                                    <span className="font-medium">Verified On-Chain</span>
+                                    <span className="font-medium">Verified</span>
                                 </div>
                             </div>
                         ))}
@@ -179,9 +179,9 @@ export default function Dashboard() {
                 ) : (
                     <div className="text-center py-12 space-y-3">
                         
-                        <p className="text-gray-500 font-medium">No achievement NFTs yet</p>
-                        <p className="text-sm text-gray-400">
-                            Go on dates and earn blockchain-verified badges!
+                        <p className="text-gray-400 font-medium">No achievement yet</p>
+                        <p className="text-sm text-gray-300">
+                            Go on dates and earn badges!
                         </p>
                     </div>
                 )}
