@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -16,18 +16,21 @@ export default function WalletRegisterPage() {
         gender: '',
         interests: '',
         email: '',
-        photoUrl: '',
+        photoUrl: '', // This will be set to Dicebear URL
     });
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
 
-    // Generate avatar based on wallet
+    // Generate avatar based on wallet and SET IT IN FORM DATA
     useEffect(() => {
         if (address) {
             const seed = address.substring(2, 10);
-            setAvatarUrl(`https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`);
+            const generatedAvatarUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
+            setAvatarUrl(generatedAvatarUrl);
+            // IMPORTANT: Set the photoUrl in formData so it gets sent to the API
+            setFormData(prev => ({ ...prev, photoUrl: generatedAvatarUrl }));
         }
     }, [address]);
 
@@ -75,7 +78,7 @@ export default function WalletRegisterPage() {
             const message = `Register with wallet ${address}\n\nTimestamp: ${Date.now()}`;
             const signature = await signMessageAsync({ message });
 
-            // Call register API
+            // Call register API with photoUrl included
             const response = await fetch('/api/profile/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -86,7 +89,7 @@ export default function WalletRegisterPage() {
                     gender: formData.gender,
                     interests: formData.interests,
                     email: formData.email,
-                    photoUrl: formData.photoUrl,
+                    photoUrl: formData.photoUrl, // Now includes the Dicebear URL
                     signature,
                     message,
                 }),
@@ -131,11 +134,14 @@ export default function WalletRegisterPage() {
                     {/* Avatar Display */}
                     <div className="flex justify-center">
                         {avatarUrl && (
-                            <img
-                                src={avatarUrl}
-                                alt="Your avatar"
-                                className="w-24 h-24 rounded-full border-4 border-purple-200"
-                            />
+                            <div className="text-center">
+                                <img
+                                    src={avatarUrl}
+                                    alt="Your avatar"
+                                    className="w-24 h-24 rounded-full border-4 border-purple-200 mb-2"
+                                />
+                                <p className="text-xs text-gray-500">Your profile avatar</p>
+                            </div>
                         )}
                     </div>
 
@@ -174,7 +180,7 @@ export default function WalletRegisterPage() {
                             value={formData.gender}
                             onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                             required
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                             <option value="">Select gender</option>
                             <option value="Female">Female</option>
