@@ -119,24 +119,32 @@ export default function ChatWindow({
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
-                <div className="border-b border-gray-200 p-4 flex justify-between items-center">
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-900">{otherUserName}</h2>
-                        <p className="text-xs text-gray-500 truncate">{otherUserAddress}</p>
-                    </div>
-                    <div className="flex gap-2 items-center">
-                        <button
-                            onClick={() => setShowDateModal(true)}
-                            className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity text-sm whitespace-nowrap"
-                        >
-                            💕 Go on a Date
-                        </button>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 text-2xl"
-                        >
-                            ×
-                        </button>
+                {/* FIXED HEADER - Mobile responsive */}
+                <div className="border-b border-gray-200 p-4">
+                    <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                            <h2 className="text-xl font-bold text-gray-900 truncate">{otherUserName}</h2>
+                            <p className="text-xs text-gray-500 truncate">{otherUserAddress}</p>
+                        </div>
+                        <div className="flex gap-2 items-center flex-shrink-0">
+                            <button
+                                onClick={() => setShowDateModal(true)}
+                                className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-3 py-1.5 rounded-lg font-semibold hover:opacity-90 transition-opacity text-xs sm:text-sm leading-tight"
+                            >
+                                <span className="hidden sm:inline whitespace-nowrap">💕 Go on a Date</span>
+                                <span className="sm:hidden flex flex-col items-center">
+                                    <span>Go on</span>
+                                    <span>a Date 💕</span>
+                                </span>
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="text-gray-400 hover:text-gray-600 text-3xl sm:text-2xl leading-none p-1 -mr-1 min-w-[32px] flex items-center justify-center"
+                                aria-label="Close"
+                            >
+                                ×
+                            </button>
+                        </div>
                     </div>
                 </div>
 
