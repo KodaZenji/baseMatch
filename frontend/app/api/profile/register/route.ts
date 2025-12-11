@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
-import { verifyWalletSignature, generateToken, sendVerificationEmail, calculatePhotoHash } from '@/lib/utils'; // Assumed to be imported
+import { verifyWalletSignature, generateToken, sendVerificationEmail } from '@/lib/utils';
 
 export const runtime = 'nodejs';
 
@@ -9,6 +9,11 @@ const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS;
 /**
  * POST /api/profile/register
  * Wallet-First Flow: Register profile with wallet signature, trigger email verification if needed
+ * 
+ * IMPORTANT: photoUrl must be a SHORT URL (max 500 chars for on-chain storage)
+ * - Use Dicebear avatars: https://api.dicebear.com/7.x/pixel-art/svg?seed=xyz
+ * - Or upload to IPFS/Supabase Storage and pass the URL
+ * - DO NOT pass base64 images directly - they're too long for on-chain storage
  */
 export async function POST(request: NextRequest) {
     try {
@@ -46,19 +51,21 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 4. Handle photo upload/hashing
-        const finalPhotoUrl = photoUrl || '';
-        const photoHash = finalPhotoUrl ? calculatePhotoHash(finalPhotoUrl) : '';
+        // 4. Validate photoUrl length for on-chain storage
+        if (photoUrl && photoUrl.length > 500) {
+            return NextResponse.json(
+                { error: 'Photo URL too long. Maximum 500 characters. Please upload to IPFS or use a short URL.' },
+                { status: 400 }
+            );
+        }
 
         // 5. Profile Lookup: Find existing profile by email OR wallet
-        // 🛑 FIX 1: Use 'profiles' table
         const { data: existingProfileByEmail } = await supabaseService
             .from('profiles') 
             .select('*')
             .eq('email', normalizedEmail)
             .single();
 
-        // 🛑 FIX 2: Use 'profiles' table
         const { data: existingProfileByWallet } = await supabaseService
             .from('profiles')
             .select('*')
@@ -75,27 +82,31 @@ export async function POST(request: NextRequest) {
 
         const existingProfile = existingProfileByEmail || existingProfileByWallet;
 
-        let profileId: string; // 🛑 Renamed from userId to profileId
+        let profileId: string;
         let needsEmailVerification = false;
 
-        // 6. Upsert Logic
+        // 6. Upsert Logic - Store photoUrl in database
         if (existingProfile) {
             // Profile exists - attempt to UPDATE
-            // 🛑 FIX 3: Use 'profiles' table
+            const updateData: any = {
+                wallet_address: normalizedAddress,
+                wallet_verified: true,
+                email: normalizedEmail,
+                name,
+                age,
+                gender,
+                interests,
+                updated_at: new Date().toISOString()
+            };
+
+            // Only include photoUrl if provided (and it's short enough)
+            if (photoUrl) {
+                updateData.photoUrl = photoUrl;
+            }
+
             const { error: updateError } = await supabaseService
                 .from('profiles')
-                .update({
-                    wallet_address: normalizedAddress,
-                    wallet_verified: true,
-                    email: normalizedEmail,
-                    name,
-                    age,
-                    gender,
-                    interests,
-                    profile_photo_url: finalPhotoUrl,
-                    photo_hash: photoHash,
-                    updated_at: new Date().toISOString()
-                })
+                .update(updateData)
                 .eq('id', existingProfile.id);
 
             if (updateError) {
@@ -106,27 +117,31 @@ export async function POST(request: NextRequest) {
                 );
             }
 
-            profileId = existingProfile.id; // 🛑 Use profileId
+            profileId = existingProfile.id;
             needsEmailVerification = !existingProfile.email_verified;
         } else {
             // New profile - attempt to CREATE
-            // 🛑 FIX 4: Use 'profiles' table
+            const insertData: any = {
+                email: normalizedEmail,
+                wallet_address: normalizedAddress,
+                wallet_verified: true,
+                email_verified: false,
+                name,
+                age,
+                gender,
+                interests,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            // Only include photoUrl if provided (and it's short enough)
+            if (photoUrl) {
+                insertData.photoUrl = photoUrl;
+            }
+
             const { data: newProfile, error: createError } = await supabaseService
                 .from('profiles')
-                .insert([{
-                    email: normalizedEmail,
-                    wallet_address: normalizedAddress,
-                    wallet_verified: true,
-                    email_verified: false,
-                    name,
-                    age,
-                    gender,
-                    interests,
-                    profile_photo_url: finalPhotoUrl,
-                    photo_hash: photoHash,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                }])
+                .insert([insertData])
                 .select('id')
                 .single();
 
@@ -138,7 +153,7 @@ export async function POST(request: NextRequest) {
                 );
             }
 
-            profileId = newProfile.id; // 🛑 Use profileId
+            profileId = newProfile.id;
             needsEmailVerification = true;
         }
 
@@ -151,7 +166,7 @@ export async function POST(request: NextRequest) {
                 const { error: tokenError } = await supabaseService
                     .from('email_verifications')
                     .insert([{
-                        user_id: profileId, // Pass profileId as user_id for the token table
+                        user_id: profileId,
                         email: normalizedEmail,
                         token,
                         expires_at: expiresAt.toISOString(),
@@ -166,10 +181,8 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // 🛑 REMOVED STEP 8: The separate upsert to 'profiles' is now redundant 
-        // as the primary upsert in step 6 now targets the 'profiles' table.
-
-        // 8. Return createProfile payload
+        // 8. Return createProfile payload for on-chain minting
+        // The contract expects photoUrl to be max 500 characters
         return NextResponse.json({
             success: true,
             message: needsEmailVerification
@@ -182,12 +195,11 @@ export async function POST(request: NextRequest) {
                 age,
                 gender,
                 interests,
-                photoUrl: photoHash, 
-                email: normalizedEmail,
-                photoHash: photoHash
+                photoUrl: photoUrl || '', // This will be sent to the smart contract
+                email: normalizedEmail
             },
             userInfo: {
-                profileId, // 🛑 Use profileId
+                profileId,
                 email: normalizedEmail,
                 walletAddress: normalizedAddress,
                 emailVerified: !needsEmailVerification
