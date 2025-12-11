@@ -32,6 +32,9 @@ export default function ProfileEdit() {
     const [showDeleteFinalConfirm, setShowDeleteFinalConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // FIXED: Add ref to track if we've already shown the success notification
+    const hasShownSuccessRef = useRef(false);
 
     const { writeContract, data: hash, isPending, isError, error } = useWriteContract();
     const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
@@ -218,6 +221,9 @@ export default function ProfileEdit() {
     // UPDATED: Two-step process - Database first, then blockchain for verification
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // FIXED: Reset the ref when starting a new update
+        hasShownSuccessRef.current = false;
 
         if (!formData.name || !formData.age || !formData.gender || !formData.interests) {
             showNotification('Please fill in all required fields', 'error');
@@ -392,10 +398,13 @@ export default function ProfileEdit() {
         refreshProfile();
     };
 
-    // Handle transaction success - sync back to database for verification
+    // FIXED: Handle transaction success - only run once per transaction
     useEffect(() => {
         const handleTransactionSuccess = async () => {
-            if (isSuccess) {
+            // FIXED: Only run if isSuccess is true AND we haven't shown notification yet
+            if (isSuccess && !hasShownSuccessRef.current) {
+                hasShownSuccessRef.current = true; // Mark as shown immediately
+                
                 if (isDeleting) {
                     showNotification('✅ Profile deleted successfully!', 'success');
                     localStorage.clear();
@@ -404,7 +413,6 @@ export default function ProfileEdit() {
                     }, 2000);
                 } else {
                     // STEP 3: After blockchain confirms, sync back to database
-                    // This creates a verified record that blockchain and database match
                     await syncProfileToDatabase({
                         name: formData.name,
                         age: parseInt(formData.age),
@@ -424,7 +432,7 @@ export default function ProfileEdit() {
         };
 
         handleTransactionSuccess();
-    }, [isSuccess, isDeleting, refreshProfile, formData, newPhotoUrl, address]);
+    }, [isSuccess]); // FIXED: Only depend on isSuccess, not formData/newPhotoUrl
 
     if (profileLoading) {
         return (
