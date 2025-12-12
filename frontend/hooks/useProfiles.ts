@@ -3,12 +3,14 @@ import { useReadContract } from 'wagmi';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 
 interface Profile {
-  wallet_address: string;
+    wallet_address: string;
     name: string;
     age: number;
     gender: string;
     interests: string;
     photoUrl: string;
+    email_verified?: boolean;  // ✅ Added
+    wallet_verified?: boolean; // ✅ Added
     reputation?: {
         totalDates: number;
         noShows: number;
@@ -52,6 +54,8 @@ export function useProfiles() {
                     gender: profile.gender || '',
                     interests: profile.interests || '',
                     photoUrl: profile.photoUrl || '',
+                    email_verified: profile.email_verified || false,  // ✅ Added
+                    wallet_verified: profile.wallet_verified || false, // ✅ Added
                 }));
 
                 setProfiles(fetchedProfiles);
