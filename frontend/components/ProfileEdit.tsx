@@ -222,8 +222,9 @@ export default function ProfileEdit() {
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // FIXED: Reset the ref when starting a new update
+        // FIXED: Reset both refs when starting a new update
         hasShownSuccessRef.current = false;
+        hasSyncedRef.current = false;
 
         if (!formData.name || !formData.age || !formData.gender || !formData.interests) {
             showNotification('Please fill in all required fields', 'error');
@@ -357,6 +358,9 @@ export default function ProfileEdit() {
 
     // CRITICAL: Sync blockchain back to database after successful transaction
     // This ensures database matches blockchain (anti-catfish verification)
+    // FIXED: Track if sync has been called to prevent duplicates
+    const hasSyncedRef = useRef(false);
+    
     const syncProfileToDatabase = async (profileData: {
         name: string;
         age: number;
@@ -365,6 +369,14 @@ export default function ProfileEdit() {
         photoUrl: string;
         email: string;
     }) => {
+        // Prevent duplicate sync calls
+        if (hasSyncedRef.current) {
+            console.log('⚠️ Sync already called, skipping duplicate');
+            return;
+        }
+        
+        hasSyncedRef.current = true;
+        
         try {
             console.log('Step 3: Syncing blockchain confirmation back to database...');
             const response = await fetch('/api/profile/sync', {
