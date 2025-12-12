@@ -71,29 +71,41 @@ export default function Home() {
   if (!isConnected) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center animate-fadeIn">
           <div className="mb-6">
             <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-2">
               💖 BaseMatch
             </h1>
-            <p className="text-gray-600 text-lg">Your Web3 Dating App</p>
+            <p className="text-gray-600 text-lg font-medium">Find Your Match On-Chain</p>
           </div>
 
           <div className="mb-8">
-            <p className="text-gray-700 mb-4">
-              Connect your wallet to start matching on Base blockchain.
+            <p className="text-gray-700 mb-4 text-base">
+              Your wallet is your dating profile. Build real reputation, meet real people.
             </p>
-            <div className="bg-pink-50 rounded-xl p-4 text-sm text-gray-600">
-              ✓ Your wallet is your identity<br />
-              ✓ Build real-world reputation<br />
-              ✓ Optional staking for serious dates
+            <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl p-4 text-sm text-gray-700 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-green-500">✓</span>
+                <span>Wallet = Your Identity</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-green-500">✓</span>
+                <span>Build Real-World Reputation</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-green-500">✓</span>
+                <span>Optional Staking For Serious Dates</span>
+              </div>
             </div>
           </div>
 
           <div className="space-y-4">
             <button
               onClick={() => router.push('/register/wallet')}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold 
+                transition-all duration-200
+                hover:shadow-lg hover:shadow-purple-500/50 hover:scale-[1.02]
+                active:scale-[0.98] active:shadow-md"
             >
               Connect Wallet
             </button>
@@ -104,10 +116,27 @@ export default function Home() {
             </div>
             <button
               onClick={() => router.push('/register/email')}
-              className="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+              className="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white py-3 rounded-xl font-semibold 
+                transition-all duration-200
+                hover:shadow-lg hover:shadow-teal-500/50 hover:scale-[1.02]
+                active:scale-[0.98] active:shadow-md"
             >
               Sign Up with Email
             </button>
+          </div>
+
+          {/* Social Proof */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="flex items-center justify-center gap-2 text-gray-600 text-sm">
+              <div className="flex -space-x-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-purple-400 border-2 border-white"></div>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-400 border-2 border-white"></div>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-teal-400 border-2 border-white"></div>
+              </div>
+              <p className="font-medium">
+                Join <span className="text-purple-600 font-bold">500+</span> users finding love on Base
+              </p>
+            </div>
           </div>
         </div>
       </div>
