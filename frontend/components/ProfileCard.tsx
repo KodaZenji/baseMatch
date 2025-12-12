@@ -19,6 +19,7 @@ export default function ProfileCard({
     const { address } = useAccount();
     const [avatarUrl, setAvatarUrl] = useState('');
     const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+    const [showImagePreview, setShowImagePreview] = useState(false);
 
     const { writeContract, data: hash, isPending: isWritePending, error } = useWriteContract();
     const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
@@ -101,22 +102,35 @@ export default function ProfileCard({
                 </div>
             )}
 
-            {/* Profile Image - Original style with slight zoom out */}
-            <div className="relative bg-gradient-to-br from-pink-50 to-purple-50 overflow-hidden">
+            {/* Profile Image - Consistent aspect ratio across all devices + Click to preview */}
+            <div 
+                className="relative w-full aspect-[4/3] bg-gradient-to-br from-pink-50 to-purple-50 overflow-hidden cursor-pointer group"
+                onClick={() => setShowImagePreview(true)}
+            >
                 {profile.photoUrl ? (
-                    <img
-                        src={profile.photoUrl}
-                        alt={profile.name}
-                        className="w-full h-48 sm:h-56 md:h-64 object-cover scale-90"
-                    />
+                    <>
+                        <img
+                            src={profile.photoUrl}
+                            alt={profile.name}
+                            className="w-full h-full object-cover scale-90 transition-transform group-hover:scale-95"
+                        />
+                        <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity flex items-center justify-center">
+                            <span className="text-white text-4xl opacity-0 group-hover:opacity-100 transition-opacity">🔍</span>
+                        </div>
+                    </>
                 ) : avatarUrl ? (
-                    <img
-                        src={avatarUrl}
-                        alt={profile.name}
-                        className="w-full h-48 sm:h-56 md:h-64 object-cover scale-90"
-                    />
+                    <>
+                        <img
+                            src={avatarUrl}
+                            alt={profile.name}
+                            className="w-full h-full object-cover scale-90 transition-transform group-hover:scale-95"
+                        />
+                        <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity flex items-center justify-center">
+                            <span className="text-white text-4xl opacity-0 group-hover:opacity-100 transition-opacity">🔍</span>
+                        </div>
+                    </>
                 ) : (
-                    <div className="bg-gray-200 w-full h-48 sm:h-56 md:h-64 flex items-center justify-center">
+                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
                         <span className="text-5xl">👤</span>
                     </div>
                 )}
@@ -195,6 +209,38 @@ export default function ProfileCard({
                     </button>
                 </div>
             </div>
+
+            {/* Image Preview Modal */}
+            {showImagePreview && (
+                <div 
+                    className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4"
+                    onClick={() => setShowImagePreview(false)}
+                >
+                    <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center">
+                        {/* Close button */}
+                        <button
+                            onClick={() => setShowImagePreview(false)}
+                            className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70 transition-all z-10"
+                        >
+                            ✕
+                        </button>
+                        
+                        {/* Full Image */}
+                        <img
+                            src={profile.photoUrl || avatarUrl}
+                            alt={profile.name}
+                            className="max-w-full max-h-[85vh] object-contain rounded-lg"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                        
+                        {/* Image info */}
+                        <div className="mt-4 text-white text-center">
+                            <p className="text-lg font-semibold">{profile.name}</p>
+                            <p className="text-sm text-gray-300">Click anywhere to close</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
