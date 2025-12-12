@@ -1,8 +1,6 @@
-// app/api/profiles/route.ts
+
 
 import { NextResponse } from 'next/server';
-// 💡 IMPORTANT: Ensure this client uses your Supabase Service Role Key 
-// to bypass RLS and fetch all user data securely.
 import { supabaseService } from '@/lib/supabase.server';
 export const runtime = 'nodejs'; 
 
