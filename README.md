@@ -6,6 +6,7 @@ You sign up with email and connect a crypto wallet.
 When two people agree on a date, both stake a small amount.
 
 ✅ Both show up → funds are refunded
+
 ❌ Someone ghosts → they lose their stake
 
 Built on Base for fast, low-cost transactions.
