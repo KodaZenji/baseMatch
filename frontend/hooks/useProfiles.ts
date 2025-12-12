@@ -7,10 +7,10 @@ interface Profile {
     name: string;
     age: number;
     gender: string;
-    interests: string;
+    interests: sting;
     photoUrl: string;
-    email_verified?: boolean;  // ✅ Added
-    wallet_verified?: boolean; // ✅ Added
+    email_verified?: boolean;  
+    wallet_verified?: boolean; 
     reputation?: {
         totalDates: number;
         noShows: number;
@@ -54,8 +54,8 @@ export function useProfiles() {
                     gender: profile.gender || '',
                     interests: profile.interests || '',
                     photoUrl: profile.photoUrl || '',
-                    email_verified: profile.email_verified || false,  // ✅ Added
-                    wallet_verified: profile.wallet_verified || false, // ✅ Added
+                    email_verified: profile.email_verified || false,  
+                    wallet_verified: profile.wallet_verified || false, 
                 }));
 
                 setProfiles(fetchedProfiles);
