@@ -213,23 +213,42 @@ export default function ProfileCard({
                 </div>
             </div>
 
-            {/* Image Preview Modal - Card format*/}
+            {/* Image Preview Modal - Card format, mobile-friendly close */}
             {showImagePreview && (
                 <div 
                     className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4"
-                    onClick={(e) => {
+                    onMouseDown={(e) => {
+                        // Only close if clicking the backdrop, not the card
                         if (e.target === e.currentTarget) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowImagePreview(false);
+                        }
+                    }}
+                    onTouchStart={(e) => {
+                        // Mobile: close on backdrop touch
+                        if (e.target === e.currentTarget) {
+                            e.preventDefault();
+                            e.stopPropagation();
                             setShowImagePreview(false);
                         }
                     }}
                 >
                     <div 
                         className="relative bg-black rounded-3xl overflow-hidden max-w-md w-full shadow-2xl"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Close button */}
                         <button
-                            onClick={(e) => {
+                            onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setShowImagePreview(false);
+                            }}
+                            onTouchStart={(e) => {
+                                e.preventDefault();
                                 e.stopPropagation();
                                 setShowImagePreview(false);
                             }}
@@ -242,13 +261,13 @@ export default function ProfileCard({
                         <img
                             src={profile.photoUrl || avatarUrl}
                             alt={profile.name}
-                            className="w-full h-auto object-contain"
+                            className="w-full h-auto object-contain pointer-events-none"
                         />
                         
                         {/* Name below image */}
                         <div className="bg-black py-4 text-center border-t border-gray-800">
                             <p className="text-white text-lg font-medium">{profile.name}</p>
-                            <p className="text-gray-400 text-xs mt-1">Click anywhere to close</p>
+                            <p className="text-gray-400 text-xs mt-1">Tap anywhere to close</p>
                         </div>
                     </div>
                 </div>
