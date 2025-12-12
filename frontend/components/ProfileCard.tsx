@@ -102,7 +102,7 @@ export default function ProfileCard({
                 </div>
             )}
 
-            {/* Profile Image - Consistent aspect ratio across all devices + Click to preview */}
+            {/* Profile Image - Click to preview */}
             <div 
                 className="relative w-full aspect-[4/3] bg-gradient-to-br from-pink-50 to-purple-50 overflow-hidden cursor-pointer group"
                 onClick={(e) => {
@@ -139,7 +139,7 @@ export default function ProfileCard({
                 )}
             </div>
 
-            {/* Profile Info - Reduced padding on mobile */}
+            {/* Profile Info */}
             <div className="p-4 sm:p-5 md:p-6">
                 <div className="flex justify-between items-start mb-2">
                     <h3 className="text-lg sm:text-xl font-bold text-gray-900">{profile.name}</h3>
@@ -213,34 +213,42 @@ export default function ProfileCard({
                 </div>
             </div>
 
-            {/* Image Preview Modal - Simple and clean, closes on first click */}
+            {/* Image Preview Modal - Card format*/}
             {showImagePreview && (
                 <div 
-                    className="fixed inset-0 z-50 bg-black bg-opacity-95 flex items-center justify-center p-4"
-                    onClickCapture={(e) => {
-                        e.stopPropagation();
-                        setShowImagePreview(false);
+                    className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                            setShowImagePreview(false);
+                        }
                     }}
                 >
-                    <div className="relative max-w-2xl w-full">
+                    <div 
+                        className="relative bg-black rounded-3xl overflow-hidden max-w-md w-full shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         {/* Close button */}
                         <button
-                            className="absolute -top-2 -right-2 text-white bg-gray-800 rounded-full w-12 h-12 flex items-center justify-center text-2xl z-10 shadow-lg"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowImagePreview(false);
+                            }}
+                            className="absolute top-3 right-3 text-white bg-black bg-opacity-60 rounded-full w-10 h-10 flex items-center justify-center text-xl z-10 shadow-lg hover:bg-opacity-80 transition-all"
                         >
                             ✕
                         </button>
                         
-                        {/* Full Image with rounded corners */}
+                        {/* Image directly - no extra container */}
                         <img
                             src={profile.photoUrl || avatarUrl}
                             alt={profile.name}
-                            className="w-full h-auto object-contain rounded-2xl shadow-2xl"
+                            className="w-full h-auto object-contain"
                         />
                         
                         {/* Name below image */}
-                        <div className="mt-4 text-center">
-                            <p className="text-white text-xl font-semibold">{profile.name}</p>
-                            <p className="text-gray-400 text-sm mt-1">Tap anywhere to close</p>
+                        <div className="bg-black py-4 text-center border-t border-gray-800">
+                            <p className="text-white text-lg font-medium">{profile.name}</p>
+                            <p className="text-gray-400 text-xs mt-1">Click anywhere to close</p>
                         </div>
                     </div>
                 </div>
