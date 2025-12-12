@@ -101,19 +101,20 @@ export default function ProfileCard({
                 </div>
             )}
 
-            {/* Profile Image - FIXED: Subtle zoom with object-contain for balanced view */}
-            <div className="relative bg-gray-50 overflow-hidden">
+            {/* Profile Image - Smart crop: shows head to shoulders, fills space nicely */}
+            <div className="relative bg-gradient-to-br from-pink-50 to-purple-50 overflow-hidden">
                 {profile.photoUrl ? (
                     <img
                         src={profile.photoUrl}
                         alt={profile.name}
-                        className="w-full h-48 sm:h-56 md:h-64 object-contain scale-110"
+                        className="w-full h-48 sm:h-56 md:h-64 object-cover object-top"
+                        style={{ objectPosition: 'center 25%' }}
                     />
                 ) : avatarUrl ? (
                     <img
                         src={avatarUrl}
                         alt={profile.name}
-                        className="w-full h-48 sm:h-56 md:h-64 object-contain scale-110"
+                        className="w-full h-48 sm:h-56 md:h-64 object-cover"
                     />
                 ) : (
                     <div className="bg-gray-200 w-full h-48 sm:h-56 md:h-64 flex items-center justify-center">
