@@ -7,7 +7,7 @@ interface Profile {
     name: string;
     age: number;
     gender: string;
-    interests: sting;
+    interests: string;
     photoUrl: string;
     email_verified?: boolean;  
     wallet_verified?: boolean; 
