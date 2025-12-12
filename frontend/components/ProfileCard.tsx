@@ -105,7 +105,10 @@ export default function ProfileCard({
             {/* Profile Image - Consistent aspect ratio across all devices + Click to preview */}
             <div 
                 className="relative w-full aspect-[4/3] bg-gradient-to-br from-pink-50 to-purple-50 overflow-hidden cursor-pointer group"
-                onClick={() => setShowImagePreview(true)}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    setShowImagePreview(true);
+                }}
             >
                 {profile.photoUrl ? (
                     <>
@@ -210,35 +213,34 @@ export default function ProfileCard({
                 </div>
             </div>
 
-            {/* Image Preview Modal */}
+            {/* Image Preview Modal - Simple and clean, closes on first click */}
             {showImagePreview && (
                 <div 
-                    className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4"
-                    onClick={() => setShowImagePreview(false)}
+                    className="fixed inset-0 z-50 bg-black bg-opacity-95 flex items-center justify-center p-4"
+                    onClickCapture={(e) => {
+                        e.stopPropagation();
+                        setShowImagePreview(false);
+                    }}
                 >
-                    <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center">
+                    <div className="relative max-w-2xl w-full">
                         {/* Close button */}
                         <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setShowImagePreview(false);
-                            }}
-                            className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70 transition-all z-10"
+                            className="absolute -top-2 -right-2 text-white bg-gray-800 rounded-full w-12 h-12 flex items-center justify-center text-2xl z-10 shadow-lg"
                         >
                             ✕
                         </button>
                         
-                        {/* Full Image */}
+                        {/* Full Image with rounded corners */}
                         <img
                             src={profile.photoUrl || avatarUrl}
                             alt={profile.name}
-                            className="max-w-full max-h-[85vh] object-contain rounded-lg"
+                            className="w-full h-auto object-contain rounded-2xl shadow-2xl"
                         />
                         
-                        {/* Image info */}
-                        <div className="mt-4 text-white text-center">
-                            <p className="text-lg font-semibold">{profile.name}</p>
-                            <p className="text-sm text-gray-300">Click anywhere to close</p>
+                        {/* Name below image */}
+                        <div className="mt-4 text-center">
+                            <p className="text-white text-xl font-semibold">{profile.name}</p>
+                            <p className="text-gray-400 text-sm mt-1">Tap anywhere to close</p>
                         </div>
                     </div>
                 </div>
