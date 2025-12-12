@@ -219,7 +219,10 @@ export default function ProfileCard({
                     <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center">
                         {/* Close button */}
                         <button
-                            onClick={() => setShowImagePreview(false)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowImagePreview(false);
+                            }}
                             className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70 transition-all z-10"
                         >
                             ✕
@@ -230,7 +233,6 @@ export default function ProfileCard({
                             src={profile.photoUrl || avatarUrl}
                             alt={profile.name}
                             className="max-w-full max-h-[85vh] object-contain rounded-lg"
-                            onClick={(e) => e.stopPropagation()}
                         />
                         
                         {/* Image info */}
