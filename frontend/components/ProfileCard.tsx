@@ -101,19 +101,19 @@ export default function ProfileCard({
                 </div>
             )}
 
-            {/* Profile Image - Reduced height on mobile */}
-            <div className="relative">
+            {/* Profile Image - FIXED: Subtle zoom with object-contain for balanced view */}
+            <div className="relative bg-gray-50 overflow-hidden">
                 {profile.photoUrl ? (
                     <img
                         src={profile.photoUrl}
                         alt={profile.name}
-                        className="w-full h-48 sm:h-56 md:h-64 object-cover"
+                        className="w-full h-48 sm:h-56 md:h-64 object-contain scale-110"
                     />
                 ) : avatarUrl ? (
                     <img
                         src={avatarUrl}
                         alt={profile.name}
-                        className="w-full h-48 sm:h-56 md:h-64 object-cover"
+                        className="w-full h-48 sm:h-56 md:h-64 object-contain scale-110"
                     />
                 ) : (
                     <div className="bg-gray-200 w-full h-48 sm:h-56 md:h-64 flex items-center justify-center">
