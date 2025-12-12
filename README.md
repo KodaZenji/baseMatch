@@ -16,7 +16,7 @@ No real money is used during testing.
 
 How to Test BaseMatch (Base Sepolia)
 
-go here 👉🏾 https://basematch(dot)app
+go here 👉🏾 https://basematch.app
 
 1️⃣ Create an account with email and connect a wallet (MetaMask or any EVM wallet)
 
@@ -27,7 +27,7 @@ go here 👉🏾 https://basematch(dot)app
 4️⃣ Get testnet USDC
 
 > Need test USDC for Base Sepolia?
-Use Circle’s official faucet 👉 https://faucet(dot)circle(dot)com/
+Use Circle’s official faucet 👉 https://faucet.circle.com/
 Select Base Sepolia
 
 
