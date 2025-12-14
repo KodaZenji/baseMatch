@@ -164,7 +164,7 @@ export default function Home() {
               <img 
                 src="https://ipfs.filebase.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw" 
                 alt="BaseMatch Logo"
-                className="w-13 h-13"
+                className="w-12 h-12"
               />
             </h1>
             <div className="flex items-center space-x-4">
@@ -178,7 +178,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </header>>
+      </header>
 
       {/* Navigation */}
       <nav className="bg-white border-b border-gray-200">
