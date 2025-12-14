@@ -1,7 +1,3 @@
-Perfect! Here’s a fully reworked README + RatingModal copy aligned with your “sweet & bitter” incentive system, ready for BaseMatch on Base Sepolia. I’ve included staking, confirmation, ghosting, neutral partial refunds, and ratings explained in human-friendly language.
-
-
----
 
 BaseMatch – What is this?
 
@@ -22,14 +18,25 @@ Ratings are only available for staked dates and help build a more accountable co
 
 Outcomes
 
-Scenario	Outcome	Notes
+Scenario	s
 
-Both confirmed	Each gets stake back minus 5% platform fee	Neutral sweet: fair and predictable
-One confirmed, other ghosted	Attendee gets 150% of stake minus platform fee, ghost gets 0	Sweet + bitter: attendee rewarded, ghost loses stake
-Both missed confirmation	Both refunded 90% of stake; 5% platform fee + 5% missed-confirmation fee	Neutral: small sting to encourage confirmation, no major punishment
+ Both confirmed
+ > Each gets stake back minus 5% platform fee	
+
+(Neutral + sweet: fair and predictable)
+
+One confirmed, other ghosted	
+> Attendee gets 150% of stake minus platform fee, ghost gets 0	
+
+(Sweet + bitter: attendee rewarded, ghost loses stake) 
+
+Both missed confirmation	
+> Both refunded 90% of stake; 5% platform fee + 5% missed-confirmation fee
+	
+(Neutral: small sting to encourage confirmation, no major punishment)
 
 
-> 
+> Tooltip :
 “Staking shows commitment.
 
 Show up → stake returned + bonus reward (150% minus platform fee)
@@ -84,4 +91,9 @@ Edit interests, profile picture, etc.
 
 > You’re not using real money — only testnet ETH and USDC for Base Sepolia.
 
- serious people date seriously — ghosting has a cost, and commitment is rewarded.
+
+
+
+---
+
+BaseMatch helps serious people date seriously — ghosting has a cost, and commitment is rewarded.
