@@ -165,7 +165,7 @@ export default function Home() {
               <img 
                 src="https://ipfs.filebase.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw" 
                 alt="BaseMatch Logo"
-                className="w-13 h-13"
+                className="w-14 h-14"
               />
               <span className="hidden md:inline text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
                 BaseMatch
@@ -255,8 +255,6 @@ export default function Home() {
                 Join <span className="text-purple-600 font-bold">500+</span> users finding love on Base
               </p>
             </div>
-          </div>
-        </div>
       </div>
     );
   }
