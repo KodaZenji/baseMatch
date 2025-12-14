@@ -18,19 +18,19 @@ Ratings are only available for staked dates and help build a more accountable co
 
 Outcomes
 
-Scenario	s
+Scenarios
 
- Both confirmed
+ A. Both confirmed
  > Each gets stake back minus 5% platform fee	
 
 (Neutral + sweet: fair and predictable)
 
-One confirmed, other ghosted	
+B. One confirmed, other ghosted	
 > Attendee gets 150% of stake minus platform fee, ghost gets 0	
 
 (Sweet + bitter: attendee rewarded, ghost loses stake) 
 
-Both missed confirmation	
+C. Both missed confirmation	
 > Both refunded 90% of stake; 5% platform fee + 5% missed-confirmation fee
 	
 (Neutral: small sting to encourage confirmation, no major punishment)
