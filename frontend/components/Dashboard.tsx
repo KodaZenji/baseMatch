@@ -7,6 +7,19 @@ import { useAchievements } from '@/hooks/useAchievements';
 import { generateAvatar } from '@/lib/avatarUtils';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import StakeReminderBanner from './StakeReminderBanner';
+import DateConfirmationModal from './DateConfirmationModal';
+import RatingModal from './RatingModal';
+
+interface PendingStake {
+  stakeId: string;
+  matchAddress: string;
+  matchName: string;
+  meetingTime: number;
+  stakeAmount: string;
+  deadline: number;
+  timeRemaining: number;
+}
 
 export default function Dashboard() {
     const { address } = useAccount();
@@ -14,6 +27,12 @@ export default function Dashboard() {
     const { reputation, loading: reputationLoading } = useReputation(address);
     const { achievements, loading: achievementsLoading } = useAchievements(address);
     const [avatarUrl, setAvatarUrl] = useState('');
+    
+    // Modal states
+    const [showDateConfirmation, setShowDateConfirmation] = useState(false);
+    const [showRatingModal, setShowRatingModal] = useState(false);
+    const [selectedStake, setSelectedStake] = useState<PendingStake | null>(null);
+    const [countdown, setCountdown] = useState<number | null>(null);
 
     // Generate avatar based on wallet address
     useEffect(() => {
@@ -22,6 +41,66 @@ export default function Dashboard() {
             setAvatarUrl(avatarUrl);
         }
     }, [address]);
+
+    // Handle countdown timer for rating modal (10 seconds after confirmation)
+    useEffect(() => {
+        if (countdown !== null && countdown > 0) {
+            const timer = setTimeout(() => {
+                setCountdown(countdown - 1);
+            }, 1000);
+            return () => clearTimeout(timer);
+        } else if (countdown === 0) {
+            // Open rating modal after countdown completes
+            setShowRatingModal(true);
+            setCountdown(null);
+        }
+    }, [countdown]);
+
+    // Handle when user clicks "Confirm Now" from StakeReminderBanner
+    const handleConfirmClick = (stake: PendingStake) => {
+        setSelectedStake(stake);
+        setShowDateConfirmation(true);
+    };
+
+    // Handle date confirmation
+    const handleDateConfirmed = async () => {
+        try {
+            if (!selectedStake) return;
+
+            // Call API to confirm the date occurred
+            const response = await fetch('/api/dates/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    stakeId: selectedStake.stakeId,
+                    userAddress: address,
+                    matchAddress: selectedStake.matchAddress,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to confirm date');
+            }
+
+            console.log('Date confirmed with:', selectedStake.matchAddress);
+
+            // Close the confirmation modal
+            setShowDateConfirmation(false);
+
+            // Start 10-second countdown to rating modal
+            setCountdown(10);
+
+        } catch (error) {
+            console.error('Error confirming date:', error);
+            alert('Failed to confirm date. Please try again.');
+        }
+    };
+
+    // Handle rating modal close
+    const handleRatingClose = () => {
+        setShowRatingModal(false);
+        setSelectedStake(null);
+    };
 
     // Get achievement emoji based on type
     const getAchievementEmoji = (type: string) => {
@@ -37,6 +116,18 @@ export default function Dashboard() {
     return (
         <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-800">Your Dashboard</h2>
+
+            {/* Stake Reminder Banner */}
+            <StakeReminderBanner onConfirmClick={handleConfirmClick} />
+
+            {/* Countdown indicator */}
+            {countdown !== null && countdown > 0 && (
+                <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-2 border-pink-300 rounded-xl p-4 text-center animate-pulse">
+                    <div className="text-pink-700 font-bold text-lg">
+                        ⏱️ Rating modal opening in {countdown} second{countdown !== 1 ? 's' : ''}...
+                    </div>
+                </div>
+            )}
 
             {/* Profile Card */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
@@ -132,7 +223,7 @@ export default function Dashboard() {
                 )}
             </div>
 
-            {/* Achievement NFTs - Live from Blockchain */}
+            {/* Achievement NFTs */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-bold text-gray-900">Achievement NFTs 🏆</h3>
@@ -157,7 +248,6 @@ export default function Dashboard() {
                                 key={achievement.tokenId}
                                 className="group relative p-6 border-2 border-purple-200 rounded-xl bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 hover:shadow-lg transition-all duration-300 hover:scale-105"
                             >
-                                {/* NFT Badge */}
                                 <div className="absolute top-2 right-2 px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">
                                     NFT #{achievement.tokenId}
                                 </div>
@@ -166,7 +256,6 @@ export default function Dashboard() {
                                 <h4 className="font-bold text-gray-900 mb-2">{achievement.type}</h4>
                                 <p className="text-sm text-gray-600 mb-4">{achievement.description}</p>
                                 
-                                {/* On-chain indicator */}
                                 <div className="flex items-center text-xs text-purple-600">
                                     <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -185,6 +274,25 @@ export default function Dashboard() {
                     </div>
                 )}
             </div>
+
+            {/* Date Confirmation Modal */}
+            {showDateConfirmation && selectedStake && (
+                <DateConfirmationModal
+                    isOpen={showDateConfirmation}
+                    onClose={() => setShowDateConfirmation(false)}
+                    onConfirm={handleDateConfirmed}
+                    matchName={selectedStake.matchName}
+                    matchAddress={selectedStake.matchAddress}
+                />
+            )}
+
+            {/* Rating Modal - Opens 10 seconds after date confirmation */}
+            {showRatingModal && selectedStake && (
+                <RatingModal
+                    matchAddress={selectedStake.matchAddress}
+                    onClose={handleRatingClose}
+                />
+            )}
         </div>
     );
 }
