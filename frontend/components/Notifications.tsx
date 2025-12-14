@@ -2,7 +2,10 @@
 
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAccount } from 'wagmi';
-import { Heart, Clock, CheckCircle, DollarSign, X } from 'lucide-react';
+import { Heart, Clock, CheckCircle, DollarSign } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import DateConfirmationModal from './DateConfirmationModal';
+import RatingModal from './RatingModal';
 
 export default function Notifications() {
   const { address } = useAccount();
@@ -18,6 +21,25 @@ export default function Notifications() {
     autoRefresh: true 
   });
 
+  // Modal states
+  const [showDateConfirmation, setShowDateConfirmation] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<{ address: string; name: string } | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  // Handle countdown timer for rating modal
+  useEffect(() => {
+    if (countdown !== null && countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (countdown === 0) {
+      setShowRatingModal(true);
+      setCountdown(null);
+    }
+  }, [countdown]);
+
   const handleMarkAsRead = async (notificationId: string) => {
     await markAsRead([notificationId]);
   };
@@ -29,6 +51,52 @@ export default function Notifications() {
     if (unreadIds.length > 0) {
       await markAsRead(unreadIds);
     }
+  };
+
+  // Handle clicking "Confirm Date" button from notification
+  const handleConfirmDateClick = (notification: any) => {
+    const matchAddress = notification.metadata?.match_address || '';
+    const matchName = notification.metadata?.match_name || 'Your match';
+    
+    setSelectedMatch({ address: matchAddress, name: matchName });
+    setShowDateConfirmation(true);
+  };
+
+  // Handle date confirmation
+  const handleDateConfirmed = async () => {
+    try {
+      if (!selectedMatch) return;
+
+      // Call API to confirm the date
+      const response = await fetch('/api/dates/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userAddress: address,
+          matchAddress: selectedMatch.address,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to confirm date');
+      }
+
+      // Close confirmation modal
+      setShowDateConfirmation(false);
+
+      // Start 10-second countdown
+      setCountdown(10);
+
+    } catch (error) {
+      console.error('Error confirming date:', error);
+      alert('Failed to confirm date. Please try again.');
+    }
+  };
+
+  // Handle rating modal close
+  const handleRatingClose = () => {
+    setShowRatingModal(false);
+    setSelectedMatch(null);
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -60,7 +128,6 @@ export default function Notifications() {
         return '☑️';
       case 'match_deleted':
         return '🗑️';
-      // Stake notifications
       case 'date_stake_created':
         return '💕';
       case 'date_stake_accepted':
@@ -88,7 +155,6 @@ export default function Notifications() {
         return 'from-gray-500 to-gray-600';
       case 'match_deleted':
         return 'from-gray-500 to-gray-600';
-      // Stake notifications
       case 'date_stake_created':
       case 'date_confirmation_reminder':
         return 'from-pink-500 to-purple-600';
@@ -117,7 +183,32 @@ export default function Notifications() {
       they_showed_up
     } = notification.metadata;
 
-    // Date Stake Created/Accepted
+    // Date Confirmation Reminder - Add "Confirm Date" button
+    if (notification.type === 'date_confirmation_reminder') {
+      return (
+        <div className="mt-3 space-y-3">
+          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg p-3 border border-orange-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock size={16} className="text-orange-600" />
+              <div className="text-sm font-semibold text-orange-900">
+                Time to Confirm!
+              </div>
+            </div>
+            <div className="text-xs text-orange-700">
+              Your date was 48 hours ago. Please confirm what happened.
+            </div>
+          </div>
+          <button
+            onClick={() => handleConfirmDateClick(notification)}
+            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-2 px-4 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+          >
+            Confirm Date Now
+          </button>
+        </div>
+      );
+    }
+
+    // Other stake notification details...
     if (notification.type === 'date_stake_created' || notification.type === 'date_stake_accepted') {
       return (
         <div className="mt-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-3 border border-pink-200">
@@ -141,24 +232,6 @@ export default function Notifications() {
       );
     }
 
-    // Date Confirmation Reminder
-    if (notification.type === 'date_confirmation_reminder') {
-      return (
-        <div className="mt-3 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg p-3 border border-orange-200">
-          <div className="flex items-center gap-2 mb-2">
-            <Clock size={16} className="text-orange-600" />
-            <div className="text-sm font-semibold text-orange-900">
-              Time to Confirm!
-            </div>
-          </div>
-          <div className="text-xs text-orange-700">
-            Your date was 1 hour ago. Please confirm what happened.
-          </div>
-        </div>
-      );
-    }
-
-    // Date Confirmed
     if (notification.type === 'date_confirmed') {
       const outcomeMessages = {
         both_showed: { text: 'Both showed up!', icon: '🎉', color: 'green' },
@@ -204,7 +277,6 @@ export default function Notifications() {
       );
     }
 
-    // Stake Processed (Payout)
     if (notification.type === 'stake_processed' && payout_amount) {
       const payoutValue = parseFloat(payout_amount);
       const stakeValue = parseFloat(stake_amount || '10');
@@ -252,71 +324,6 @@ export default function Notifications() {
     return null;
   };
 
-  const renderGiftDetails = (notification: any) => {
-    if (notification.type !== 'gift' || !notification.metadata) return null;
-
-    const { gift_type, crypto_type, amount, gift_name, gift_emoji, tx_hash, order_id } = notification.metadata;
-
-    return (
-      <div className="mt-3 space-y-2">
-        {gift_type === 'crypto' && (
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3 border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-semibold text-gray-900">
-                  {gift_emoji || '🪙'} {amount} {crypto_type?.toUpperCase()}
-                </div>
-                <div className="text-xs text-gray-600 mt-1">
-                  Crypto Gift Received
-                </div>
-              </div>
-              {tx_hash && (
-                <a
-                  href={`https://basescan.org/tx/${tx_hash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:text-blue-800 underline"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  View TX
-                </a>
-              )}
-            </div>
-          </div>
-        )}
-
-        {gift_type === 'physical' && (
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3 border border-purple-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{gift_emoji || '📦'}</span>
-                <div>
-                  <div className="text-sm font-semibold text-gray-900">
-                    {gift_name}
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    Physical Gift • Delivery in 2-7 days
-                  </div>
-                </div>
-              </div>
-              {order_id && (
-                <div className="text-xs text-gray-500">
-                  Order #{order_id.slice(0, 8)}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {notification.metadata.sender_address && (
-          <div className="text-xs text-gray-500">
-            From: {truncateAddress(notification.metadata.sender_address)}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   if (loading && notifications.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -327,6 +334,15 @@ export default function Notifications() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Countdown indicator */}
+      {countdown !== null && countdown > 0 && (
+        <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-2 border-pink-300 rounded-xl p-4 text-center mb-4 animate-pulse">
+          <div className="text-pink-700 font-bold text-lg">
+            ⏱️ Rating modal opening in {countdown} second{countdown !== 1 ? 's' : ''}...
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-4">
         <div className="flex items-center justify-between">
@@ -404,11 +420,8 @@ export default function Notifications() {
                         {notification.message}
                       </p>
                       
-                      {/* Stake-specific details */}
+                      {/* Stake-specific details with Confirm button */}
                       {renderStakeDetails(notification)}
-                      
-                      {/* Gift details */}
-                      {renderGiftDetails(notification)}
                       
                       {notification.type === 'message' && notification.metadata?.sender_address && (
                         <p className="text-xs text-gray-500 mt-2">
@@ -435,6 +448,25 @@ export default function Notifications() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Date Confirmation Modal */}
+      {showDateConfirmation && selectedMatch && (
+        <DateConfirmationModal
+          isOpen={showDateConfirmation}
+          onClose={() => setShowDateConfirmation(false)}
+          onConfirm={handleDateConfirmed}
+          matchName={selectedMatch.name}
+          matchAddress={selectedMatch.address}
+        />
+      )}
+
+      {/* Rating Modal */}
+      {showRatingModal && selectedMatch && (
+        <RatingModal
+          matchAddress={selectedMatch.address}
+          onClose={handleRatingClose}
+        />
       )}
     </div>
   );
