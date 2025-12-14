@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -125,6 +126,123 @@ export default function Home() {
             </button>
           </div>
 
+          {/* Social Proof */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="flex items-center justify-center gap-2 text-gray-600 text-sm">
+              <div className="flex -space-x-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-purple-400 border-2 border-white"></div>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-400 border-2 border-white"></div>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-teal-400 border-2 border-white"></div>
+              </div>
+              <p className="font-medium">
+                Join <span className="text-purple-600 font-bold">500+</span> users finding love on Base
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If user connected but no profile, redirect to profile edit to create one
+  if (!profile?.exists) {
+    router.push('/profile/edit');
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center">
+        <div className="text-white text-2xl">Redirecting to profile setup...</div>
+      </div>
+    );
+  }
+
+  // Show main dashboard if user is connected and has a profile
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-blue-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <img 
+                src="https://ipfs.filebase.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw" 
+                alt="BaseMatch Logo"
+                className="w-13 h-13"
+              />
+              <span className="hidden md:inline text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                BaseMatch
+              </span>
+            </h1>
+            <div className="flex items-center space-x-4">
+              <Link
+                href="/profile/edit"
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Edit Profile
+              </Link>
+              <ConnectButton />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Navigation */}
+      <nav className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab('browse')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'browse'
+                ? 'border-pink-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              Browse
+            </button>
+            <button
+              onClick={() => setActiveTab('matches')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'matches'
+                ? 'border-pink-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              Matches
+            </button>
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'profile'
+                ? 'border-pink-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={() => setActiveTab('notifications')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm relative ${activeTab === 'notifications'
+                ? 'border-pink-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              Notifications
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'browse' && <BrowseProfiles />}
+        {activeTab === 'matches' && <Matches />}
+        {activeTab === 'profile' && <Dashboard />}
+        {activeTab === 'notifications' && <Notifications />}
+      </main>
+    </div>
+  );
+}
           {/* Social Proof */}
           <div className="mt-8 pt-6 border-t border-gray-200">
             <div className="flex items-center justify-center gap-2 text-gray-600 text-sm">
