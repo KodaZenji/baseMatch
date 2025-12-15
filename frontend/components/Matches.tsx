@@ -6,6 +6,7 @@ import { useMatches } from '@/hooks/useMatches';
 import ProfileCard from './ProfileCard';
 import GiftingModal from './GiftingModal';
 import ChatWindow from './ChatWindow';
+import { Trash2 } from 'lucide-react';
 
 export default function Matches() {
     const { address } = useAccount();
@@ -14,6 +15,7 @@ export default function Matches() {
     const [showChatWindow, setShowChatWindow] = useState(false);
     const [selectedRecipient, setSelectedRecipient] = useState({ address: '', name: '' });
     const [selectedChatMatch, setSelectedChatMatch] = useState<{ address: string; name: string } | null>(null);
+    const [removingMatch, setRemovingMatch] = useState<string | null>(null);
 
     // DEBUG: Log match data
     useEffect(() => {
@@ -22,7 +24,7 @@ export default function Matches() {
         console.log('Matches loading:', matchesLoading);
         console.log('Number of matches:', matches?.length);
         console.log('Match data:', matches);
-        
+
         if (matches && matches.length > 0) {
             matches.forEach((match, i) => {
                 console.log(`Match ${i}:`, {
@@ -43,6 +45,37 @@ export default function Matches() {
     const handleChatClick = (matchAddress: string, matchName: string) => {
         setSelectedChatMatch({ address: matchAddress, name: matchName });
         setShowChatWindow(true);
+    };
+
+    const handleRemoveMatch = async (matchAddress: string) => {
+        if (!address) return;
+        if (!confirm('Are you sure you want to remove this match?')) return;
+
+        setRemovingMatch(matchAddress);
+        try {
+            const response = await fetch('/api/profile/remove-match', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-address': address.toLowerCase(),
+                },
+                body: JSON.stringify({
+                    matchedUserAddress: matchAddress.toLowerCase(),
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to remove match');
+            }
+
+            // Refetch matches to update the UI
+            window.location.reload();
+        } catch (error) {
+            console.error('Error removing match:', error);
+            alert('Failed to remove match. Please try again.');
+        } finally {
+            setRemovingMatch(null);
+        }
     };
 
     if (matchesLoading) {
@@ -101,12 +134,22 @@ export default function Matches() {
                                 }}
                                 onGift={() => handleGiftClick(match.address, match.name)}
                             />
-                            <button
-                                onClick={() => handleChatClick(match.address, match.name)}
-                                className="absolute top-4 right-14 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-3 py-2 rounded-lg font-semibold hover:opacity-90 text-sm z-10"
-                            >
-                                Chat
-                            </button>
+                            <div className="absolute top-4 right-4 flex gap-2 z-10">
+                                <button
+                                    onClick={() => handleChatClick(match.address, match.name)}
+                                    className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-3 py-2 rounded-lg font-semibold hover:opacity-90 text-sm"
+                                >
+                                    Chat
+                                </button>
+                                <button
+                                    onClick={() => handleRemoveMatch(match.address)}
+                                    disabled={removingMatch === match.address}
+                                    className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                                    title="Remove match"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>

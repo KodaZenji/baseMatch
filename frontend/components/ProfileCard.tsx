@@ -118,7 +118,7 @@ export default function ProfileCard({
                             className="w-full h-full object-cover scale-90 transition-transform group-hover:scale-95"
                         />
                         <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity flex items-center justify-center">
-                            <span className="text-white text-4xl opacity-0 group-hover:opacity-100 transition-opacity">🔍</span>
+                            <span className="text-white text-4xl opacity-0 group-hover:opacity-100 transition-opacity"></span>
                         </div>
                     </>
                 ) : avatarUrl ? (
