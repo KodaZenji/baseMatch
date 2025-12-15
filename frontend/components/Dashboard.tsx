@@ -13,13 +13,13 @@ import RatingModal from './RatingModal';
 import { Star, Calendar, ThumbsUp, AlertCircle, Clock, Trophy, Zap, Flame, Sparkles, Heart } from 'lucide-react';
 
 interface PendingStake {
-  stakeId: string;
-  matchAddress: string;
-  matchName: string;
-  meetingTime: number;
-  stakeAmount: string;
-  deadline: number;
-  timeRemaining: number;
+    stakeId: string;
+    matchAddress: string;
+    matchName: string;
+    meetingTime: number;
+    stakeAmount: string;
+    deadline: number;
+    timeRemaining: number;
 }
 
 export default function Dashboard() {
@@ -28,7 +28,7 @@ export default function Dashboard() {
     const { reputation, loading: reputationLoading } = useReputation(address);
     const { achievements, loading: achievementsLoading } = useAchievements(address);
     const [avatarUrl, setAvatarUrl] = useState('');
-    
+
     // Modal states
     const [showDateConfirmation, setShowDateConfirmation] = useState(false);
     const [showRatingModal, setShowRatingModal] = useState(false);
@@ -250,11 +250,11 @@ export default function Dashboard() {
                                 <div className="absolute top-2 right-2 px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">
                                     NFT #{achievement.tokenId}
                                 </div>
-                                
+
                                 <div className="mb-3">{getAchievementIcon(achievement.type)}</div>
                                 <h4 className="font-bold text-gray-900 mb-2">{achievement.type}</h4>
                                 <p className="text-sm text-gray-600 mb-4">{achievement.description}</p>
-                                
+
                                 <div className="flex items-center text-xs text-purple-600">
                                     <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />

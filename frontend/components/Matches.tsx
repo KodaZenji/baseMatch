@@ -89,8 +89,12 @@ export default function Matches() {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-900">Your Matches</h2>
-                <div className="text-sm text-gray-500">
+                <div className="flex items-center gap-2">
+                    <Heart className="text-pink-600" size={24} />
+                    <h2 className="text-2xl font-bold text-gray-900">Your Matches</h2>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                    <Users size={16} />
                     {matches?.length || 0} matches
                 </div>
             </div>
@@ -98,23 +102,26 @@ export default function Matches() {
 
             {/* Warning for Unknown Users */}
             {matches && matches.some(m => m.name === 'Unknown User' || m.name === 'User') && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="font-semibold text-yellow-900">⚠️ Some profiles couldn't be loaded</div>
-                    <div className="text-sm text-yellow-800 mt-1">
-                        This happens when the API fails to fetch profile data from the blockchain.
-                        Check the browser console for error messages.
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+                    <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={20} />
+                    <div>
+                        <div className="font-semibold text-yellow-900">Some profiles couldn't be loaded</div>
+                        <div className="text-sm text-yellow-800 mt-1">
+                            This happens when the API fails to fetch profile data from the blockchain.
+                            Check the browser console for error messages.
+                        </div>
                     </div>
                 </div>
             )}
 
             {!matches || matches.length === 0 ? (
-                <div className="text-center py-12">
-                    <div className="text-gray-400 text-6xl mb-4">💔</div>
-                    <h3 className="text-xl font-medium text-gray-900 mb-2">No matches yet</h3>
+                <div className="text-center py-12 space-y-3">
+                    <Heart className="w-24 h-24 text-gray-300 mx-auto" />
+                    <h3 className="text-xl font-medium text-gray-900">No matches yet</h3>
                     <p className="text-gray-500">
                         Express interest in profiles to find your matches!
                     </p>
-                    <p className="text-xs text-gray-400 mt-2 font-mono">
+                    <p className="text-xs text-gray-400 font-mono">
                         Your address: {address || 'Not connected'}
                     </p>
                 </div>
