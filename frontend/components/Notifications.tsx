@@ -9,22 +9,22 @@ import RatingModal from './RatingModal';
 
 export default function Notifications() {
   const { address } = useAccount();
-  const { 
-    notifications, 
-    unreadCount, 
-    loading, 
-    error, 
-    markAsRead, 
-    clearRead 
-  } = useNotifications({ 
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    markAsRead,
+    clearRead
+  } = useNotifications({
     userAddress: address,
-    autoRefresh: true 
+    autoRefresh: true
   });
 
   // Modal states
   const [showDateConfirmation, setShowDateConfirmation] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
-  const [selectedMatch, setSelectedMatch] = useState<{ address: string; name: string } | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<{ address: string; name: string; stakeId?: string; meetingTime?: number; stakeAmount?: string } | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
 
   // Handle countdown timer for rating modal
@@ -57,8 +57,11 @@ export default function Notifications() {
   const handleConfirmDateClick = (notification: any) => {
     const matchAddress = notification.metadata?.match_address || '';
     const matchName = notification.metadata?.match_name || 'Your match';
-    
-    setSelectedMatch({ address: matchAddress, name: matchName });
+    const stakeId = notification.metadata?.stake_id || '0';
+    const meetingTime = notification.metadata?.meeting_timestamp || Math.floor(Date.now() / 1000);
+    const stakeAmount = notification.metadata?.stake_amount || '0';
+
+    setSelectedMatch({ address: matchAddress, name: matchName, stakeId, meetingTime, stakeAmount });
     setShowDateConfirmation(true);
   };
 
@@ -174,8 +177,8 @@ export default function Notifications() {
     const isStakeNotification = notification.type.startsWith('date_') || notification.type === 'stake_processed';
     if (!isStakeNotification) return null;
 
-    const { 
-      stake_amount, 
+    const {
+      stake_amount,
       meeting_timestamp,
       outcome,
       payout_amount,
@@ -244,13 +247,12 @@ export default function Notifications() {
       const outcomeInfo = outcome ? outcomeMessages[outcome as keyof typeof outcomeMessages] : null;
 
       return (
-        <div className={`mt-3 rounded-lg p-3 border ${
-          outcomeInfo?.color === 'green' ? 'bg-green-50 border-green-200' :
+        <div className={`mt-3 rounded-lg p-3 border ${outcomeInfo?.color === 'green' ? 'bg-green-50 border-green-200' :
           outcomeInfo?.color === 'blue' ? 'bg-blue-50 border-blue-200' :
-          outcomeInfo?.color === 'orange' ? 'bg-orange-50 border-orange-200' :
-          outcomeInfo?.color === 'yellow' ? 'bg-yellow-50 border-yellow-200' :
-          'bg-gray-50 border-gray-200'
-        }`}>
+            outcomeInfo?.color === 'orange' ? 'bg-orange-50 border-orange-200' :
+              outcomeInfo?.color === 'yellow' ? 'bg-yellow-50 border-yellow-200' :
+                'bg-gray-50 border-gray-200'
+          }`}>
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle size={16} />
             <div className="text-sm font-semibold">
@@ -284,17 +286,16 @@ export default function Notifications() {
       const isLoss = payoutValue < stakeValue;
 
       return (
-        <div className={`mt-3 rounded-lg p-3 border ${
-          isProfit ? 'bg-green-50 border-green-200' :
+        <div className={`mt-3 rounded-lg p-3 border ${isProfit ? 'bg-green-50 border-green-200' :
           isLoss ? 'bg-red-50 border-red-200' :
-          'bg-blue-50 border-blue-200'
-        }`}>
+            'bg-blue-50 border-blue-200'
+          }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <DollarSign size={16} className={
                 isProfit ? 'text-green-600' :
-                isLoss ? 'text-red-600' :
-                'text-blue-600'
+                  isLoss ? 'text-red-600' :
+                    'text-blue-600'
               } />
               <div>
                 <div className="text-sm font-semibold text-gray-900">
@@ -302,19 +303,18 @@ export default function Notifications() {
                 </div>
                 <div className="text-xs text-gray-600">
                   {isProfit ? `+${(payoutValue - stakeValue).toFixed(2)} profit` :
-                   isLoss ? `${(stakeValue - payoutValue).toFixed(2)} lost` :
-                   'Even'}
+                    isLoss ? `${(stakeValue - payoutValue).toFixed(2)} lost` :
+                      'Even'}
                 </div>
               </div>
             </div>
-            <div className={`text-xs font-semibold ${
-              isProfit ? 'text-green-700' :
+            <div className={`text-xs font-semibold ${isProfit ? 'text-green-700' :
               isLoss ? 'text-red-700' :
-              'text-blue-700'
-            }`}>
+                'text-blue-700'
+              }`}>
               {isProfit ? '📈 Bonus' :
-               isLoss ? '📉 Loss' :
-               '➡️ Refund'}
+                isLoss ? '📉 Loss' :
+                  '➡️ Refund'}
             </div>
           </div>
         </div>
@@ -397,9 +397,8 @@ export default function Notifications() {
             <div
               key={notification.id}
               onClick={() => !notification.read && handleMarkAsRead(notification.id)}
-              className={`p-6 transition-colors cursor-pointer hover:bg-gray-50 ${
-                !notification.read ? 'bg-blue-50' : ''
-              }`}
+              className={`p-6 transition-colors cursor-pointer hover:bg-gray-50 ${!notification.read ? 'bg-blue-50' : ''
+                }`}
             >
               <div className="flex items-start gap-4">
                 {/* Icon */}
@@ -419,10 +418,10 @@ export default function Notifications() {
                       <p className="text-sm text-gray-600 mt-1">
                         {notification.message}
                       </p>
-                      
+
                       {/* Stake-specific details with Confirm button */}
                       {renderStakeDetails(notification)}
-                      
+
                       {notification.type === 'message' && notification.metadata?.sender_address && (
                         <p className="text-xs text-gray-500 mt-2">
                           From: {truncateAddress(notification.metadata.sender_address)}
@@ -453,11 +452,13 @@ export default function Notifications() {
       {/* Date Confirmation Modal */}
       {showDateConfirmation && selectedMatch && (
         <DateConfirmationModal
-          isOpen={showDateConfirmation}
-          onClose={() => setShowDateConfirmation(false)}
-          onConfirm={handleDateConfirmed}
-          matchName={selectedMatch.name}
+          stakeId={selectedMatch.stakeId || '0'}
           matchAddress={selectedMatch.address}
+          matchName={selectedMatch.name}
+          meetingTime={selectedMatch.meetingTime || Math.floor(Date.now() / 1000)}
+          stakeAmount={selectedMatch.stakeAmount || '0'}
+          onClose={() => setShowDateConfirmation(false)}
+          onSuccess={handleDateConfirmed}
         />
       )}
 
