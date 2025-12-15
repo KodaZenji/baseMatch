@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 interface IMatching {
     function notifyProfileDeleted(address deletedUser) external;
@@ -10,9 +12,9 @@ interface IMatching {
 
 /**
  * @title ProfileNFT
- * @dev Soulbound NFT for user profiles - non-transferable
+ * @dev Soulbound NFT for user profiles - non-transferable (Upgradeable)
  */
-contract ProfileNFT is ERC721, Ownable {
+contract ProfileNFT is Initializable, ERC721Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
     struct Profile {
         uint256 tokenId;
         string name;
@@ -97,13 +99,24 @@ contract ProfileNFT is ERC721, Ownable {
     event ProfileDeleted(address indexed user, uint256 tokenId);
     event EmailRegistered(string email, address user);
 
-    constructor() ERC721("BaseMatch Profile", "BMPRO") {
-        // Initialize the contract owner to the deployer
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize() public initializer {
+        __ERC721_init("BaseMatch Profile", "BMPRO");
+        __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
     }
 
     /**
-     * @dev Set the Matching contract address (can only be set once)
+     * @dev Authorize upgrade (only owner can upgrade)
      */
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        onlyOwner
+        override
+    {}
     function setMatchingContract(address _matchingContract) external onlyOwner {
         require(matchingContract == address(0), "Matching contract already set");
         require(_matchingContract != address(0), "Invalid address");

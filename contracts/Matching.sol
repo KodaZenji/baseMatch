@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 interface IProfileNFT {
     function profileExists(address user) external view returns (bool);
 }
 
 /**
  * @title Matching
- * @dev Handles user matching and interest expressions
+ * @dev Handles user matching and interest expressions (Upgradeable)
  */
-contract Matching {
+contract Matching is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     IProfileNFT public profileNFT;
     address public profileNFTContract;
 
@@ -28,11 +32,27 @@ contract Matching {
     event InterestExpressed(address indexed from, address indexed to);
     event MatchCreated(address indexed user1, address indexed user2, uint256 matchId);
     event ProfileDeleted(address indexed user, uint256 matchesCleared);
+    event MatchRemoved(address indexed user1, address indexed user2);
 
     constructor(address _profileNFT) {
+        _disableInitializers();
+    }
+
+    function initialize(address _profileNFT) public initializer {
+        __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
         profileNFT = IProfileNFT(_profileNFT);
         profileNFTContract = _profileNFT;
     }
+
+    /**
+     * @dev Authorize upgrade (only owner can upgrade)
+     */
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        onlyOwner
+        override
+    {}
 
     modifier onlyProfileNFT() {
         require(msg.sender == profileNFTContract, "Only ProfileNFT can call this");
@@ -86,6 +106,29 @@ contract Matching {
      */
     function hasExpressedInterest(address from, address to) external view returns (bool) {
         return interests[from][to];
+    }
+
+    /**
+     * @dev Remove a match between two users (both users' match records deleted)
+     * Does NOT affect reputation scores
+     */
+    function removeMatch(address matchedUser) external {
+        require(matchedUser != address(0), "Invalid address");
+        require(isMatched[msg.sender][matchedUser], "Not matched with this user");
+
+        // Clear mutual match status
+        isMatched[msg.sender][matchedUser] = false;
+        isMatched[matchedUser][msg.sender] = false;
+
+        // Clear mutual interests
+        interests[msg.sender][matchedUser] = false;
+        interests[matchedUser][msg.sender] = false;
+
+        // Remove from match lists
+        _removeFromMatchList(msg.sender, matchedUser);
+        _removeFromMatchList(matchedUser, msg.sender);
+
+        emit MatchRemoved(msg.sender, matchedUser);
     }
 
     /**

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
 interface IMatching {
     function isMatched(address user1, address user2) external view returns (bool);
@@ -10,9 +12,9 @@ interface IMatching {
 
 /**
  * @title Staking
- * @dev Manages USDC staking for dates
+ * @dev Manages USDC staking for dates (Upgradeable)
  */
-contract Staking is Ownable {
+contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     IERC20 public usdc;
     IMatching public matching;
 
@@ -34,13 +36,25 @@ contract Staking is Ownable {
     event StakeClaimed(address indexed user1, address indexed user2, uint256 user1Amount, uint256 user2Amount);
 
     constructor(address _usdc, address _matching) {
+        _disableInitializers();
+    }
+
+    function initialize(address _usdc, address _matching) public initializer {
+        __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
         usdc = IERC20(_usdc);
         matching = IMatching(_matching);
     }
 
     /**
-     * @dev Create a stake for a meeting
+     * @dev Authorize upgrade (only owner can upgrade)
      */
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        onlyOwner
+        override
+    {}
+
     function createStake(address matchedUser, uint256 amount, uint256 meetingTime) external {
         require(matching.isMatched(msg.sender, matchedUser), "Not matched");
         require(amount >= 5 * 10**6, "Minimum stake is 5 USDC");

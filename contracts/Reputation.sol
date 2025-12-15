@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 interface IMatching {
     function isMatched(address user1, address user2) external view returns (bool);
@@ -9,9 +11,9 @@ interface IMatching {
 
 /**
  * @title Reputation
- * @dev Manages user reputation scores
+ * @dev Manages user reputation scores (Upgradeable)
  */
-contract Reputation is Ownable {
+contract Reputation is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     IMatching public matching;
 
     struct ReputationData {
@@ -29,8 +31,23 @@ contract Reputation is Ownable {
     event UserRated(address indexed rater, address indexed rated, uint256 score);
 
     constructor(address _matching) {
+        _disableInitializers();
+    }
+
+    function initialize(address _matching) public initializer {
+        __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
         matching = IMatching(_matching);
     }
+
+    /**
+     * @dev Authorize upgrade (only owner can upgrade)
+     */
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        onlyOwner
+        override
+    {}
 
     /**
      * @dev Rate a matched user (1-5 stars)
