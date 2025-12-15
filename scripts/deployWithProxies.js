@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const { upgrades } = require("hardhat");
+const { ethers } = require("hardhat");
 
 async function main() {
     console.log("🚀 Deploying BaseMatch contracts with UUPS proxies on Base Sepolia...\n");
