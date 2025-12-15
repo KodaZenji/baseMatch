@@ -216,9 +216,20 @@ export const STAKING_ABI = [
         name: "createStake",
         stateMutability: "nonpayable",
         inputs: [
-            { name: "matchedUser", type: "address" },
+            { name: "user2", type: "address" },
             { name: "amount", type: "uint256" },
             { name: "meetingTime", type: "uint256" }
+        ],
+        outputs: [
+            { name: "", type: "uint256" }
+        ]
+    },
+    {
+        type: "function",
+        name: "acceptStake",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "stakeId", type: "uint256" }
         ],
         outputs: []
     },
@@ -227,16 +238,27 @@ export const STAKING_ABI = [
         name: "confirmMeeting",
         stateMutability: "nonpayable",
         inputs: [
-            { name: "matchedUser", type: "address" }
+            { name: "stakeId", type: "uint256" },
+            { name: "iShowedUp", type: "bool" },
+            { name: "theyShowedUp", type: "bool" }
         ],
         outputs: []
     },
     {
         type: "function",
-        name: "claimStake",
+        name: "processExpiredStake",
         stateMutability: "nonpayable",
         inputs: [
-            { name: "matchedUser", type: "address" }
+            { name: "stakeId", type: "uint256" }
+        ],
+        outputs: []
+    },
+    {
+        type: "function",
+        name: "cancelStake",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "stakeId", type: "uint256" }
         ],
         outputs: []
     },
@@ -245,21 +267,52 @@ export const STAKING_ABI = [
         name: "getStake",
         stateMutability: "view",
         inputs: [
-            { name: "user1", type: "address" },
-            { name: "user2", type: "address" }
+            { name: "stakeId", type: "uint256" }
         ],
         outputs: [
-            { name: "amount", type: "uint256" },
-            { name: "meetingTime", type: "uint256" },
-            { name: "user1Confirmed", type: "bool" },
-            { name: "user2Confirmed", type: "bool" },
-            { name: "claimed", type: "bool" }
+            {
+                name: "",
+                type: "tuple",
+                components: [
+                    { name: "user1", type: "address" },
+                    { name: "user2", type: "address" },
+                    { name: "user1Amount", type: "uint256" },
+                    { name: "user2Amount", type: "uint256" },
+                    { name: "totalStaked", type: "uint256" },
+                    { name: "meetingTime", type: "uint256" },
+                    { name: "user1Staked", type: "bool" },
+                    { name: "user2Staked", type: "bool" },
+                    { name: "processed", type: "bool" },
+                    { name: "createdAt", type: "uint256" }
+                ]
+            }
+        ]
+    },
+    {
+        type: "function",
+        name: "getConfirmation",
+        stateMutability: "view",
+        inputs: [
+            { name: "stakeId", type: "uint256" },
+            { name: "user", type: "address" }
+        ],
+        outputs: [
+            {
+                name: "",
+                type: "tuple",
+                components: [
+                    { name: "hasConfirmed", type: "bool" },
+                    { name: "iShowedUp", type: "bool" },
+                    { name: "theyShowedUp", type: "bool" }
+                ]
+            }
         ]
     },
     {
         type: "event",
         name: "StakeCreated",
         inputs: [
+            { name: "stakeId", type: "uint256", indexed: true },
             { name: "user1", type: "address", indexed: true },
             { name: "user2", type: "address", indexed: true },
             { name: "amount", type: "uint256", indexed: false },
@@ -268,20 +321,32 @@ export const STAKING_ABI = [
     },
     {
         type: "event",
-        name: "MeetingConfirmed",
+        name: "StakeAccepted",
         inputs: [
-            { name: "user", type: "address", indexed: true },
-            { name: "matchedUser", type: "address", indexed: true }
+            { name: "stakeId", type: "uint256", indexed: true },
+            { name: "user2", type: "address", indexed: true },
+            { name: "amount", type: "uint256", indexed: false }
         ]
     },
     {
         type: "event",
-        name: "StakeClaimed",
+        name: "MeetingConfirmed",
         inputs: [
-            { name: "user1", type: "address", indexed: true },
-            { name: "user2", type: "address", indexed: true },
-            { name: "user1Amount", type: "uint256", indexed: false },
-            { name: "user2Amount", type: "uint256", indexed: false }
+            { name: "stakeId", type: "uint256", indexed: true },
+            { name: "confirmer", type: "address", indexed: true },
+            { name: "iShowedUp", type: "bool", indexed: false },
+            { name: "theyShowedUp", type: "bool", indexed: false }
+        ]
+    },
+    {
+        type: "event",
+        name: "StakeProcessed",
+        inputs: [
+            { name: "stakeId", type: "uint256", indexed: true },
+            { name: "user1Payout", type: "uint256", indexed: false },
+            { name: "user2Payout", type: "uint256", indexed: false },
+            { name: "platformFee", type: "uint256", indexed: false },
+            { name: "outcome", type: "string", indexed: false }
         ]
     }
 ] as const;
