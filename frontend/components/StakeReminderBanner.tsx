@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { Clock, AlertCircle } from 'lucide-react';
+import { Clock, AlertCircle, Heart } from 'lucide-react';
 import { supabaseClient } from '@/lib/supabase/client';
 
 interface PendingStake {
@@ -143,8 +143,8 @@ export default function StakeReminderBanner({ onConfirmClick }: StakeReminderBan
           >
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 flex-1">
-                <div className="text-3xl">
-                  {isUrgent ? '🚨' : '⏰'}
+                <div className="text-2xl">
+                  {isUrgent ? <AlertCircle className="text-red-600" size={32} /> : <Clock className="text-orange-600" size={32} />}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -185,8 +185,9 @@ export default function StakeReminderBanner({ onConfirmClick }: StakeReminderBan
 
             {/* Compassionate Reminder */}
             <div className="mt-3 p-3 bg-white/60 rounded-lg">
-              <p className="text-xs text-gray-700">
-                💙 <strong>Reminder:</strong> If you showed up, you'll get 95-142.5% back. 
+              <p className="text-xs text-gray-700 flex items-center gap-2">
+                <Heart className="text-pink-500" size={16} />
+                <strong>Reminder:</strong> If you showed up, you'll get 95-142.5% back. 
                 If you couldn't make it, you'll still get 20% back (life happens).
               </p>
             </div>

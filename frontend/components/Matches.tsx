@@ -6,7 +6,7 @@ import { useMatches } from '@/hooks/useMatches';
 import ProfileCard from './ProfileCard';
 import GiftingModal from './GiftingModal';
 import ChatWindow from './ChatWindow';
-import { Trash2 } from 'lucide-react';
+import { Trash2, AlertCircle, Heart, Users } from 'lucide-react';
 
 export default function Matches() {
     const { address } = useAccount();

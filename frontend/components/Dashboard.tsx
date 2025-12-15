@@ -10,6 +10,7 @@ import Link from 'next/link';
 import StakeReminderBanner from './StakeReminderBanner';
 import DateConfirmationModal from './DateConfirmationModal';
 import RatingModal from './RatingModal';
+import { Star, Calendar, ThumbsUp, AlertCircle, Clock, Trophy, Zap, Flame, Sparkles, Heart } from 'lucide-react';
 
 interface PendingStake {
   stakeId: string;
@@ -84,15 +85,15 @@ export default function Dashboard() {
         setSelectedStake(null);
     };
 
-    // Get achievement emoji based on type
-    const getAchievementEmoji = (type: string) => {
-        if (type.includes('First Date')) return '🎉';
-        if (type.includes('5 Dates')) return '🔥';
-        if (type.includes('10 Dates')) return '💎';
-        if (type.includes('5 Star')) return '⭐';
-        if (type.includes('Perfect Week')) return '🗓️';
-        if (type.includes('Match Maker')) return '💘';
-        return '🏆';
+    // Get achievement icon based on type
+    const getAchievementIcon = (type: string) => {
+        if (type.includes('First Date')) return <Zap className="text-yellow-500" size={28} />;
+        if (type.includes('5 Dates')) return <Flame className="text-orange-500" size={28} />;
+        if (type.includes('10 Dates')) return <Sparkles className="text-blue-500" size={28} />;
+        if (type.includes('5 Star')) return <Star className="text-yellow-500" size={28} />;
+        if (type.includes('Perfect Week')) return <Calendar className="text-purple-500" size={28} />;
+        if (type.includes('Match Maker')) return <Heart className="text-pink-500" size={28} />;
+        return <Trophy className="text-amber-600" size={28} />;
     };
 
     return (
@@ -105,8 +106,9 @@ export default function Dashboard() {
             {/* Countdown indicator */}
             {countdown !== null && countdown > 0 && (
                 <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-2 border-pink-300 rounded-xl p-4 text-center animate-pulse">
-                    <div className="text-pink-700 font-bold text-lg">
-                        ⏱️ Rating modal opening in {countdown} second{countdown !== 1 ? 's' : ''}...
+                    <div className="flex items-center justify-center gap-2 text-pink-700 font-bold text-lg">
+                        <Clock size={24} />
+                        Rating modal opening in {countdown} second{countdown !== 1 ? 's' : ''}...
                     </div>
                 </div>
             )}
@@ -178,28 +180,40 @@ export default function Dashboard() {
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
+                            <div className="flex justify-center mb-2">
+                                <Star className="text-blue-600" size={32} />
+                            </div>
                             <div className="text-3xl font-bold text-blue-600">
                                 {reputation ? reputation.averageRating.toFixed(1) : '0.0'}
                             </div>
-                            <div className="text-sm text-gray-700 font-medium mt-2">⭐ Avg Rating</div>
+                            <div className="text-sm text-gray-700 font-medium mt-2">Avg Rating</div>
                         </div>
                         <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
+                            <div className="flex justify-center mb-2">
+                                <Calendar className="text-purple-600" size={32} />
+                            </div>
                             <div className="text-3xl font-bold text-purple-600">
                                 {reputation ? reputation.totalDates : 0}
                             </div>
-                            <div className="text-sm text-gray-700 font-medium mt-2">📅 Total Dates</div>
+                            <div className="text-sm text-gray-700 font-medium mt-2">Total Dates</div>
                         </div>
                         <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
+                            <div className="flex justify-center mb-2">
+                                <ThumbsUp className="text-green-600" size={32} />
+                            </div>
                             <div className="text-3xl font-bold text-green-600">
                                 {reputation ? reputation.ratingCount : 0}
                             </div>
-                            <div className="text-sm text-gray-700 font-medium mt-2">👍 Ratings</div>
+                            <div className="text-sm text-gray-700 font-medium mt-2">Ratings</div>
                         </div>
                         <div className="text-center p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-xl">
+                            <div className="flex justify-center mb-2">
+                                <AlertCircle className="text-red-600" size={32} />
+                            </div>
                             <div className="text-3xl font-bold text-red-600">
                                 {reputation ? reputation.noShows : 0}
                             </div>
-                            <div className="text-sm text-gray-700 font-medium mt-2">❌ No-Shows</div>
+                            <div className="text-sm text-gray-700 font-medium mt-2">No-Shows</div>
                         </div>
                     </div>
                 )}
@@ -208,7 +222,10 @@ export default function Dashboard() {
             {/* Achievement NFTs */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-gray-900">Achievement NFTs 🏆</h3>
+                    <div className="flex items-center gap-2">
+                        <Trophy className="text-amber-600" size={24} />
+                        <h3 className="text-xl font-bold text-gray-900">Achievement NFTs</h3>
+                    </div>
                     {!achievementsLoading && achievements.length > 0 && (
                         <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full">
                             {achievements.length} {achievements.length === 1 ? 'Badge' : 'Badges'}
@@ -234,7 +251,7 @@ export default function Dashboard() {
                                     NFT #{achievement.tokenId}
                                 </div>
                                 
-                                <div className="text-4xl mb-3">{getAchievementEmoji(achievement.type)}</div>
+                                <div className="mb-3">{getAchievementIcon(achievement.type)}</div>
                                 <h4 className="font-bold text-gray-900 mb-2">{achievement.type}</h4>
                                 <p className="text-sm text-gray-600 mb-4">{achievement.description}</p>
                                 
