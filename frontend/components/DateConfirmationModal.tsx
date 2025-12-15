@@ -124,7 +124,7 @@ export default function DateConfirmationModal({
                 address: CONTRACTS.STAKING as `0x${string}`,
                 abi: STAKING_ABI,
                 functionName: 'confirmMeeting',
-                args: [BigInt(stakeId), iShowedUp, partnerShowedUp],
+                args: [stakeId as `0x${string}`, iShowedUp, partnerShowedUp],
             });
         } catch (err) {
             console.error('Confirmation error:', err);
