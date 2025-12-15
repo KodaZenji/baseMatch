@@ -62,27 +62,10 @@ export default function Dashboard() {
         setShowDateConfirmation(true);
     };
 
-    // Handle date confirmation
+    // Handle date confirmation success
     const handleDateConfirmed = async () => {
         try {
-            if (!selectedStake) return;
-
-            // Call API to confirm the date occurred
-            const response = await fetch('/api/dates/confirm', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    stakeId: selectedStake.stakeId,
-                    userAddress: address,
-                    matchAddress: selectedStake.matchAddress,
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to confirm date');
-            }
-
-            console.log('Date confirmed with:', selectedStake.matchAddress);
+            console.log('Date confirmed successfully');
 
             // Close the confirmation modal
             setShowDateConfirmation(false);
@@ -91,8 +74,7 @@ export default function Dashboard() {
             setCountdown(10);
 
         } catch (error) {
-            console.error('Error confirming date:', error);
-            alert('Failed to confirm date. Please try again.');
+            console.error('Error after confirmation:', error);
         }
     };
 
@@ -275,14 +257,16 @@ export default function Dashboard() {
                 )}
             </div>
 
-            {/* Date Confirmation Modal */}
+            {/* Date Confirmation Modal - TWO QUESTION SYSTEM */}
             {showDateConfirmation && selectedStake && (
                 <DateConfirmationModal
-                    isOpen={showDateConfirmation}
-                    onClose={() => setShowDateConfirmation(false)}
-                    onConfirm={handleDateConfirmed}
-                    matchName={selectedStake.matchName}
+                    stakeId={selectedStake.stakeId}
                     matchAddress={selectedStake.matchAddress}
+                    matchName={selectedStake.matchName}
+                    meetingTime={selectedStake.meetingTime}
+                    stakeAmount={selectedStake.stakeAmount}
+                    onClose={() => setShowDateConfirmation(false)}
+                    onSuccess={handleDateConfirmed}
                 />
             )}
 
