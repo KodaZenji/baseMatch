@@ -46,10 +46,10 @@ export default function DateConfirmationModal({
 
     const calculatePayout = () => {
         if (iShowedUp === null || partnerShowedUp === null) return null;
-        
+
         const stake = parseFloat(stakeAmount);
         const total = stake * 2;
-        
+
         if (iShowedUp && partnerShowedUp) {
             return {
                 you: stake * 0.95,
@@ -60,7 +60,7 @@ export default function DateConfirmationModal({
                 outcome: "both_showed"
             };
         }
-        
+
         if (iShowedUp && !partnerShowedUp) {
             return {
                 you: stake * 1.425,
@@ -71,7 +71,7 @@ export default function DateConfirmationModal({
                 outcome: "you_showed"
             };
         }
-        
+
         if (!iShowedUp && partnerShowedUp) {
             return {
                 you: stake * 0.20,
@@ -82,7 +82,7 @@ export default function DateConfirmationModal({
                 outcome: "partner_showed"
             };
         }
-        
+
         if (!iShowedUp && !partnerShowedUp) {
             return {
                 you: stake * 0.20,
@@ -93,7 +93,7 @@ export default function DateConfirmationModal({
                 outcome: "neither_showed"
             };
         }
-        
+
         return null;
     };
 
@@ -124,7 +124,7 @@ export default function DateConfirmationModal({
                 address: CONTRACTS.STAKING as `0x${string}`,
                 abi: STAKING_ABI,
                 functionName: 'confirmMeeting',
-                args: [stakeId as `0x${string}`, iShowedUp, partnerShowedUp],
+                args: [BigInt(stakeId), iShowedUp, partnerShowedUp],
             });
         } catch (err) {
             console.error('Confirmation error:', err);
@@ -136,7 +136,7 @@ export default function DateConfirmationModal({
         if (isSuccess) {
             // Send notification to partner
             sendConfirmationNotification();
-            
+
             // Update stakes table
             updateStakesTable();
 
@@ -176,7 +176,7 @@ export default function DateConfirmationModal({
     const updateStakesTable = async () => {
         try {
             const isUser1 = address?.toLowerCase() === matchAddress.toLowerCase() ? false : true;
-            
+
             await supabaseClient
                 .from('stakes')
                 .update({
@@ -319,11 +319,10 @@ export default function DateConfirmationModal({
                                 <button
                                     onClick={() => setIShowedUp(false)}
                                     disabled={!canConfirm}
-                                    className={`px-4 py-3 border-2 rounded-lg font-semibold transition-all ${
-                                        iShowedUp === false
+                                    className={`px-4 py-3 border-2 rounded-lg font-semibold transition-all ${iShowedUp === false
                                             ? 'border-orange-500 bg-orange-50 text-orange-700'
                                             : 'border-gray-300 hover:border-gray-400 text-gray-700'
-                                    } disabled:opacity-50`}
+                                        } disabled:opacity-50`}
                                 >
                                     <span className="text-2xl block mb-1">❌</span>
                                     No, I didn't
@@ -331,11 +330,10 @@ export default function DateConfirmationModal({
                                 <button
                                     onClick={() => setIShowedUp(true)}
                                     disabled={!canConfirm}
-                                    className={`px-4 py-3 border-2 rounded-lg font-semibold transition-all ${
-                                        iShowedUp === true
+                                    className={`px-4 py-3 border-2 rounded-lg font-semibold transition-all ${iShowedUp === true
                                             ? 'border-green-500 bg-green-50 text-green-700'
                                             : 'border-gray-300 hover:border-gray-400 text-gray-700'
-                                    } disabled:opacity-50`}
+                                        } disabled:opacity-50`}
                                 >
                                     <span className="text-2xl block mb-1">✅</span>
                                     Yes, I showed
@@ -352,11 +350,10 @@ export default function DateConfirmationModal({
                                 <button
                                     onClick={() => setPartnerShowedUp(false)}
                                     disabled={!canConfirm}
-                                    className={`px-4 py-3 border-2 rounded-lg font-semibold transition-all ${
-                                        partnerShowedUp === false
+                                    className={`px-4 py-3 border-2 rounded-lg font-semibold transition-all ${partnerShowedUp === false
                                             ? 'border-orange-500 bg-orange-50 text-orange-700'
                                             : 'border-gray-300 hover:border-gray-400 text-gray-700'
-                                    } disabled:opacity-50`}
+                                        } disabled:opacity-50`}
                                 >
                                     <span className="text-2xl block mb-1">❌</span>
                                     No, they didn't
@@ -364,11 +361,10 @@ export default function DateConfirmationModal({
                                 <button
                                     onClick={() => setPartnerShowedUp(true)}
                                     disabled={!canConfirm}
-                                    className={`px-4 py-3 border-2 rounded-lg font-semibold transition-all ${
-                                        partnerShowedUp === true
+                                    className={`px-4 py-3 border-2 rounded-lg font-semibold transition-all ${partnerShowedUp === true
                                             ? 'border-green-500 bg-green-50 text-green-700'
                                             : 'border-gray-300 hover:border-gray-400 text-gray-700'
-                                    } disabled:opacity-50`}
+                                        } disabled:opacity-50`}
                                 >
                                     <span className="text-2xl block mb-1">✅</span>
                                     Yes, they showed
@@ -395,12 +391,11 @@ export default function DateConfirmationModal({
 
                         {/* Payout Preview */}
                         {payout && (
-                            <div className={`mb-4 p-4 rounded-lg border-2 ${
-                                payout.color === 'green' ? 'bg-green-50 border-green-200' :
-                                payout.color === 'blue' ? 'bg-blue-50 border-blue-200' :
-                                payout.color === 'orange' ? 'bg-orange-50 border-orange-200' :
-                                'bg-gray-50 border-gray-200'
-                            }`}>
+                            <div className={`mb-4 p-4 rounded-lg border-2 ${payout.color === 'green' ? 'bg-green-50 border-green-200' :
+                                    payout.color === 'blue' ? 'bg-blue-50 border-blue-200' :
+                                        payout.color === 'orange' ? 'bg-orange-50 border-orange-200' :
+                                            'bg-gray-50 border-gray-200'
+                                }`}>
                                 <div className="flex items-center gap-2 mb-3">
                                     <DollarSign size={20} />
                                     <p className="text-sm font-semibold">{payout.message}</p>
