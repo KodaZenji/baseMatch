@@ -105,13 +105,73 @@ export async function POST(request: NextRequest) {
             // Don't fail the order if notification fails
         }
 
-        // Send notification to admin
+        // Send notification to admin with Discord embed
         if (process.env.DISCORD_WEBHOOK_URL) {
+            const giftNames: Record<string, string> = {
+                'roses-bouquet': '🌹 Red Roses Bouquet',
+                'mixed-flowers': '💐 Mixed Flower Arrangement',
+                'teddy-bear': '🧸 Plush Teddy Bear',
+                'teddy-roses': '🧸🌹 Teddy with Roses',
+                'chocolate-box': '🍫 Luxury Chocolate Box',
+                'gift-basket': '🎁 Gourmet Gift Basket',
+                'spa-box': '🧖‍♀️ Spa Gift Set',
+                'dinner-delivery': '🍽️ Restaurant Dinner',
+                'dessert-box': '🧁 Dessert Sampler',
+            };
+
+            const giftName = giftNames[giftId] || giftId;
+
             await fetch(process.env.DISCORD_WEBHOOK_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    content: `🎁 New Physical Gift Order!\n\nGift: ${giftId}\nAmount: $${amount}\nRecipient: ${recipientName}\nAddress: ${deliveryInfo.address}, ${deliveryInfo.city}, ${deliveryInfo.state} ${deliveryInfo.zip}\nPhone: ${deliveryInfo.phone}\nTx: ${txHash}\nOrder ID: ${order.id}`
+                    embeds: [{
+                        title: '🎁 New IRL Gift Order',
+                        color: 0xff69b4, // Pink color
+                        fields: [
+                            {
+                                name: '📦 Gift',
+                                value: giftName,
+                                inline: true
+                            },
+                            {
+                                name: '💰 Amount',
+                                value: `$${amount}`,
+                                inline: true
+                            },
+                            {
+                                name: '👤 Recipient',
+                                value: recipientName,
+                                inline: false
+                            },
+                            {
+                                name: '📍 Delivery Address',
+                                value: `${deliveryInfo.address}\n${deliveryInfo.city}, ${deliveryInfo.state} ${deliveryInfo.zip}`,
+                                inline: false
+                            },
+                            {
+                                name: '📞 Phone',
+                                value: deliveryInfo.phone,
+                                inline: true
+                            },
+                            {
+                                name: '📝 Notes',
+                                value: deliveryInfo.notes || 'None',
+                                inline: false
+                            },
+                            {
+                                name: '🔗 TX Hash',
+                                value: `\`${txHash.slice(0, 10)}...${txHash.slice(-8)}\``,
+                                inline: false
+                            },
+                            {
+                                name: '📌 Order ID',
+                                value: `\`${order.id}\``,
+                                inline: false
+                            }
+                        ],
+                        timestamp: new Date().toISOString()
+                    }]
                 })
             }).catch(console.error);
         }
