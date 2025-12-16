@@ -33,14 +33,25 @@ export async function POST(request: NextRequest) {
 
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // Remove match record from Supabase
-        // This is a soft delete - we remove from matches table if it exists
-        const { error } = await supabase
-            .from("matches")
+        const addr1 = userAddress.toLowerCase();
+        const addr2 = matchedUserAddress.toLowerCase();
+
+        // Delete both interest directions to break the match
+        // Delete interest from user to matched user
+        const { error: error1 } = await supabase
+            .from("interests")
             .delete()
-            .or(
-                `and(user1_address.eq.${userAddress},user2_address.eq.${matchedUserAddress}),and(user1_address.eq.${matchedUserAddress},user2_address.eq.${userAddress})`
-            );
+            .eq("from_address", addr1)
+            .eq("to_address", addr2);
+
+        // Delete interest from matched user to user
+        const { error: error2 } = await supabase
+            .from("interests")
+            .delete()
+            .eq("from_address", addr2)
+            .eq("to_address", addr1);
+
+        const error = error1 || error2;
 
         if (error) {
             console.error("Supabase error:", error);
