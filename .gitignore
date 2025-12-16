@@ -1,6 +1,11 @@
 node_modules
 setupSupabaseTables.js
 
+# Environment variables - NEVER commit these!
+.env
+.env.local
+.env.*.local
+
 # Documentation files
 *.md
 DATABASE_MIGRATION.sql
