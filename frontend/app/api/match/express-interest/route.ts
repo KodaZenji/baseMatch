@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdmin();
-    
+
     // Check if this interest already exists
     const { data: existingInterest, error: checkExistingError } = await supabase
       .from('interests')
@@ -38,13 +38,13 @@ export async function POST(request: NextRequest) {
     // If interest already exists, just return success
     if (existingInterest) {
       console.log('Interest already exists:', fromAddress, '->', toAddress);
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         matched: false,
-        message: 'Interest already recorded' 
+        message: 'Interest already recorded'
       });
     }
-    
+
     // Check if reverse interest exists (toAddress already liked fromAddress)
     const { data: reverseInterest, error: checkError } = await supabase
       .from('interests')
@@ -118,17 +118,17 @@ export async function POST(request: NextRequest) {
         console.error('Failed to create match notifications:', notifError);
       }
 
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         matched: true,
-        message: 'It\'s a match!' 
+        message: 'It\'s a match!'
       });
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       matched: false,
-      message: 'Interest recorded' 
+      message: 'Interest recorded'
     });
   } catch (error) {
     console.error('Error in POST /api/match/express-interest:', error);

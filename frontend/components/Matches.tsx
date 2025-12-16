@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useWriteContract } from 'wagmi';
 import { useMatches } from '@/hooks/useMatches';
 import ProfileCard from './ProfileCard';
 import GiftingModal from './GiftingModal';
 import ChatWindow from './ChatWindow';
 import { Trash2, AlertCircle, Heart, Users } from 'lucide-react';
+import { CONTRACTS, MATCHING_ABI } from '@/lib/contracts';
 
 export default function Matches() {
     const { address } = useAccount();
+    const { writeContract } = useWriteContract();
     const { matches, loading: matchesLoading } = useMatches(address);
     const [showGiftingModal, setShowGiftingModal] = useState(false);
     const [showChatWindow, setShowChatWindow] = useState(false);
@@ -53,6 +55,7 @@ export default function Matches() {
 
         setRemovingMatch(matchAddress);
         try {
+            // Step 1: Delete from database
             const response = await fetch('/api/profile/remove-match', {
                 method: 'POST',
                 headers: {
@@ -65,7 +68,27 @@ export default function Matches() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to remove match');
+                throw new Error('Failed to remove match from database');
+            }
+
+            const data = await response.json();
+            console.log('Match removed from database:', data);
+
+            // Step 2: Call blockchain to remove match
+            if (data.blockchainRemovalRequired && CONTRACTS.MATCHING) {
+                try {
+                    writeContract({
+                        address: CONTRACTS.MATCHING as `0x${string}`,
+                        abi: MATCHING_ABI,
+                        functionName: 'removeMatch',
+                        args: [matchAddress.toLowerCase() as `0x${string}`],
+                    });
+                    console.log('Blockchain removeMatch transaction sent');
+                } catch (blockchainError) {
+                    console.error('Blockchain removal error:', blockchainError);
+                    alert('Database deletion succeeded but blockchain update failed. Please try again.');
+                    return;
+                }
             }
 
             // Refetch matches to update the UI

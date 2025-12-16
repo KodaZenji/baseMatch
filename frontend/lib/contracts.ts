@@ -192,6 +192,15 @@ export const MATCHING_ABI = [
         ]
     },
     {
+        type: "function",
+        name: "removeMatch",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "matchedUser", type: "address" }
+        ],
+        outputs: []
+    },
+    {
         type: "event",
         name: "InterestExpressed",
         inputs: [

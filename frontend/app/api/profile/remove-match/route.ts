@@ -36,37 +36,49 @@ export async function POST(request: NextRequest) {
         const addr1 = userAddress.toLowerCase();
         const addr2 = matchedUserAddress.toLowerCase();
 
+        console.log('Removing match from database:', { from: addr1, to: addr2 });
+
         // Delete both interest directions to break the match
         // Delete interest from user to matched user
-        const { error: error1 } = await supabase
+        const { error: error1, count: count1 } = await supabase
             .from("interests")
-            .delete()
+            .delete({ count: 'exact' })
             .eq("from_address", addr1)
             .eq("to_address", addr2);
 
+        console.log(`Deleted ${count1} interest(s) from ${addr1} to ${addr2}`, error1);
+
         // Delete interest from matched user to user
-        const { error: error2 } = await supabase
+        const { error: error2, count: count2 } = await supabase
             .from("interests")
-            .delete()
+            .delete({ count: 'exact' })
             .eq("from_address", addr2)
             .eq("to_address", addr1);
+
+        console.log(`Deleted ${count2} interest(s) from ${addr2} to ${addr1}`, error2);
 
         const error = error1 || error2;
 
         if (error) {
             console.error("Supabase error:", error);
             return NextResponse.json(
-                { error: "Failed to remove match from database" },
+                { error: "Failed to remove match from database", details: error.message },
                 { status: 500 }
             );
         }
 
         return NextResponse.json(
-            { 
-                success: true, 
-                message: "Match removed successfully",
-                userAddress,
-                matchedUserAddress
+            {
+                success: true,
+                message: "Match removed from database. Please call blockchain removeMatch() from frontend.",
+                userAddress: addr1,
+                matchedUserAddress: addr2,
+                deleted: {
+                    direction1: count1,
+                    direction2: count2,
+                    total: (count1 || 0) + (count2 || 0)
+                },
+                blockchainRemovalRequired: true
             },
             { status: 200 }
         );
