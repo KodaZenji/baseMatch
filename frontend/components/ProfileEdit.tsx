@@ -7,14 +7,15 @@ import { generateAvatar } from '@/lib/avatarUtils';
 import { handleProfileTextUpdate } from '@/lib/profileMinting';
 import { useProfile } from '@/hooks/useProfile';
 import WalletConnectionSection from './WalletConnectionSection';
+import { User, Edit, Mail, Lock, AlertTriangle, Trash2, Lightbulb } from 'lucide-react';
 
 export default function ProfileEdit() {
     const { address, isConnected } = useAccount();
     const { profile, isLoading: profileLoading, refreshProfile } = useProfile(address);
-    
+
     const [userEmail, setUserEmail] = useState('');
     const [hasWallet, setHasWallet] = useState(false);
-    
+
     const [avatarUrl, setAvatarUrl] = useState('');
     const [formData, setFormData] = useState({
         name: '',
@@ -32,7 +33,7 @@ export default function ProfileEdit() {
     const [showDeleteFinalConfirm, setShowDeleteFinalConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
+
     // FIXED: Add ref to track if we've already shown the success notification
     const hasShownSuccessRef = useRef(false);
 
@@ -48,18 +49,18 @@ export default function ProfileEdit() {
             }
 
             const storedEmail = localStorage.getItem('userEmail');
-            
+
             if (storedEmail) {
                 setUserEmail(storedEmail);
                 setHasWallet(false);
-                
+
                 try {
                     const response = await fetch('/api/profile/get-by-email', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email: storedEmail }),
                     });
-                    
+
                     if (response.ok) {
                         const data = await response.json();
                         if (data.profile) {
@@ -72,7 +73,7 @@ export default function ProfileEdit() {
                                 email: data.profile.email || '',
                             });
                             setNewPhotoUrl(data.profile.photoUrl || '');
-                            
+
                             if (data.profile.walletAddress) {
                                 setHasWallet(true);
                             }
@@ -83,7 +84,7 @@ export default function ProfileEdit() {
                 }
             }
         };
-        
+
         checkUserStatus();
     }, [isConnected, address]);
 
@@ -99,12 +100,12 @@ export default function ProfileEdit() {
     useEffect(() => {
         const fetchMergedProfile = async () => {
             if (!address) return;
-            
+
             try {
                 const response = await fetch(`/api/profile/edit?address=${address}`);
                 if (response.ok) {
                     const mergedProfile = await response.json();
-                    
+
                     // Only populate if form is empty (first load)
                     if (!formData.name && !formData.age && !formData.gender && !formData.interests) {
                         setFormData({
@@ -221,7 +222,7 @@ export default function ProfileEdit() {
     // UPDATED: Two-step process - Database first, then blockchain for verification
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // FIXED: Reset both refs when starting a new update
         hasShownSuccessRef.current = false;
         hasSyncedRef.current = false;
@@ -360,7 +361,7 @@ export default function ProfileEdit() {
     // This ensures database matches blockchain (anti-catfish verification)
     // FIXED: Track if sync has been called to prevent duplicates
     const hasSyncedRef = useRef(false);
-    
+
     const syncProfileToDatabase = async (profileData: {
         name: string;
         age: number;
@@ -374,9 +375,9 @@ export default function ProfileEdit() {
             console.log('⚠️ Sync already called, skipping duplicate');
             return;
         }
-        
+
         hasSyncedRef.current = true;
-        
+
         try {
             console.log('Step 3: Syncing blockchain confirmation back to database...');
             const response = await fetch('/api/profile/sync', {
@@ -416,7 +417,7 @@ export default function ProfileEdit() {
             // FIXED: Only run if isSuccess is true AND we haven't shown notification yet
             if (isSuccess && !hasShownSuccessRef.current) {
                 hasShownSuccessRef.current = true; // Mark as shown immediately
-                
+
                 if (isDeleting) {
                     showNotification('✅ Profile deleted successfully!', 'success');
                     localStorage.clear();
@@ -485,15 +486,15 @@ export default function ProfileEdit() {
                                 />
                             ) : (
                                 <div className="bg-gray-200 border-4 border-white rounded-full w-32 h-32 flex items-center justify-center shadow-lg">
-                                    <span className="text-gray-500 text-4xl">👤</span>
+                                    <User className="text-gray-500" size={64} />
                                 </div>
                             )}
                             <button
                                 type="button"
                                 onClick={triggerFileInput}
-                                className="absolute bottom-2 right-2 bg-blue-500 text-white rounded-full p-2 shadow-lg hover:bg-blue-600 transition-colors"
+                                className="absolute bottom-2 right-2 bg-blue-500 text-white rounded-full p-2 shadow-lg hover:bg-blue-600 transition-colors flex items-center justify-center"
                             >
-                                ✏️
+                                <Edit size={20} />
                             </button>
                         </div>
                         <input
@@ -509,20 +510,20 @@ export default function ProfileEdit() {
                     {/* Wallet Connection */}
                     {!hasWallet && (formData.email || userEmail) && (
                         <div>
-                            <WalletConnectionSection 
-                                userEmail={formData.email || userEmail} 
-                                onWalletLinked={handleWalletLinked} 
+                            <WalletConnectionSection
+                                userEmail={formData.email || userEmail}
+                                onWalletLinked={handleWalletLinked}
                             />
-                            <p className="text-xs text-blue-600 mt-2">
-                                💡 Connect your wallet to mint your profile NFT
+                            <p className="text-xs text-blue-600 mt-2 flex items-center gap-1">
+                                <Lightbulb size={14} /> Connect your wallet to mint your profile NFT
                             </p>
                         </div>
                     )}
 
                     {/* Email Section with Blockchain Verification Badge */}
                     <div className="bg-blue-50 rounded-xl p-4 border-2 border-blue-200">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            📧 Email Address
+                        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <Mail size={16} /> Email Address
                             {profile?.email && formData.email === profile.email && (
                                 <span className="ml-2 text-xs bg-green-500 text-white px-2 py-1 rounded-full">
                                     ✓ Blockchain Verified
@@ -543,11 +544,11 @@ export default function ProfileEdit() {
                                 disabled={isSendingVerification || !formData.email || !formData.email.includes('@')}
                                 className="w-full px-3 py-2 bg-green-400 text-white text-sm rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                {isSendingVerification ? 'Sending...' : '📨 Send Verification Email'}
+                                {isSendingVerification ? 'Sending...' : 'Send Verification Email'}
                             </button>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                            🔒 Email stored in database + synced to blockchain for anti-catfish verification
+                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                            <Lock size={12} /> Email stored in database + synced to blockchain for anti-catfish verification
                         </p>
                     </div>
 
@@ -631,7 +632,7 @@ export default function ProfileEdit() {
                     {hasWallet && profile?.exists && (
                         <div className="mt-8 pt-6 border-t-2 border-gray-200">
                             <div className="bg-red-50 rounded-xl p-4 border-2 border-red-200">
-                                <h3 className="text-lg font-semibold text-red-800 mb-2">⚠️ Danger Zone</h3>
+                                <h3 className="text-lg font-semibold text-red-800 mb-2 flex items-center gap-2"><AlertTriangle size={20} /> Danger Zone</h3>
                                 <p className="text-sm text-red-700 mb-4">
                                     Deleting your account will permanently remove your profile NFT and all associated data. This action cannot be undone.
                                 </p>
@@ -648,7 +649,7 @@ export default function ProfileEdit() {
                                 ) : !showDeleteFinalConfirm ? (
                                     <div className="space-y-3">
                                         <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-3">
-                                            <p className="text-sm font-semibold text-yellow-800 mb-2">⚠️ First Confirmation</p>
+                                            <p className="text-sm font-semibold text-yellow-800 mb-2 flex items-center gap-1"><AlertTriangle size={16} /> First Confirmation</p>
                                             <p className="text-sm text-yellow-700 mb-3">
                                                 Are you sure? This will permanently delete everything.
                                             </p>
@@ -676,7 +677,7 @@ export default function ProfileEdit() {
                                 ) : (
                                     <div className="space-y-3">
                                         <div className="bg-red-100 border-2 border-red-500 rounded-lg p-3">
-                                            <p className="text-sm font-bold text-red-900 mb-2">🚨 FINAL CONFIRMATION</p>
+                                            <p className="text-sm font-bold text-red-900 mb-2 flex items-center gap-1"><AlertTriangle size={16} className="text-red-600" /> FINAL CONFIRMATION</p>
                                             <p className="text-sm text-red-800">This is your last chance!</p>
                                         </div>
                                         <div className="flex gap-2">
@@ -697,7 +698,7 @@ export default function ProfileEdit() {
                                                 disabled={isPending || isConfirming || isDeleting}
                                                 className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
                                             >
-                                                {isDeleting ? 'Deleting...' : '🗑️ Permanently Delete'}
+                                                {isDeleting ? 'Deleting...' : <span className="flex items-center gap-2"><Trash2 size={16} /> Permanently Delete</span>}
                                             </button>
                                         </div>
                                     </div>
