@@ -15,11 +15,13 @@ export async function POST(req: Request) {
       );
     }
 
-    
+    // Normalize wallet address to lowercase
+    const normalizedWallet = wallet_address.toLowerCase();
+
     const { data: profile, error } = await supabaseService
       .from("profiles")
       .update({
-        wallet_address: wallet_address,
+        wallet_address: normalizedWallet,
         wallet_verified: true, // Setting the verified flag as requested
         ...(name && { name }),
         ...(age && { age: parseInt(age) }),
