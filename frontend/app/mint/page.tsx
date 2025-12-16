@@ -191,7 +191,7 @@ export default function MintPage() {
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
-            💖 BaseMatch
+            ❤️ BaseMatch
           </h1>
           <div className="flex flex-col items-center justify-center">
             <svg className="animate-spin h-8 w-8 text-indigo-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -212,7 +212,7 @@ export default function MintPage() {
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
-            💖 BaseMatch
+            ❤️ BaseMatch
           </h1>
           <p className="text-gray-700 mb-6">Please connect your wallet to mint your profile</p>
           <div className="mb-4">
@@ -235,7 +235,7 @@ export default function MintPage() {
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
-            💖 BaseMatch
+            ❤️ BaseMatch
           </h1>
           <p className="text-gray-700 mb-6">{error || 'Loading...'}</p>
           <button

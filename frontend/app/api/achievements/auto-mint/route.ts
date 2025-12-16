@@ -15,7 +15,7 @@ const ACHIEVEMENT_ABI = [
       { name: "user", type: "address" },
       { name: "achievementType", type: "string" }
     ],
-    outputs: []
+    outputs: [{ name: "", type: "bool" }]
   },
   {
     type: "function",
@@ -23,6 +23,20 @@ const ACHIEVEMENT_ABI = [
     stateMutability: "view",
     inputs: [{ name: "user", type: "address" }],
     outputs: [{ name: "", type: "uint256[]" }]
+  },
+  {
+    type: "function",
+    name: "tokenURI",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ name: "", type: "string" }]
+  },
+  {
+    type: "function",
+    name: "getTokenIdFromType",
+    stateMutability: "pure",
+    inputs: [{ name: "achievementType", type: "string" }],
+    outputs: [{ name: "", type: "uint256" }]
   }
 ] as const;
 
@@ -158,25 +172,42 @@ export async function POST(request: NextRequest) {
     const mintedAchievements = [];
     for (const achievement of achievementsToMint) {
       try {
-        const hash = await walletClient.writeContract({
+        const success = await walletClient.writeContract({
           address: achievementAddress,
           abi: ACHIEVEMENT_ABI,
           functionName: 'mintAchievement',
           args: [userAddress as `0x${string}`, achievement.type],
         });
 
-        // Wait for transaction
-        await publicClient.waitForTransactionReceipt({ hash });
+        if (!success) {
+          console.log(`Achievement ${achievement.type} already earned by ${userAddress}`);
+          continue;
+        }
 
-        mintedAchievements.push({
-          tokenId: achievement.tokenId,
-          type: achievement.type,
-          hash,
+        // Get token URI
+        const tokenURI = await publicClient.readContract({
+          address: achievementAddress,
+          abi: ACHIEVEMENT_ABI,
+          functionName: 'tokenURI',
+          args: [BigInt(achievement.tokenId)],
         });
 
-        console.log(`Minted ${achievement.type} (tokenId: ${achievement.tokenId}) for ${userAddress}`);
+        mintedAchievements.push({
+          type: achievement.type,
+          tokenId: achievement.tokenId,
+          tokenURI: tokenURI as string,
+          status: 'success'
+        });
+
+        console.log(`✅ Minted ${achievement.type} (tokenId: ${achievement.tokenId}) for ${userAddress}`);
       } catch (error) {
         console.error(`Failed to mint ${achievement.type}:`, error);
+        mintedAchievements.push({
+          type: achievement.type,
+          tokenId: achievement.tokenId,
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
     }
 
@@ -188,7 +219,7 @@ export async function POST(request: NextRequest) {
         totalMatches,
       },
       mintedAchievements,
-      message: mintedAchievements.length > 0 
+      message: mintedAchievements.length > 0
         ? `Minted ${mintedAchievements.length} new achievement(s)!`
         : 'No new achievements to mint',
     });
@@ -214,31 +245,31 @@ async function checkPerfectWeek(userAddress: string): Promise<boolean> {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
-    
+
     // Get dates from the past 7 days
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    
+
     const { data: dateHistory, error } = await supabase
       .from('date_history')
       .select('date_occurred_at')
       .eq('user_address', userAddress.toLowerCase())
       .gte('date_occurred_at', sevenDaysAgo.toISOString())
       .order('date_occurred_at', { ascending: true });
-    
+
     if (error) {
       console.error('Error checking perfect week:', error);
       return false;
     }
-    
+
     if (!dateHistory || dateHistory.length < 7) return false;
-    
+
     // Check if there's at least one date on each of the past 7 days
     const daysWithDates = new Set<string>();
     dateHistory.forEach(record => {
       const day = new Date(record.date_occurred_at).toISOString().split('T')[0]; // YYYY-MM-DD
       daysWithDates.add(day);
     });
-    
+
     // Need 7 unique days with dates
     return daysWithDates.size >= 7;
   } catch (error) {

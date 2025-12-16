@@ -30,10 +30,6 @@ contract Reputation is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     event ReputationUpdated(address indexed user, uint256 newScore);
     event UserRated(address indexed rater, address indexed rated, uint256 score);
 
-    constructor(address _matching) {
-        _disableInitializers();
-    }
-
     function initialize(address _matching) public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();

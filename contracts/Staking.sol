@@ -78,11 +78,6 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable, Reentran
         string outcome
     );
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
-
     function initialize(address _usdc) public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();

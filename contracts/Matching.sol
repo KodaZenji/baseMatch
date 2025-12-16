@@ -34,10 +34,6 @@ contract Matching is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     event ProfileDeleted(address indexed user, uint256 matchesCleared);
     event MatchRemoved(address indexed user1, address indexed user2);
 
-    constructor(address _profileNFT) {
-        _disableInitializers();
-    }
-
     function initialize(address _profileNFT) public initializer {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();

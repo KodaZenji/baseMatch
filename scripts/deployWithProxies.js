@@ -8,8 +8,6 @@ async function main() {
     // Get deployer
     const [deployer] = await ethers.getSigners();
     console.log("Deploying with account:", deployer.address);
-
-    // Deploy ProfileNFT proxy
     console.log("\n1️⃣ Deploying ProfileNFT proxy...");
     const ProfileNFT = await ethers.getContractFactory("ProfileNFT");
     const profileNFT = await upgrades.deployProxy(ProfileNFT, [], {
@@ -55,9 +53,10 @@ async function main() {
 
     // Deploy Staking proxy
     console.log("\n5️⃣ Deploying Staking proxy...");
-    const USDC_ADDRESS = process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+    // Base Sepolia testnet USDC address (correct checksum)
+    const USDC_ADDRESS = process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x036CbD53842c5426634e7929541eC2318f3dCd01".toLowerCase();
     const Staking = await ethers.getContractFactory("Staking");
-    const staking = await upgrades.deployProxy(Staking, [USDC_ADDRESS, matchingAddr], {
+    const staking = await upgrades.deployProxy(Staking, [USDC_ADDRESS], {
         kind: "uups",
         initializer: "initialize",
     });

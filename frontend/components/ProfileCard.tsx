@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import blockies from 'blockies-ts';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { MATCHING_ABI, CONTRACTS } from '@/lib/contracts';
+import { Gift, Search, User, Mail, Link2, X, Loader } from 'lucide-react';
 
 export default function ProfileCard({
     profile,
@@ -90,20 +91,19 @@ export default function ProfileCard({
             hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-1 hover:border-purple-300
             active:scale-[0.98] active:shadow-xl active:shadow-purple-500/30
             border border-gray-100">
-            
+
             {/* Notification */}
             {notification && (
-                <div className={`m-3 p-2.5 rounded-lg text-sm ${
-                    notification.type === 'success' 
-                        ? 'bg-green-100 text-green-700' 
+                <div className={`m-3 p-2.5 rounded-lg text-sm ${notification.type === 'success'
+                        ? 'bg-green-100 text-green-700'
                         : 'bg-red-100 text-red-700'
-                }`}>
+                    }`}>
                     {notification.message}
                 </div>
             )}
 
             {/* Profile Image - Click to preview */}
-            <div 
+            <div
                 className="relative w-full aspect-[4/3] bg-gradient-to-br from-pink-50 to-purple-50 overflow-hidden cursor-pointer group"
                 onClick={(e) => {
                     e.stopPropagation();
@@ -129,12 +129,11 @@ export default function ProfileCard({
                             className="w-full h-full object-cover scale-90 transition-transform group-hover:scale-95"
                         />
                         <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity flex items-center justify-center">
-                            <span className="text-white text-4xl opacity-0 group-hover:opacity-100 transition-opacity">🔍</span>
                         </div>
                     </>
                 ) : (
                     <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <span className="text-5xl">👤</span>
+                        <User className="text-gray-400" size={80} />
                     </div>
                 )}
             </div>
@@ -146,11 +145,12 @@ export default function ProfileCard({
                     {onGift && (
                         <button
                             onClick={onGift}
-                            className="text-pink-600 hover:text-pink-700 active:text-pink-800 
+                            className="flex items-center gap-1.5 text-pink-600 hover:text-pink-700 active:text-pink-800 
                                 font-medium text-sm transition-colors duration-200
                                 hover:scale-105 active:scale-95"
                         >
-                            🎁 Gift
+                            <Gift size={16} />
+                            Gift
                         </button>
                     )}
                 </div>
@@ -159,25 +159,27 @@ export default function ProfileCard({
                     <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-1 rounded-full">
                         {profile.age} years
                     </span>
-                    
+
                     {profile.email_verified && (
-                        <span 
-                            className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full flex items-center"
+                        <span
+                            className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1"
                             title="Email Verified"
                         >
-                            📧 Verified
+                            <Mail size={12} />
+                            Verified
                         </span>
                     )}
-                    
+
                     {profile.wallet_verified && (
-                        <span 
-                            className="bg-purple-100 text-purple-800 text-xs font-medium px-2 py-1 rounded-full flex items-center"
+                        <span
+                            className="bg-purple-100 text-purple-800 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1"
                             title="Wallet Linked & Verified"
                         >
-                            🔗 Wallet
+                            <Link2 size={12} />
+                            Wallet
                         </span>
                     )}
-                    
+
                     {profile.gender && (
                         <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
                             {profile.gender}
@@ -199,11 +201,8 @@ export default function ProfileCard({
                             disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
                         {isButtonDisabled ? (
-                            <span className="flex items-center justify-center">
-                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
+                            <span className="flex items-center justify-center gap-2">
+                                <Loader className="animate-spin" size={18} />
                                 Expressing...
                             </span>
                         ) : (
@@ -215,7 +214,7 @@ export default function ProfileCard({
 
             {/* Image Preview Modal - Card format, mobile-friendly close */}
             {showImagePreview && (
-                <div 
+                <div
                     className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4"
                     onMouseDown={(e) => {
                         // Only close if clicking the backdrop, not the card
@@ -234,7 +233,7 @@ export default function ProfileCard({
                         }
                     }}
                 >
-                    <div 
+                    <div
                         className="relative bg-black rounded-3xl overflow-hidden max-w-md w-full shadow-2xl"
                         onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}
@@ -252,18 +251,18 @@ export default function ProfileCard({
                                 e.stopPropagation();
                                 setShowImagePreview(false);
                             }}
-                            className="absolute top-3 right-3 text-white bg-black bg-opacity-60 rounded-full w-10 h-10 flex items-center justify-center text-xl z-10 shadow-lg hover:bg-opacity-80 transition-all"
+                            className="absolute top-3 right-3 text-white bg-black bg-opacity-60 rounded-full w-10 h-10 flex items-center justify-center z-10 shadow-lg hover:bg-opacity-80 transition-all"
                         >
-                            ✕
+                            <X size={20} />
                         </button>
-                        
+
                         {/* Image directly - no extra container */}
                         <img
                             src={profile.photoUrl || avatarUrl}
                             alt={profile.name}
                             className="w-full h-auto object-contain pointer-events-none"
                         />
-                        
+
                         {/* Name below image */}
                         <div className="bg-black py-4 text-center border-t border-gray-800">
                             <p className="text-white text-lg font-medium">{profile.name}</p>

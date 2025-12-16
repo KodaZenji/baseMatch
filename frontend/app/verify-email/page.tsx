@@ -81,7 +81,7 @@ export default function VerifyEmailPage() {
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
                 <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
-                    💖 BaseMatch
+                    ❤️ BaseMatch
                 </h1>
 
                 {verificationStatus === 'loading' && (

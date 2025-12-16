@@ -99,10 +99,6 @@ contract ProfileNFT is Initializable, ERC721Upgradeable, OwnableUpgradeable, UUP
     event ProfileDeleted(address indexed user, uint256 tokenId);
     event EmailRegistered(string email, address user);
 
-    constructor() {
-        _disableInitializers();
-    }
-
     function initialize() public initializer {
         __ERC721_init("BaseMatch Profile", "BMPRO");
         __Ownable_init(msg.sender);
