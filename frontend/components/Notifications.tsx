@@ -6,6 +6,7 @@ import { Heart, Clock, CheckCircle, DollarSign, MessageCircle, Gift, Trash2, Ale
 import { useState, useEffect } from 'react';
 import DateConfirmationModal from './DateConfirmationModal';
 import RatingModal from './RatingModal';
+import ChatWindow from './ChatWindow';
 
 export default function Notifications() {
   const { address } = useAccount();
@@ -24,6 +25,8 @@ export default function Notifications() {
   // Modal states
   const [showDateConfirmation, setShowDateConfirmation] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showChatWindow, setShowChatWindow] = useState(false);
+  const [selectedChatMessage, setSelectedChatMessage] = useState<{ address: string; name: string } | null>(null);
   const [selectedMatch, setSelectedMatch] = useState<{ address: string; name: string; stakeId?: string; meetingTime?: number; stakeAmount?: string } | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
 
@@ -51,6 +54,24 @@ export default function Notifications() {
     if (unreadIds.length > 0) {
       await markAsRead(unreadIds);
     }
+  };
+
+  // Handle clicking message notification to open chat
+  const handleMessageClick = (notification: any) => {
+    const senderAddress = notification.metadata?.sender_address || '';
+    const senderName = notification.metadata?.sender_name || 'User';
+
+    if (senderAddress) {
+      setSelectedChatMessage({ address: senderAddress, name: senderName });
+      setShowChatWindow(true);
+      handleMarkAsRead(notification.id);
+    }
+  };
+
+  // Handle closing chat window
+  const handleChatClose = () => {
+    setShowChatWindow(false);
+    setSelectedChatMessage(null);
   };
 
   // Handle clicking "Confirm Date" button from notification
@@ -429,6 +450,16 @@ export default function Notifications() {
                       {/* Stake-specific details with Confirm button */}
                       {renderStakeDetails(notification)}
 
+                      {/* Add clickable button for message notifications */}
+                      {notification.type === 'message' && (
+                        <button
+                          onClick={() => handleMessageClick(notification)}
+                          className="mt-3 w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-2 px-4 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                        >
+                          Open Chat
+                        </button>
+                      )}
+
                       {notification.type === 'message' && notification.metadata?.sender_address && (
                         <p className="text-xs text-gray-500 mt-2">
                           From: {truncateAddress(notification.metadata.sender_address)}
@@ -454,6 +485,18 @@ export default function Notifications() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Chat Window */}
+      {showChatWindow && address && selectedChatMessage && (
+        <ChatWindow
+          user1Address={address}
+          user2Address={selectedChatMessage.address}
+          user1Name="You"
+          user2Name={selectedChatMessage.name}
+          currentUserAddress={address}
+          onClose={handleChatClose}
+        />
       )}
 
       {/* Date Confirmation Modal */}
