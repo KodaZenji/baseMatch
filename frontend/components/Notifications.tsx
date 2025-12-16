@@ -2,7 +2,7 @@
 
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAccount } from 'wagmi';
-import { Heart, Clock, CheckCircle, DollarSign } from 'lucide-react';
+import { Heart, Clock, CheckCircle, DollarSign, MessageCircle, Gift, Trash2, AlertCircle, TrendingUp, TrendingDown, ArrowRight, Bell } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import DateConfirmationModal from './DateConfirmationModal';
 import RatingModal from './RatingModal';
@@ -122,27 +122,26 @@ export default function Notifications() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'message':
-        return '💬';
+        return <MessageCircle size={24} className="text-white" />;
       case 'match':
-        return '💖';
+        return <Heart size={24} className="text-white" />;
       case 'gift':
-        return '🎁';
+        return <Gift size={24} className="text-white" />;
       case 'profile_complete':
-        return '☑️';
+        return <CheckCircle size={24} className="text-white" />;
       case 'match_deleted':
-        return '🗑️';
+        return <Trash2 size={24} className="text-white" />;
       case 'date_stake_created':
-        return '💕';
       case 'date_stake_accepted':
-        return '✅';
+        return <Heart size={24} className="text-white" />;
       case 'date_confirmation_reminder':
-        return '⏰';
+        return <Clock size={24} className="text-white" />;
       case 'date_confirmed':
-        return '✅';
+        return <CheckCircle size={24} className="text-white" />;
       case 'stake_processed':
-        return '💰';
+        return <DollarSign size={24} className="text-white" />;
       default:
-        return '🔔';
+        return <Bell size={24} className="text-white" />;
     }
   };
 
@@ -256,7 +255,12 @@ export default function Notifications() {
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle size={16} />
             <div className="text-sm font-semibold">
-              {outcomeInfo?.icon} {outcomeInfo?.text || 'Confirmed'}
+              {outcomeInfo?.color === 'green' && <span className="inline-flex items-center gap-1">🎉 {outcomeInfo?.text}</span>}
+              {outcomeInfo?.color === 'blue' && <span className="inline-flex items-center gap-1">💪 {outcomeInfo?.text}</span>}
+              {outcomeInfo?.color === 'orange' && <span className="inline-flex items-center gap-1">😞 {outcomeInfo?.text}</span>}
+              {outcomeInfo?.color === 'gray' && <span className="inline-flex items-center gap-1">😔 {outcomeInfo?.text}</span>}
+              {outcomeInfo?.color === 'yellow' && <span className="inline-flex items-center gap-1"><AlertCircle size={14} /> {outcomeInfo?.text}</span>}
+              {!outcomeInfo && 'Confirmed'}
             </div>
           </div>
           {(i_showed_up !== undefined && they_showed_up !== undefined) && (
@@ -308,13 +312,14 @@ export default function Notifications() {
                 </div>
               </div>
             </div>
-            <div className={`text-xs font-semibold ${isProfit ? 'text-green-700' :
+            <div className={`text-xs font-semibold flex items-center gap-1 ${isProfit ? 'text-green-700' :
               isLoss ? 'text-red-700' :
                 'text-blue-700'
               }`}>
-              {isProfit ? '📈 Bonus' :
-                isLoss ? '📉 Loss' :
-                  '➡️ Refund'}
+              {isProfit ? <><TrendingUp size={14} /> Bonus</> :
+                isLoss ? <><TrendingDown size={14} /> Loss</> :
+                  <><ArrowRight size={14} /> Refund</>
+              }
             </div>
           </div>
         </div>
@@ -337,8 +342,8 @@ export default function Notifications() {
       {/* Countdown indicator */}
       {countdown !== null && countdown > 0 && (
         <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-2 border-pink-300 rounded-xl p-4 text-center mb-4 animate-pulse">
-          <div className="text-pink-700 font-bold text-lg">
-            ⏱️ Rating modal opening in {countdown} second{countdown !== 1 ? 's' : ''}...
+          <div className="text-pink-700 font-bold text-lg flex items-center justify-center gap-2">
+            <Clock size={20} className="animate-spin" /> Rating modal opening in {countdown} second{countdown !== 1 ? 's' : ''}...
           </div>
         </div>
       )}
@@ -385,7 +390,9 @@ export default function Notifications() {
       {/* Notifications List */}
       {notifications.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-          <div className="text-4xl mb-4">🔔</div>
+          <div className="mb-4 flex justify-center">
+            <Bell size={48} className="text-gray-300" />
+          </div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">No notifications yet</h3>
           <p className="text-gray-600">
             When you receive messages, matches, or date updates, they'll appear here
@@ -403,7 +410,7 @@ export default function Notifications() {
               <div className="flex items-start gap-4">
                 {/* Icon */}
                 <div className="flex-shrink-0">
-                  <div className={`w-12 h-12 bg-gradient-to-br ${getNotificationColor(notification.type)} rounded-full flex items-center justify-center text-2xl`}>
+                  <div className={`w-12 h-12 bg-gradient-to-br ${getNotificationColor(notification.type)} rounded-full flex items-center justify-center`}>
                     {getNotificationIcon(notification.type)}
                   </div>
                 </div>

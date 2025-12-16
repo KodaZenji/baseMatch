@@ -27,6 +27,24 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
     
+    // Check if this interest already exists
+    const { data: existingInterest, error: checkExistingError } = await supabase
+      .from('interests')
+      .select('*')
+      .eq('from_address', fromAddress.toLowerCase())
+      .eq('to_address', toAddress.toLowerCase())
+      .single();
+
+    // If interest already exists, just return success
+    if (existingInterest) {
+      console.log('Interest already exists:', fromAddress, '->', toAddress);
+      return NextResponse.json({ 
+        success: true, 
+        matched: false,
+        message: 'Interest already recorded' 
+      });
+    }
+    
     // Check if reverse interest exists (toAddress already liked fromAddress)
     const { data: reverseInterest, error: checkError } = await supabase
       .from('interests')
