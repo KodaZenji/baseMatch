@@ -65,6 +65,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="base:app_id" content="69427d5ed19763ca20ddc392" />
+      </head>
       <body
         className={`${lexend.variable} font-sans antialiased`}
         style={{ fontFamily: 'var(--font-lexend)' }}
