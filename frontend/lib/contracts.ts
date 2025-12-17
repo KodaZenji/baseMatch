@@ -495,6 +495,15 @@ export const ACHIEVEMENT_ABI = [
         ]
     },
     {
+        type: "function",
+        name: "setBaseMetadataURI",
+        stateMutability: "nonpayable",
+        inputs: [
+            { name: "newBaseURI", type: "string" }
+        ],
+        outputs: []
+    },
+    {
         type: "event",
         name: "AchievementMinted",
         inputs: [
