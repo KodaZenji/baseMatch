@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Get admin wallet to mint achievements
-    const adminAccount = privateKeyToAccount(process.env.ADMIN_PRIVATE_KEY as `0x${string}`);
+    const adminAccount = privateKeyToAccount(`0x${process.env.ADMIN_PRIVATE_KEY}` as `0x${string}`);
     const walletClient = createWalletClient({
       account: adminAccount,
       chain: baseSepolia,
