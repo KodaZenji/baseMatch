@@ -11,7 +11,7 @@ const lexend = Lexend({
 export const metadata: Metadata = {
   title: "BaseMatch - Web3 Dating on Base",
   description: "The dating app where your wallet is your identity and reputation matters.",
-  
+
   // Open Graph (for social sharing)
   openGraph: {
     title: "BaseMatch - Find Your Match On-Chain",
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     siteName: 'BaseMatch',
     type: 'website',
   },
-  
+
   // Twitter Card
   twitter: {
     card: 'summary_large_image',
@@ -29,14 +29,15 @@ export const metadata: Metadata = {
     description: 'Your wallet is your dating profile. Build real reputation, meet real people.',
     images: ['https://ipfs.filebase.io/ipfs/Qmd4VXcPXtbesRc2gmgEXgLCE6H69WcjMcemuYF26jTSA7'],
   },
-  
+
   // Icons
   icons: {
     icon: 'https://ipfs.filebase.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw',
     apple: 'https://ipfs.filebase.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw',
   },
-  
+
   other: {
+    'base:app_id': '69427d5ed19763ca20ddc392',
     'fc:miniapp': JSON.stringify({
       version: "next",
       imageUrl: "https://ipfs.filebase.io/ipfs/Qmd4VXcPXtbesRc2gmgEXgLCE6H69WcjMcemuYF26jTSA7",
