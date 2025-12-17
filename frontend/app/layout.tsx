@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   },
 
   other: {
-    'base:app_id': '69427d5ed19763ca20ddc392',
+    'base:app_id': '69427d5ed19763ca26ddc392',
     'fc:miniapp': JSON.stringify({
       version: "next",
       imageUrl: "https://ipfs.filebase.io/ipfs/Qmd4VXcPXtbesRc2gmgEXgLCE6H69WcjMcemuYF26jTSA7",
@@ -65,9 +65,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <meta name="base:app_id" content="69427d5ed19763ca20ddc392" />
-      </head>
       <body
         className={`${lexend.variable} font-sans antialiased`}
         style={{ fontFamily: 'var(--font-lexend)' }}
