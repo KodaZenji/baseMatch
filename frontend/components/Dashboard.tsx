@@ -9,7 +9,7 @@ import Link from 'next/link';
 import StakeReminderBanner from './StakeReminderBanner';
 import DateConfirmationModal from './DateConfirmationModal';
 import RatingModal from './RatingModal';
-import { Star, Calendar, ThumbsUp, AlertCircle, Clock, Trophy, Zap, Flame, Sparkles, Heart } from 'lucide-react';
+import { Star, Calendar, ThumbsUp, AlertCircle, Clock, Trophy, Zap, Flame, Sparkles, Heart, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface PendingStake {
@@ -36,6 +36,7 @@ export default function Dashboard() {
     const { achievements, loading: achievementsLoading } = useAchievements(address);
     const [avatarUrl, setAvatarUrl] = useState('');
     const [achievementsWithImages, setAchievementsWithImages] = useState<AchievementWithImage[]>([]);
+    const [selectedAchievementImage, setSelectedAchievementImage] = useState<{ imageUrl: string; type: string } | null>(null);
 
     // Modal states
     const [showDateConfirmation, setShowDateConfirmation] = useState(false);
@@ -99,9 +100,20 @@ export default function Dashboard() {
             const withImages = await Promise.all(
                 achievements.map(async (achievement) => {
                     try {
-                        // Fetch metadata from IPFS
-                        const metadataUrl = `https://ipfs.io/ipfs/QmUaKVFosUfGagYmuE9fTqkw19LKJ9F3Job7QEtrnUZJdW/${achievement.type.toLowerCase().replace(/\s+/g, '-')}.json`;
+                        // Map achievement type to filename
+                        const typeMap: { [key: string]: string } = {
+                            'First Date': 'first-date',
+                            '5 Dates': '5 dates',
+                            '10 Dates': '10-dates',
+                            '5-Star Rating': '5 star',
+                            'Perfect Week': 'perfect-week',
+                            'Match Maker': 'match-maker'
+                        };
+
+                        const filename = typeMap[achievement.type] || achievement.type.toLowerCase().replace(/\s+/g, '-');
+                        const metadataUrl = `https://ipfs.io/ipfs/QmUaKVFosUfGagYmuE9fTqkw19LKJ9F3Job7QEtrnUZJdW/${filename}.json`;
                         const response = await fetch(metadataUrl);
+                        if (!response.ok) throw new Error(`Failed to fetch metadata: ${response.status}`);
                         const metadata = await response.json();
                         return {
                             ...achievement,
@@ -277,43 +289,51 @@ export default function Dashboard() {
                         </div>
                     </div>
                 ) : achievementsWithImages.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                         {achievementsWithImages.map((achievement) => (
                             <div
                                 key={achievement.tokenId}
-                                className="group relative border-2 border-purple-200 rounded-xl bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 hover:shadow-lg transition-all duration-300 hover:scale-105 overflow-hidden"
+                                className="group relative border-2 border-purple-200 rounded-2xl bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 hover:shadow-2xl transition-all duration-300 hover:scale-110 overflow-hidden cursor-pointer"
+                                onClick={() => {
+                                    if (achievement.imageUrl) {
+                                        setSelectedAchievementImage({
+                                            imageUrl: achievement.imageUrl,
+                                            type: achievement.type
+                                        });
+                                    }
+                                }}
                             >
                                 {achievement.imageUrl ? (
                                     <>
                                         <img
                                             src={achievement.imageUrl.replace('ipfs://', 'https://ipfs.io/ipfs/')}
                                             alt={achievement.type}
-                                            className="w-full h-48 object-cover"
+                                            className="w-full h-64 object-cover"
                                         />
-                                        <div className="p-6">
-                                            <div className="absolute top-2 right-2 px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">
+                                        <div className="p-8">
+                                            <div className="absolute top-3 right-3 px-3 py-1.5 bg-purple-600 text-white text-xs font-bold rounded-full">
                                                 NFT #{achievement.tokenId}
                                             </div>
-                                            <h4 className="font-bold text-gray-900 mb-2">{achievement.type}</h4>
-                                            <p className="text-sm text-gray-600 mb-4">{achievement.description}</p>
-                                            <div className="flex items-center text-xs text-purple-600">
-                                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <h4 className="font-bold text-xl text-gray-900 mb-3">{achievement.type}</h4>
+                                            <p className="text-base text-gray-600 mb-4">{achievement.description}</p>
+                                            <div className="flex items-center text-sm text-purple-600">
+                                                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                                 </svg>
-                                                <span className="font-medium">Verified</span>
+                                                <span className="font-medium">Verified • Click to view</span>
                                             </div>
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="p-6">
-                                        <div className="absolute top-2 right-2 px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">
+                                    <div className="p-8">
+                                        <div className="absolute top-3 right-3 px-3 py-1.5 bg-purple-600 text-white text-xs font-bold rounded-full">
                                             NFT #{achievement.tokenId}
                                         </div>
-                                        <div className="mb-3">{getAchievementIcon(achievement.type)}</div>
-                                        <h4 className="font-bold text-gray-900 mb-2">{achievement.type}</h4>
-                                        <p className="text-sm text-gray-600 mb-4">{achievement.description}</p>
-                                        <div className="flex items-center text-xs text-purple-600">
-                                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <div className="mb-4 text-5xl">{getAchievementIcon(achievement.type)}</div>
+                                        <h4 className="font-bold text-xl text-gray-900 mb-3">{achievement.type}</h4>
+                                        <p className="text-base text-gray-600 mb-4">{achievement.description}</p>
+                                        <div className="flex items-center text-sm text-purple-600">
+                                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                             </svg>
                                             <span className="font-medium">Verified</span>
@@ -333,7 +353,63 @@ export default function Dashboard() {
                 )}
             </div>
 
-            {/* Date Confirmation Modal - TWO QUESTION SYSTEM */}
+            {/* Achievement Image Preview Modal - Same as ProfileCard */}
+            {selectedAchievementImage && (
+                <div
+                    className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4"
+                    onMouseDown={(e) => {
+                        if (e.target === e.currentTarget) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedAchievementImage(null);
+                        }
+                    }}
+                    onTouchStart={(e) => {
+                        if (e.target === e.currentTarget) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedAchievementImage(null);
+                        }
+                    }}
+                >
+                    <div
+                        className="relative bg-black rounded-3xl overflow-hidden max-w-md w-full shadow-2xl"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Close button */}
+                        <button
+                            onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedAchievementImage(null);
+                            }}
+                            onTouchStart={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedAchievementImage(null);
+                            }}
+                            className="absolute top-3 right-3 text-white bg-black bg-opacity-60 rounded-full w-10 h-10 flex items-center justify-center z-10 shadow-lg hover:bg-opacity-80 transition-all"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        {/* Full badge image */}
+                        <img
+                            src={selectedAchievementImage.imageUrl.replace('ipfs://', 'https://ipfs.io/ipfs/')}
+                            alt={selectedAchievementImage.type}
+                            className="w-full h-auto object-contain pointer-events-none"
+                        />
+
+                        {/* Badge name below image */}
+                        <div className="bg-black py-4 text-center border-t border-gray-800">
+                            <p className="text-white text-lg font-medium">{selectedAchievementImage.type}</p>
+                            <p className="text-gray-400 text-xs mt-1">Tap anywhere to close</p>
+                        </div>
+                    </div>
+                </div>
+            )}
             {showDateConfirmation && selectedStake && (
                 <DateConfirmationModal
                     stakeId={selectedStake.stakeId}
