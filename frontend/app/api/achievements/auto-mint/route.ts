@@ -133,6 +133,8 @@ export async function POST(request: NextRequest) {
       args: [userAddress as `0x${string}`],
     });
 
+    console.log('📊 Reputation data:', reputation);
+
     const averageRating = await publicClient.readContract({
       address: reputationAddress,
       abi: REPUTATION_ABI,
