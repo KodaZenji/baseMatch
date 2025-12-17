@@ -2,7 +2,7 @@ import { randomBytes } from 'crypto';
 import { verifyMessage } from 'viem';
 import * as brevo from '@getbrevo/brevo';
 import { createPublicClient, http, Address } from 'viem';
-import { baseSepolia } from 'viem/chains'; 
+import { baseSepolia } from 'viem/chains';
 
 // --- VIEM/WAGMI CONFIGURATION ---
 
@@ -21,8 +21,8 @@ const PROFILE_NFT_ABI = [
 
 // Setup a Viem Public Client for server-side contract reads
 const publicClient = createPublicClient({
-  chain: baseSepolia, 
-  transport: http(),
+    chain: baseSepolia,
+    transport: http(),
 });
 
 /**
@@ -33,7 +33,7 @@ export async function checkNftOwnership(address: string): Promise<boolean> {
         console.error("NFT Contract address is not set.");
         return false;
     }
-    
+
     try {
         const balance = await publicClient.readContract({
             address: PROFILE_NFT_ADDRESS,
@@ -42,10 +42,10 @@ export async function checkNftOwnership(address: string): Promise<boolean> {
             args: [address as Address],
         });
 
-        return balance > BigInt(0); 
+        return balance > BigInt(0);
     } catch (error) {
         console.error('Error checking NFT balance:', error);
-        return false; 
+        return false;
     }
 }
 
@@ -56,11 +56,11 @@ export async function checkNftOwnership(address: string): Promise<boolean> {
 export function calculatePhotoHash(photoUrl: string): string {
     // Use Node's 'crypto' module, which is available in Next.js API routes
     const crypto = require('crypto');
-    
+
     // Hash the URL and return as a 64-character hex string with the '0x' prefix
     const hash = crypto.createHash('sha256').update(photoUrl).digest('hex');
-    
-    return '0x' + hash; 
+
+    return '0x' + hash;
 }
 
 /**
@@ -72,10 +72,21 @@ export async function verifyWalletSignature(
     address: string
 ): Promise<boolean> {
     try {
+        // Ensure signature has 0x prefix
+        const sig = signature.startsWith('0x') ? signature : `0x${signature}`;
+        // Ensure address has 0x prefix and is lowercase
+        const addr = address.startsWith('0x') ? address.toLowerCase() : `0x${address}`.toLowerCase();
+
+        console.log('Verifying signature:', {
+            messageLength: message.length,
+            signatureLength: sig.length,
+            addressFormat: addr.substring(0, 4) + '...'
+        });
+
         const isValid = await verifyMessage({
-            address: address as `0x${string}`,
+            address: addr as `0x${string}`,
             message,
-            signature: signature as `0x${string}`
+            signature: sig as `0x${string}`
         });
         return isValid;
     } catch (error) {
