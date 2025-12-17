@@ -289,11 +289,11 @@ export default function Dashboard() {
                         </div>
                     </div>
                 ) : achievementsWithImages.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         {achievementsWithImages.map((achievement) => (
                             <div
                                 key={achievement.tokenId}
-                                className="group relative border-2 border-purple-200 rounded-xl bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 hover:shadow-lg transition-all duration-300 hover:scale-105 overflow-hidden cursor-pointer"
+                                className="group relative border-2 border-purple-200 rounded-lg bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 hover:shadow-md transition-all duration-300 hover:scale-105 overflow-hidden cursor-pointer"
                                 onClick={() => {
                                     if (achievement.imageUrl) {
                                         setSelectedAchievementImage({
@@ -308,16 +308,15 @@ export default function Dashboard() {
                                         <img
                                             src={achievement.imageUrl.replace('ipfs://', 'https://ipfs.io/ipfs/')}
                                             alt={achievement.type}
-                                            className="w-full h-40 object-cover"
+                                            className="w-full h-32 object-cover"
                                         />
-                                        <div className="p-4">
-                                            <div className="absolute top-2 right-2 px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">
-                                                NFT #{achievement.tokenId}
+                                        <div className="p-3">
+                                            <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-purple-600 text-white text-xs font-bold rounded-full">
+                                                NFT
                                             </div>
-                                            <h4 className="font-bold text-sm text-gray-900 mb-1">{achievement.type}</h4>
-                                            <p className="text-xs text-gray-600 mb-2">{achievement.description}</p>
+                                            <h4 className="font-bold text-xs text-gray-900 mb-1 line-clamp-2">{achievement.type}</h4>
                                             <div className="flex items-center text-xs text-purple-600">
-                                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <svg className="w-2.5 h-2.5 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
                                                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                                 </svg>
                                                 <span className="font-medium">Verified</span>
@@ -325,15 +324,14 @@ export default function Dashboard() {
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="p-4">
-                                        <div className="absolute top-2 right-2 px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">
-                                            NFT #{achievement.tokenId}
+                                    <div className="p-3 flex flex-col items-center justify-center h-32">
+                                        <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-purple-600 text-white text-xs font-bold rounded-full">
+                                            NFT
                                         </div>
-                                        <div className="mb-2 text-3xl flex justify-center">{getAchievementIcon(achievement.type)}</div>
-                                        <h4 className="font-bold text-sm text-gray-900 mb-1">{achievement.type}</h4>
-                                        <p className="text-xs text-gray-600 mb-2">{achievement.description}</p>
+                                        <div className="mb-1 text-2xl">{getAchievementIcon(achievement.type)}</div>
+                                        <h4 className="font-bold text-xs text-gray-900 mb-1 text-center line-clamp-2">{achievement.type}</h4>
                                         <div className="flex items-center text-xs text-purple-600">
-                                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <svg className="w-2.5 h-2.5 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                             </svg>
                                             <span className="font-medium">Verified</span>
