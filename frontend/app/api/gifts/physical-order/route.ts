@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (!deliveryInfo.address || !deliveryInfo.city || !deliveryInfo.state || 
+        if (!deliveryInfo.address || !deliveryInfo.city || !deliveryInfo.state ||
             !deliveryInfo.zip || !deliveryInfo.phone) {
             return NextResponse.json(
                 { error: 'Incomplete delivery information' },
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
                 status: 'pending',
                 created_at: new Date().toISOString(),
                 delivered_at: null,
-                sender_name: null, 
+                sender_name: null,
             });
 
         if (historyError) {
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
                 body: JSON.stringify({
                     recipientAddress,
                     senderAddress,
-                    senderName: 'Your Match', 
+                    senderName: 'Your Match',
                     giftType: 'physical',
                     giftId,
                     txHash,
@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
             query = query.eq('id', orderId);
         } else if (senderAddress) {
             query = query.eq('sender_address', senderAddress.toLowerCase())
-                         .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false });
         }
 
         const { data, error } = await query;

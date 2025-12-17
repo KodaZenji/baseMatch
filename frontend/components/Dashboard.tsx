@@ -5,12 +5,12 @@ import { useProfile } from '@/hooks/useProfile';
 import { useReputation } from '@/hooks/useReputation';
 import { useAchievements } from '@/hooks/useAchievements';
 import { generateAvatar } from '@/lib/avatarUtils';
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import StakeReminderBanner from './StakeReminderBanner';
 import DateConfirmationModal from './DateConfirmationModal';
 import RatingModal from './RatingModal';
 import { Star, Calendar, ThumbsUp, AlertCircle, Clock, Trophy, Zap, Flame, Sparkles, Heart } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 interface PendingStake {
     stakeId: string;
@@ -22,12 +22,20 @@ interface PendingStake {
     timeRemaining: number;
 }
 
+interface AchievementWithImage {
+    tokenId: number;
+    type: string;
+    description: string;
+    imageUrl?: string;
+}
+
 export default function Dashboard() {
     const { address } = useAccount();
     const { profile } = useProfile(address);
     const { reputation, loading: reputationLoading } = useReputation(address);
     const { achievements, loading: achievementsLoading } = useAchievements(address);
     const [avatarUrl, setAvatarUrl] = useState('');
+    const [achievementsWithImages, setAchievementsWithImages] = useState<AchievementWithImage[]>([]);
 
     // Modal states
     const [showDateConfirmation, setShowDateConfirmation] = useState(false);
@@ -85,7 +93,35 @@ export default function Dashboard() {
         setSelectedStake(null);
     };
 
-    // Get achievement icon based on type
+    // Fetch achievement images from IPFS metadata
+    useEffect(() => {
+        const fetchAchievementImages = async () => {
+            const withImages = await Promise.all(
+                achievements.map(async (achievement) => {
+                    try {
+                        // Fetch metadata from IPFS
+                        const metadataUrl = `https://ipfs.io/ipfs/QmUaKVFosUfGagYmuE9fTqkw19LKJ9F3Job7QEtrnUZJdW/${achievement.type.toLowerCase().replace(/\s+/g, '-')}.json`;
+                        const response = await fetch(metadataUrl);
+                        const metadata = await response.json();
+                        return {
+                            ...achievement,
+                            imageUrl: metadata.image
+                        };
+                    } catch (error) {
+                        console.error(`Failed to fetch metadata for ${achievement.type}:`, error);
+                        return achievement;
+                    }
+                })
+            );
+            setAchievementsWithImages(withImages);
+        };
+
+        if (achievements.length > 0) {
+            fetchAchievementImages();
+        }
+    }, [achievements]);
+
+    // Get achievement icon based on type (fallback)
     const getAchievementIcon = (type: string) => {
         if (type.includes('First Date')) return <Zap className="text-yellow-500" size={28} />;
         if (type.includes('5 Dates')) return <Flame className="text-orange-500" size={28} />;
@@ -240,27 +276,50 @@ export default function Dashboard() {
                             <span className="text-gray-500">Loading achievements from blockchain...</span>
                         </div>
                     </div>
-                ) : achievements.length > 0 ? (
+                ) : achievementsWithImages.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {achievements.map((achievement) => (
+                        {achievementsWithImages.map((achievement) => (
                             <div
                                 key={achievement.tokenId}
-                                className="group relative p-6 border-2 border-purple-200 rounded-xl bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 hover:shadow-lg transition-all duration-300 hover:scale-105"
+                                className="group relative border-2 border-purple-200 rounded-xl bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 hover:shadow-lg transition-all duration-300 hover:scale-105 overflow-hidden"
                             >
-                                <div className="absolute top-2 right-2 px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">
-                                    NFT #{achievement.tokenId}
-                                </div>
-
-                                <div className="mb-3">{getAchievementIcon(achievement.type)}</div>
-                                <h4 className="font-bold text-gray-900 mb-2">{achievement.type}</h4>
-                                <p className="text-sm text-gray-600 mb-4">{achievement.description}</p>
-
-                                <div className="flex items-center text-xs text-purple-600">
-                                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                    </svg>
-                                    <span className="font-medium">Verified</span>
-                                </div>
+                                {achievement.imageUrl ? (
+                                    <>
+                                        <img
+                                            src={achievement.imageUrl.replace('ipfs://', 'https://ipfs.io/ipfs/')}
+                                            alt={achievement.type}
+                                            className="w-full h-48 object-cover"
+                                        />
+                                        <div className="p-6">
+                                            <div className="absolute top-2 right-2 px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">
+                                                NFT #{achievement.tokenId}
+                                            </div>
+                                            <h4 className="font-bold text-gray-900 mb-2">{achievement.type}</h4>
+                                            <p className="text-sm text-gray-600 mb-4">{achievement.description}</p>
+                                            <div className="flex items-center text-xs text-purple-600">
+                                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                </svg>
+                                                <span className="font-medium">Verified</span>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="p-6">
+                                        <div className="absolute top-2 right-2 px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">
+                                            NFT #{achievement.tokenId}
+                                        </div>
+                                        <div className="mb-3">{getAchievementIcon(achievement.type)}</div>
+                                        <h4 className="font-bold text-gray-900 mb-2">{achievement.type}</h4>
+                                        <p className="text-sm text-gray-600 mb-4">{achievement.description}</p>
+                                        <div className="flex items-center text-xs text-purple-600">
+                                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                            </svg>
+                                            <span className="font-medium">Verified</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>

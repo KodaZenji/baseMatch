@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     // Ensure key has 0x prefix and is valid hex
     const privateKeyWithPrefix = privateKeyStr.startsWith('0x') ? privateKeyStr : `0x${privateKeyStr}`;
-    
+
     // Validate private key format (should be 66 chars with 0x or 64 hex chars)
     if (!/^0x[a-fA-F0-9]{64}$/.test(privateKeyWithPrefix)) {
       return NextResponse.json(
