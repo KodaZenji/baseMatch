@@ -87,7 +87,26 @@ export async function POST(request: NextRequest) {
     });
 
     // Get admin wallet to mint achievements
-    const adminAccount = privateKeyToAccount(`0x${process.env.ADMIN_PRIVATE_KEY}` as `0x${string}`);
+    const privateKeyStr = process.env.ADMIN_PRIVATE_KEY;
+    if (!privateKeyStr) {
+      return NextResponse.json(
+        { error: 'ADMIN_PRIVATE_KEY not set in environment variables' },
+        { status: 500 }
+      );
+    }
+
+    // Ensure key has 0x prefix and is valid hex
+    const privateKeyWithPrefix = privateKeyStr.startsWith('0x') ? privateKeyStr : `0x${privateKeyStr}`;
+    
+    // Validate private key format (should be 66 chars with 0x or 64 hex chars)
+    if (!/^0x[a-fA-F0-9]{64}$/.test(privateKeyWithPrefix)) {
+      return NextResponse.json(
+        { error: `Invalid ADMIN_PRIVATE_KEY format. Got: ${privateKeyWithPrefix.slice(0, 10)}... (length: ${privateKeyWithPrefix.length})` },
+        { status: 500 }
+      );
+    }
+
+    const adminAccount = privateKeyToAccount(privateKeyWithPrefix as `0x${string}`);
     const walletClient = createWalletClient({
       account: adminAccount,
       chain: baseSepolia,
