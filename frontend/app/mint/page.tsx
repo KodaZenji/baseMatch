@@ -5,6 +5,7 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagm
 import { useRouter } from 'next/navigation';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { Heart } from 'lucide-react';
 
 export default function MintPage() {
   const router = useRouter();
@@ -190,9 +191,31 @@ export default function MintPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
-            ❤️ BaseMatch
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="bg-white rounded-full p-3 shadow-lg">
+                <Heart
+                  className="w-12 h-12"
+                  fill="url(#brandGradient)"
+                  stroke="none"
+                />
+                <svg width="0" height="0">
+                  <defs>
+                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#ec4899" />
+                      <stop offset="100%" stopColor="#a855f7" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+            BaseMatch
           </h1>
+
           <div className="flex flex-col items-center justify-center">
             <svg className="animate-spin h-8 w-8 text-indigo-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -211,9 +234,31 @@ export default function MintPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
-            ❤️ BaseMatch
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="bg-white rounded-full p-3 shadow-lg">
+                <Heart
+                  className="w-12 h-12"
+                  fill="url(#brandGradient)"
+                  stroke="none"
+                />
+                <svg width="0" height="0">
+                  <defs>
+                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#ec4899" />
+                      <stop offset="100%" stopColor="#a855f7" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+            BaseMatch
           </h1>
+
           <p className="text-gray-700 mb-6">Please connect your wallet to mint your profile</p>
           <div className="mb-4">
             <ConnectButton />
@@ -234,9 +279,31 @@ export default function MintPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
-            ❤️ BaseMatch
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="bg-white rounded-full p-3 shadow-lg">
+                <Heart
+                  className="w-12 h-12"
+                  fill="url(#brandGradient)"
+                  stroke="none"
+                />
+                <svg width="0" height="0">
+                  <defs>
+                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#ec4899" />
+                      <stop offset="100%" stopColor="#a855f7" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+            BaseMatch
           </h1>
+
           <p className="text-gray-700 mb-6">{error || 'Loading...'}</p>
           <button
             onClick={() => router.push('/')}
@@ -289,8 +356,29 @@ export default function MintPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full text-center">
-        <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
-          💖 BaseMatch
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <div className="relative">
+            <div className="bg-white rounded-full p-3 shadow-lg">
+              <Heart
+                className="w-12 h-12"
+                fill="url(#brandGradient)"
+                stroke="none"
+              />
+              <svg width="0" height="0">
+                <defs>
+                  <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ec4899" />
+                    <stop offset="100%" stopColor="#a855f7" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+          BaseMatch
         </h1>
 
         {error && (
