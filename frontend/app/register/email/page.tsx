@@ -42,7 +42,7 @@ export default function EmailRegisterPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-blue-500 to-purple-600 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
 
                 {/* Logo */}
