@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Heart } from 'lucide-react';
 
 export default function EmailRegisterPage() {
     const router = useRouter();
@@ -19,7 +20,6 @@ export default function EmailRegisterPage() {
                 throw new Error('Please enter a valid email address');
             }
 
-            // Call the register-email API to create token and send verification email
             const response = await fetch('/api/register-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -32,13 +32,8 @@ export default function EmailRegisterPage() {
                 throw new Error(data.error || 'Failed to register email');
             }
 
-            // Store email in localStorage
             localStorage.setItem('emailForRegistration', email);
-
-            // Show success message and wait before redirecting
-            setError('');
-            // The user will receive email with verification link
-            alert(`Verification email sent to ${email}. Please check your inbox!`);
+            router.push('/verify-email');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to register email');
         } finally {
@@ -47,16 +42,37 @@ export default function EmailRegisterPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
-                <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-2 text-center">
-                    ❤️ BaseMatch
+        <div className="min-h-screen bg-gradient-to-b from-blue-500 to-purple-600 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+                {/* Logo */}
+                <div className="flex justify-center mb-6">
+                    <div className="relative">
+                        <div className="bg-white rounded-full p-3 shadow-lg">
+                            <Heart 
+                                className="w-12 h-12" 
+                                fill="url(#heartGradient)" 
+                                stroke="none"
+                            />
+                            <svg width="0" height="0">
+                                <defs>
+                                    <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#3b82f6" />
+                                        <stop offset="100%" stopColor="#9333ea" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    BaseMatch
                 </h1>
                 <p className="text-gray-600 text-center mb-8">Email Registration</p>
 
                 <form onSubmit={handleEmailSubmit} className="space-y-4">
                     {error && (
-                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                             {error}
                         </div>
                     )}
@@ -70,7 +86,7 @@ export default function EmailRegisterPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-3 text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="your@email.com"
                         />
                     </div>
@@ -78,12 +94,12 @@ export default function EmailRegisterPage() {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
                     >
-                        {isLoading ? 'Sending verification email...' : 'Continue with Email'}
+                        {isLoading ? 'Sending verification code...' : 'Continue with Email'}
                     </button>
                     <p className="text-xs text-gray-500 text-center mt-3">
-                        We'll send a verification link to your email
+                        We'll send a 6-digit verification code to your email
                     </p>
                 </form>
 
