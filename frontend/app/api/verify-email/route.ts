@@ -3,49 +3,53 @@ import { supabaseService } from '@/lib/supabase.server';
 
 export const runtime = 'nodejs';
 
-export async function GET(request: Request) {
+export async function POST(request: Request) {
     try {
-        const { searchParams } = new URL(request.url);
-        const token = searchParams.get('token');
-        const email = searchParams.get('email');
+        const { code, email } = await request.json();
 
-        console.log('Verify email attempt:', { token: !!token, email });
+        console.log('Verify email attempt:', { code: !!code, email });
 
-        if (!token || !email) {
-            return new NextResponse(getErrorHTML('Invalid verification link.'), {
-                headers: { 'Content-Type': 'text/html' },
-                status: 400
-            });
+        if (!code || !email) {
+            return NextResponse.json(
+                { error: 'Code and email are required' },
+                { status: 400 }
+            );
         }
 
-        // Look up the verification token
-        const { data: verificationToken, error: tokenError } = await supabaseService
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // Look up the verification code
+        const { data: verificationRecord, error: codeError } = await supabaseService
             .from('email_verifications')
             .select('*')
-            .eq('token', token)
+            .eq('code', code)
+            .eq('email', normalizedEmail)
             .single();
 
-        if (tokenError || !verificationToken) {
-            console.error('Token not found:', tokenError);
-            return new NextResponse(getErrorHTML('The verification link is invalid or has expired.'), {
-                headers: { 'Content-Type': 'text/html' },
-                status: 400
-            });
+        if (codeError || !verificationRecord) {
+            console.error('Code not found:', codeError);
+            return NextResponse.json(
+                { error: 'Invalid verification code' },
+                { status: 400 }
+            );
         }
 
         // Check expiry
-        if (new Date(verificationToken.expires_at) < new Date()) {
-            await supabaseService.from('email_verifications').delete().eq('token', token);
-            return new NextResponse(getErrorHTML('The verification link has expired.'), {
-                headers: { 'Content-Type': 'text/html' },
-                status: 400
-            });
+        if (new Date(verificationRecord.expires_at) < new Date()) {
+            await supabaseService
+                .from('email_verifications')
+                .delete()
+                .eq('code', code);
+            return NextResponse.json(
+                { error: 'Verification code has expired. Please request a new one.' },
+                { status: 400 }
+            );
         }
 
-        const targetProfileId = verificationToken.profile_id;
-        const verificationEmail = verificationToken.email;
+        const targetProfileId = verificationRecord.profile_id;
+        const verificationEmail = verificationRecord.email;
 
-        // Get the profile to check if user is existing
+        // Get the profile
         const { data: profile, error: profileError } = await supabaseService
             .from('profiles')
             .select('*')
@@ -54,10 +58,10 @@ export async function GET(request: Request) {
 
         if (profileError || !profile) {
             console.error('Profile not found:', profileError);
-            return new NextResponse(getErrorHTML('Profile not found.'), {
-                headers: { 'Content-Type': 'text/html' },
-                status: 400
-            });
+            return NextResponse.json(
+                { error: 'Profile not found' },
+                { status: 400 }
+            );
         }
 
         console.log('📋 FULL PROFILE DATA:', JSON.stringify(profile, null, 2));
@@ -92,8 +96,7 @@ export async function GET(request: Request) {
 
         console.log('Email verified and updated successfully for profile:', targetProfileId);
 
-        // ============ CREATE EMAIL VERIFICATION NOTIFICATION ============
-        // Only create notification if this is a new verification (not re-verifying)
+        // Create email verification notification (only if not already verified)
         if (!wasAlreadyVerified) {
             try {
                 const userAddress = profile.wallet_address || verificationEmail;
@@ -121,111 +124,12 @@ export async function GET(request: Request) {
         } else {
             console.log('⏭️ Skipping notification - email was already verified');
         }
-        // ============ END NOTIFICATION CODE ============
 
-        // Cleanup: Delete the used token
+        // Cleanup: Delete the used code
         await supabaseService
             .from('email_verifications')
             .delete()
-            .eq('token', token);
-
-        return new NextResponse(getSuccessHTML(verificationEmail, isExistingUser, targetProfileId), {
-            headers: { 'Content-Type': 'text/html' }
-        });
-
-    } catch (error) {
-        console.error('Error verifying email:', error);
-        return new NextResponse(getErrorHTML('System error verifying email. Please try again.'), {
-            headers: { 'Content-Type': 'text/html' },
-            status: 500
-        });
-    }
-}
-
-// POST endpoint for client-side verification calls
-export async function POST(request: Request) {
-    try {
-        const { token, email } = await request.json();
-
-        if (!token || !email) {
-            return NextResponse.json({ error: 'Token and email required' }, { status: 400 });
-        }
-
-        // Look up token
-        const { data: verification, error: verifyError } = await supabaseService
-            .from('email_verifications')
-            .select('*')
-            .eq('token', token)
-            .single();
-
-        if (verifyError || !verification) {
-            return NextResponse.json({ error: 'Invalid link' }, { status: 400 });
-        }
-
-        if (new Date(verification.expires_at) < new Date()) {
-            await supabaseService.from('email_verifications').delete().eq('token', token);
-            return NextResponse.json({ error: 'Link expired, please return to homepage' }, { status: 400 });
-        }
-
-        const targetProfileId = verification.profile_id;
-        const verificationEmail = verification.email;
-
-        // Get the profile
-        const { data: profile } = await supabaseService
-            .from('profiles')
-            .select('*')
-            .eq('id', targetProfileId)
-            .single();
-        
-        const hasName = profile?.name && typeof profile.name === 'string' && profile.name.trim().length > 0;
-        const isExistingUser = hasName;
-        const wasAlreadyVerified = profile?.email_verified;
-
-        // Update profile
-        const { error: updateError } = await supabaseService
-            .from('profiles')
-            .update({
-                email: verificationEmail,
-                email_verified: true,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', targetProfileId);
-
-        if (updateError) throw updateError;
-
-        // ============ CREATE EMAIL VERIFICATION NOTIFICATION ============
-        if (!wasAlreadyVerified) {
-            try {
-                const userAddress = profile?.wallet_address || verificationEmail;
-                
-                await supabaseService
-                    .from('notifications')
-                    .insert({
-                        user_address: userAddress.toLowerCase(),
-                        type: 'profile_complete',
-                        title: '✅ Email Verified!',
-                        message: isExistingUser 
-                            ? 'Your email has been successfully verified!'
-                            : 'Your email has been verified! Complete your profile to start matching.',
-                        metadata: {
-                            profile_id: targetProfileId,
-                            email: verificationEmail,
-                            is_new_user: !isExistingUser
-                        }
-                    });
-                
-                console.log('✅ Email verification notification created');
-            } catch (notifError) {
-                console.error('Failed to create email verification notification:', notifError);
-            }
-        }
-        // ============ END NOTIFICATION CODE ============
-
-        // Cleanup
-        await supabaseService
-            .from('email_verifications')
-            .delete()
-            .eq('token', token);
+            .eq('code', code);
 
         return NextResponse.json({
             success: true,
@@ -235,86 +139,9 @@ export async function POST(request: Request) {
         });
     } catch (error) {
         console.error('Error verifying email:', error);
-        return NextResponse.json({ error: 'Failed to verify email' }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Failed to verify email' },
+            { status: 500 }
+        );
     }
-}
-
-// Helper function for success HTML with redirect logic
-function getSuccessHTML(email: string, isExistingUser: boolean, profileId: string): string {
-    const redirectUrl = isExistingUser ? '/profile/edit' : '/register/email/complete';
-    const redirectMessage = isExistingUser 
-        ? 'Email updated! Redirecting back to your profile...' 
-        : 'Redirecting to complete your profile...';
-    
-    console.log('🔀 Redirecting:', { isExistingUser, redirectUrl, profileId });
-    
-    const localStorageScript = !isExistingUser ? `
-        localStorage.setItem('emailVerified', JSON.stringify({
-            email: '${email}',
-            profile_id: '${profileId}'
-        }));
-    ` : '';
-    
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Email Verified</title>
-    <meta http-equiv="refresh" content="3;url=${redirectUrl}">
-    <style>
-        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f2f5; }
-        .container { text-align: center; padding: 2rem; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 500px; }
-        .success { color: #4CAF50; }
-        a { color: #4f46e5; text-decoration: none; font-weight: bold; }
-        a:hover { text-decoration: underline; }
-        .redirect-note { color: #666; font-size: 14px; margin-top: 10px; }
-        .debug { background: #f5f5f5; padding: 10px; margin-top: 20px; font-size: 12px; font-family: monospace; text-align: left; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1 class="success">✓ Email Verified Successfully!</h1>
-        <p>Your email address <strong>${email}</strong> has been verified.</p>
-        <p class="redirect-note">${redirectMessage}</p>
-        <p><a href="${redirectUrl}">Click here if not redirected automatically</a></p>
-        <div class="debug">
-            Debug: isExistingUser = ${isExistingUser}<br>
-            Redirect URL: ${redirectUrl}<br>
-            Profile ID: ${profileId}
-        </div>
-    </div>
-    <script>
-        ${localStorageScript}
-        console.log('Verification complete:', {
-            isExistingUser: ${isExistingUser},
-            redirectUrl: '${redirectUrl}',
-            profileId: '${profileId}'
-        });
-    </script>
-</body>
-</html>`;
-}
-
-function getErrorHTML(message: string): string {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Verification Failed</title>
-    <style>
-        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f2f5; }
-        .container { text-align: center; padding: 2rem; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 500px; }
-        .error { color: #f44336; }
-        a { color: #4f46e5; text-decoration: none; font-weight: bold; }
-        a:hover { text-decoration: underline; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1 class="error">✗ Verification Failed</h1>
-        <p>${message}</p>
-        <p><a href="/">Return to BaseMatch</a></p>
-    </div>
-</body>
-</html>`;
 }
