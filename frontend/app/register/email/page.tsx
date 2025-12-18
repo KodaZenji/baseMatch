@@ -44,20 +44,22 @@ export default function EmailRegisterPage() {
     return (
         <div className="min-h-screen bg-gradient-to-b from-blue-500 to-purple-600 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+
                 {/* Logo */}
                 <div className="flex justify-center mb-6">
                     <div className="relative">
                         <div className="bg-white rounded-full p-3 shadow-lg">
-                            <Heart 
-                                className="w-12 h-12" 
-                                fill="url(#heartGradient)" 
+                            <Heart
+                                className="w-12 h-12"
+                                fill="url(#brandGradient)"
                                 stroke="none"
                             />
+                            {/* ✅ UPDATED: brand-matching gradient */}
                             <svg width="0" height="0">
                                 <defs>
-                                    <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stopColor="#3b82f6" />
-                                        <stop offset="100%" stopColor="#9333ea" />
+                                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#ec4899" />
+                                        <stop offset="100%" stopColor="#a855f7" />
                                     </linearGradient>
                                 </defs>
                             </svg>
@@ -65,9 +67,11 @@ export default function EmailRegisterPage() {
                     </div>
                 </div>
 
-                <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                {/* ✅ UPDATED: BaseMatch text gradient */}
+                <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
                     BaseMatch
                 </h1>
+
                 <p className="text-gray-600 text-center mb-8">Email Registration</p>
 
                 <form onSubmit={handleEmailSubmit} className="space-y-4">
@@ -98,6 +102,7 @@ export default function EmailRegisterPage() {
                     >
                         {isLoading ? 'Sending verification code...' : 'Continue with Email'}
                     </button>
+
                     <p className="text-xs text-gray-500 text-center mt-3">
                         We'll send a 6-digit verification code to your email
                     </p>
