@@ -49,6 +49,15 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable, Reentran
     
     uint256 public stakeCounter;
     
+    // Upgrade timelock
+    uint256 public constant UPGRADE_DELAY = 48 hours;
+    address public pendingImplementation;
+    uint256 public upgradeETA;
+    
+    event UpgradeProposed(address indexed implementation, uint256 eta);
+    event UpgradeCancelled(address indexed implementation);
+    event UpgradeExecuted(address indexed implementation);
+    
     event StakeCreated(
         uint256 indexed stakeId,
         address indexed user1,
@@ -86,13 +95,44 @@ contract Staking is Initializable, OwnableUpgradeable, UUPSUpgradeable, Reentran
     }
 
     /**
-     * @dev Authorize upgrade (only owner can upgrade)
+     * @dev Propose an upgrade (starts 48-hour timelock)
+     */
+    function proposeUpgrade(address newImplementation) external onlyOwner {
+        require(newImplementation != address(0), "Invalid implementation");
+        pendingImplementation = newImplementation;
+        upgradeETA = block.timestamp + UPGRADE_DELAY;
+        emit UpgradeProposed(newImplementation, upgradeETA);
+    }
+    
+    /**
+     * @dev Cancel a pending upgrade
+     */
+    function cancelUpgrade() external onlyOwner {
+        require(pendingImplementation != address(0), "No pending upgrade");
+        address cancelled = pendingImplementation;
+        pendingImplementation = address(0);
+        upgradeETA = 0;
+        emit UpgradeCancelled(cancelled);
+    }
+
+    /**
+     * @dev Authorize upgrade (only after 48-hour delay)
      */
     function _authorizeUpgrade(address newImplementation)
         internal
         onlyOwner
         override
-    {}
+    {
+        require(pendingImplementation == newImplementation, "Not the proposed implementation");
+        require(block.timestamp >= upgradeETA, "Upgrade delay not met");
+        require(upgradeETA != 0, "No upgrade proposed");
+        
+        // Clear the pending upgrade
+        pendingImplementation = address(0);
+        upgradeETA = 0;
+        
+        emit UpgradeExecuted(newImplementation);
+    }
     
     /**
      * @notice Create a new date stake

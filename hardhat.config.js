@@ -1,6 +1,6 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("@openzeppelin/hardhat-upgrades");
-// require("@nomicfoundation/hardhat-verify");
+require("@nomicfoundation/hardhat-verify");
 require("dotenv").config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
@@ -34,9 +34,7 @@ module.exports = {
         },
     },
     etherscan: {
-        apiKey: {
-            "base-sepolia": process.env.BASESCAN_API_KEY || "",
-        },
+        apiKey: process.env.BASESCAN_API_KEY || "",
         customChains: [
             {
                 network: "base-sepolia",

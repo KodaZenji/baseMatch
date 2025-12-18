@@ -9,6 +9,7 @@ import Dashboard from '@/components/Dashboard';
 import Notifications from '@/components/Notifications';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
+import { Heart } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -45,8 +46,29 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-          <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
-            ❤️ BaseMatch
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="bg-white rounded-full p-3 shadow-lg">
+                <Heart
+                  className="w-12 h-12"
+                  fill="url(#brandGradient)"
+                  stroke="none"
+                />
+                <svg width="0" height="0">
+                  <defs>
+                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#ec4899" />
+                      <stop offset="100%" stopColor="#a855f7" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+            BaseMatch
           </h1>
           <p className="text-gray-600 text-lg mb-4">Loading Timeout</p>
           <p className="text-gray-700 mb-6">
@@ -67,9 +89,30 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center animate-fadeIn">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="bg-white rounded-full p-3 shadow-lg">
+                <Heart
+                  className="w-12 h-12"
+                  fill="url(#brandGradient)"
+                  stroke="none"
+                />
+                <svg width="0" height="0">
+                  <defs>
+                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#ec4899" />
+                      <stop offset="100%" stopColor="#a855f7" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+          </div>
+
           <div className="mb-6">
-            <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-2">
-              ❤️ BaseMatch
+            <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+              BaseMatch
             </h1>
             <p className="text-gray-600 text-lg font-medium">Find Your Match On-Chain</p>
           </div>

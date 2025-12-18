@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { Heart } from 'lucide-react';
 
 export default function ConnectWalletPage() {
     const router = useRouter();
@@ -89,8 +90,29 @@ export default function ConnectWalletPage() {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
                 <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-                    <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
-                        ❤️ BaseMatch
+                    {/* Logo */}
+                    <div className="flex justify-center mb-6">
+                        <div className="relative">
+                            <div className="bg-white rounded-full p-3 shadow-lg">
+                                <Heart
+                                    className="w-12 h-12"
+                                    fill="url(#brandGradient)"
+                                    stroke="none"
+                                />
+                                <svg width="0" height="0">
+                                    <defs>
+                                        <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stopColor="#ec4899" />
+                                            <stop offset="100%" stopColor="#a855f7" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                        BaseMatch
                     </h1>
                     <h2 className="text-2xl font-bold text-gray-800 mb-4">Step 2: Connect Wallet</h2>
                     <p className="text-gray-700 text-lg mb-6">
@@ -114,8 +136,29 @@ export default function ConnectWalletPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-                <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
-                    💖 BaseMatch
+                {/* Logo */}
+                <div className="flex justify-center mb-6">
+                    <div className="relative">
+                        <div className="bg-white rounded-full p-3 shadow-lg">
+                            <Heart
+                                className="w-12 h-12"
+                                fill="url(#brandGradient)"
+                                stroke="none"
+                            />
+                            <svg width="0" height="0">
+                                <defs>
+                                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#ec4899" />
+                                        <stop offset="100%" stopColor="#a855f7" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                    BaseMatch
                 </h1>
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">
                     {isConnecting ? 'Connecting Wallet...' : 'Wallet Connected!'}
