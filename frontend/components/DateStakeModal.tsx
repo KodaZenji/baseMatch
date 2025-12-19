@@ -35,10 +35,11 @@ export default function DateStakeModal({
     const [meetingDate, setMeetingDate] = useState('');
     const [meetingTime, setMeetingTime] = useState('');
     const [error, setError] = useState('');
-    const [step, setStep] = useState<'form' | 'approval' | 'staking' | 'success'>('form');
+    const [step, setStep] = useState<'form' | 'approval' | 'confirming' | 'staking' | 'success'>('form');
     const [meetingTimestamp, setMeetingTimestamp] = useState<number>(0);
 
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
+        chainId: 84532, // Base Sepolia
         address: CONTRACTS.USDC as `0x${string}`,
         abi: erc20Abi,
         functionName: 'allowance',
@@ -49,11 +50,7 @@ export default function DateStakeModal({
     useEffect(() => {
         if (isApprovalSuccess && step === 'approval') {
             console.log('✅ Approval confirmed');
-            refetchAllowance().then(() => {
-                setTimeout(() => {
-                    handleCreateStake();
-                }, 1000);
-            });
+            setStep('confirming');
         }
     }, [isApprovalSuccess, step]);
 
@@ -120,6 +117,7 @@ export default function DateStakeModal({
 
         try {
             approveUSDC({
+                chainId: 84532, // Base Sepolia
                 address: CONTRACTS.USDC as `0x${string}`,
                 abi: erc20Abi,
                 functionName: 'approve',
@@ -150,6 +148,7 @@ export default function DateStakeModal({
         }
 
         const timestamp = Math.floor(selectedDateTime.getTime() / 1000);
+        setMeetingTimestamp(timestamp);
         const amount = parseUnits(stakeAmount, 6);
 
         if (!CONTRACTS.STAKING || !address) {
@@ -158,6 +157,8 @@ export default function DateStakeModal({
         }
 
         if (!allowance || allowance < amount) {
+            console.log('📤 Insufficient allowance, requesting approval...');
+            setMeetingTimestamp(timestamp);
             setStep('approval');
             return;
         }
@@ -171,6 +172,7 @@ export default function DateStakeModal({
             setStep('staking');
 
             createStakeContract({
+                chainId: 84532, // Base Sepolia
                 address: CONTRACTS.STAKING as `0x${string}`,
                 abi: STAKING_ABI,
                 functionName: 'createStake',
@@ -236,6 +238,28 @@ export default function DateStakeModal({
                                 </button>
                             </div>
                         )}
+                    </div>
+                ) : step === 'confirming' ? (
+                    <div className="text-center py-6">
+                        <p className="text-5xl mb-4">✅</p>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Approve Confirmed!</h3>
+                        <p className="text-gray-600 mb-6">
+                            Ready to create your stake of {stakeAmount} USDC?
+                        </p>
+                        <div className="flex gap-2 pt-4">
+                            <button
+                                onClick={() => setStep('form')}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50"
+                            >
+                                Back
+                            </button>
+                            <button
+                                onClick={handleCreateStake}
+                                className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90"
+                            >
+                                Confirm & Create Stake
+                            </button>
+                        </div>
                     </div>
                 ) : step === 'staking' ? (
                     <div className="text-center py-6">
