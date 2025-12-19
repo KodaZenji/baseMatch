@@ -651,7 +651,9 @@ export default function ProfileEdit() {
                     {hasWallet && profile?.exists && (
                         <div className="mt-8 pt-6 border-t-2 border-gray-200">
                             <div className="bg-red-50 rounded-xl p-4 border-2 border-red-200">
-                                <h3 className="text-lg font-semibold text-red-800 mb-2 flex items-center gap-2"><AlertTriangle size={20} /> Danger Zone</h3>
+                                <h3 className="text-lg font-semibold text-red-800 mb-2 flex items-center gap-2">
+                                    <AlertTriangle size={20} /> Danger Zone
+                                </h3>
                                 <p className="text-sm text-red-700 mb-4">
                                     Deleting your account will permanently remove your profile NFT and all associated data. This action cannot be undone.
                                 </p>
@@ -668,7 +670,9 @@ export default function ProfileEdit() {
                                 ) : !showDeleteFinalConfirm ? (
                                     <div className="space-y-3">
                                         <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-3">
-                                            <p className="text-sm font-semibold text-yellow-800 mb-2 flex items-center gap-1"><AlertTriangle size={16} /> First Confirmation</p>
+                                            <p className="text-sm font-semibold text-yellow-800 mb-2 flex items-center gap-1">
+                                                <AlertTriangle size={16} /> First Confirmation
+                                            </p>
                                             <p className="text-sm text-yellow-700 mb-3">
                                                 Are you sure? This will permanently delete everything.
                                             </p>
@@ -696,7 +700,9 @@ export default function ProfileEdit() {
                                 ) : (
                                     <div className="space-y-3">
                                         <div className="bg-red-100 border-2 border-red-500 rounded-lg p-3">
-                                            <p className="text-sm font-bold text-red-900 mb-2 flex items-center gap-1"><AlertTriangle size={16} className="text-red-600" /> FINAL CONFIRMATION</p>
+                                            <p className="text-sm font-bold text-red-900 mb-2 flex items-center gap-1">
+                                                <AlertTriangle size={16} className="text-red-600" /> FINAL CONFIRMATION
+                                            </p>
                                             <p className="text-sm text-red-800">This is your last chance!</p>
                                         </div>
                                         <div className="flex gap-2">
@@ -717,4 +723,20 @@ export default function ProfileEdit() {
                                                 disabled={isPending || isConfirming || isDeleting}
                                                 className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
                                             >
-                                                {isDeleting ? 'Deleting...' : <span className="flex items-center gap-2"><Trash2
+                                                {isDeleting ? 'Deleting...' : (
+                                                    <span className="flex items-center justify-center gap-2">
+                                                        <Trash2 size={16} /> Delete Forever
+                                                    </span>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </form>
+            </div>
+        </div>
+    );
+}
