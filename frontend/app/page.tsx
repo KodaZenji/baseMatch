@@ -19,21 +19,6 @@ export default function Home() {
   const { profile, isLoading } = useProfile();
   const [activeTab, setActiveTab] = useState<'browse' | 'matches' | 'profile' | 'notifications'>('browse');
   const [loadingTimeout, setLoadingTimeout] = useState(false);
-  const [featureIndex, setFeatureIndex] = useState(0);
-
-  const features = [
-    "Your wallet is your identity",
-    "Build real-world reputation",
-    "Optional staking for serious dates"
-  ];
-
-  // Rotate features every 3 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setFeatureIndex((prev) => (prev + 1) % features.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
 
   const { unreadCount } = useNotifications({
     userAddress: address,
@@ -101,9 +86,6 @@ export default function Home() {
 
   // Landing Page - Not Connected OR Connected but No Profile
   if (!isConnected || !profile?.exists) {
-    // Debug logging
-    console.log('Landing page state:', { isConnected, profileExists: profile?.exists, address });
-
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center animate-fadeIn">
@@ -134,48 +116,40 @@ export default function Home() {
             <p className="text-gray-600 text-lg font-medium">Find Your Match On-Chain</p>
           </div>
 
-          {/* Show wallet button if connected - ALWAYS show when connected */}
+          {/* Show wallet status if connected */}
           {isConnected && (
-            <div className="mb-6 flex justify-center">
-              <div className="scale-90">
-                <ConnectButton 
-                  showBalance={false}
-                  accountStatus="address"
-                  chainStatus="none"
-                />
-              </div>
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg flex items-center justify-between">
+              <p className="text-sm text-blue-700 font-medium">Wallet Connected</p>
+              <ConnectButton 
+                showBalance={false}
+                accountStatus="address"
+                chainStatus="none"
+              />
             </div>
           )}
 
           <div className="mb-8">
-            <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl p-6 text-center min-h-[80px] flex items-center justify-center">
-              <p 
-                key={featureIndex}
-                className="text-gray-700 text-lg font-medium animate-fadeIn"
-              >
-                {isConnected 
-                  ? "Ready to create your profile and start matching."
-                  : features[featureIndex]
-                }
-              </p>
+            <p className="text-gray-700 mb-4 text-base">
+              {isConnected 
+                ? "You're connected! Create your profile to start matching."
+                : "Your wallet is your dating profile. Build real reputation, meet real people."
+              }
+            </p>
+            <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl p-4 text-sm text-gray-700 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-green-500">✓</span>
+                <span>Wallet = Your Identity</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-green-500">✓</span>
+                <span>Build Real-World Reputation</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-green-500">✓</span>
+                <span>Optional Staking For Serious Dates</span>
+              </div>
             </div>
           </div>
-
-          <style jsx>{`
-            @keyframes fadeIn {
-              from {
-                opacity: 0;
-                transform: translateY(10px);
-              }
-              to {
-                opacity: 1;
-                transform: translateY(0);
-              }
-            }
-            .animate-fadeIn {
-              animation: fadeIn 0.5s ease-out;
-            }
-          `}</style>
 
           <div className="space-y-4">
             {/* If wallet connected, show Create Profile button prominently */}
