@@ -242,7 +242,7 @@ export default function DateStakeModal({
                 ) : step === 'confirming' ? (
                     <div className="text-center py-6">
                         <p className="text-5xl mb-4">✅</p>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Approve Confirmed!</h3>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Approval Confirmed!</h3>
                         <p className="text-gray-600 mb-6">
                             Ready to create your stake of {stakeAmount} USDC?
                         </p>
@@ -257,7 +257,7 @@ export default function DateStakeModal({
                                 onClick={handleCreateStake}
                                 className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90"
                             >
-                                Confirm & Create Stake
+                                Create Stake
                             </button>
                         </div>
                     </div>
