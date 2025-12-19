@@ -129,8 +129,8 @@ export default function Home() {
           <div className="mb-8">
             <p className="text-gray-700 mb-4 text-base">
               {isConnected 
-                ? "You're connected! Create your profile to start matching."
-                : "Your wallet is your dating profile. Build real reputation, meet real people."
+                ? "You're connected! Create your profile"
+                : "Your wallet is your dating profile "
               }
             </p>
             <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl p-4 text-sm text-gray-700 space-y-2">
