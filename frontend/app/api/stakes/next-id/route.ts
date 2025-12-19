@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
+import { createPublicClient, http } from 'viem';
+import { baseSepolia } from 'wagmi/chains';
 import { CONTRACTS } from '@/lib/contracts';
-import { getPublicClient } from '@/lib/wagmi';
 
 export async function GET() {
     try {
-        const client = getPublicClient();
+        const client = createPublicClient({
+            chain: baseSepolia,
+            transport: http(),
+        });
 
         // Read stakeCounter from the Staking contract
         const stakeCounter = await client.readContract({
@@ -17,7 +21,7 @@ export async function GET() {
                     inputs: [],
                     outputs: [{ type: "uint256" }]
                 }
-            ],
+            ] as const,
             functionName: 'stakeCounter',
         });
 

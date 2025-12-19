@@ -1,6 +1,5 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { baseSepolia } from 'wagmi/chains';
-import { createPublicClient, http } from 'viem';
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
@@ -24,11 +23,3 @@ export const getConfig = () => {
 };
 
 export const config = getConfig();
-
-// Export a public client for server-side contract reads
-export const getPublicClient = () => {
-    return createPublicClient({
-        chain: baseSepolia,
-        transport: http(),
-    });
-};
