@@ -118,13 +118,11 @@ export default function Home() {
 
           {/* Show wallet status if connected */}
           {isConnected && (
-            <div className="mb-4 p-3 bg-blue-50 rounded-lg flex items-center justify-between">
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-700 font-medium">Wallet Connected</p>
-              <ConnectButton 
-                showBalance={false}
-                accountStatus="address"
-                chainStatus="none"
-              />
+              <p className="text-xs text-blue-600 font-mono mt-1">
+                {address?.slice(0, 6)}...{address?.slice(-4)}
+              </p>
             </div>
           )}
 
