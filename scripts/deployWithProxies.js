@@ -53,8 +53,8 @@ async function main() {
 
     // Deploy Staking proxy
     console.log("\n5️⃣ Deploying Staking proxy...");
-    // Base Sepolia testnet USDC address (correct checksum)
-    const USDC_ADDRESS = process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x036CbD53842c5426634e7929541eC2318f3dCF7e".toLowerCase();
+    // Base Sepolia testnet USDC address - MUST use exact checksum
+    const USDC_ADDRESS = "0x036CbD53842c5426634e7929541eC2318f3dCF7e"; // Official Base Sepolia USDC
     const Staking = await ethers.getContractFactory("Staking");
     const staking = await upgrades.deployProxy(Staking, [USDC_ADDRESS], {
         kind: "uups",
