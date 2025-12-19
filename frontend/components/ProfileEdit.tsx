@@ -7,7 +7,7 @@ import { generateAvatar } from '@/lib/avatarUtils';
 import { handleProfileTextUpdate } from '@/lib/profileMinting';
 import { useProfile } from '@/hooks/useProfile';
 import WalletConnectionSection from './WalletConnectionSection';
-import { User, Edit, Mail, Lock, AlertTriangle, Trash2, Lightbulb } from 'lucide-react';
+import { User, Edit, Mail, Lock, AlertTriangle, Trash2, Lightbulb, Info } from 'lucide-react';
 
 export default function ProfileEdit() {
     const { address, isConnected } = useAccount();
@@ -453,6 +453,9 @@ export default function ProfileEdit() {
         handleTransactionSuccess();
     }, [isSuccess]); // FIXED: Only depend on isSuccess, not formData/newPhotoUrl
 
+    // Check if profile is fully verified
+    const isFullyVerified = profile?.email && formData.email === profile.email && profile?.exists;
+
     if (profileLoading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center">
@@ -634,6 +637,16 @@ export default function ProfileEdit() {
                         )}
                     </button>
 
+                    {/* Visibility Notice - Moved below Update Profile button */}
+                    {!isFullyVerified && (
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
+                            <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-blue-800">
+                                <span className="font-semibold">Visibility Notice:</span> Only profiles with both email and wallet verified appear on the discovery page.
+                            </p>
+                        </div>
+                    )}
+
                     {/* Delete Account Section */}
                     {hasWallet && profile?.exists && (
                         <div className="mt-8 pt-6 border-t-2 border-gray-200">
@@ -704,16 +717,4 @@ export default function ProfileEdit() {
                                                 disabled={isPending || isConfirming || isDeleting}
                                                 className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
                                             >
-                                                {isDeleting ? 'Deleting...' : <span className="flex items-center gap-2"><Trash2 size={16} /> Permanently Delete</span>}
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </form>
-            </div>
-        </div>
-    );
-}
+                                                {isDeleting ? 'Deleting...' : <span className="flex items-center gap-2"><Trash2
