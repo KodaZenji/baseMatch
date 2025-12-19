@@ -118,11 +118,14 @@ export default function Home() {
 
           {/* Show wallet status if connected */}
           {isConnected && (
-            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-700 font-medium">Wallet Connected</p>
-              <p className="text-xs text-blue-600 font-mono mt-1">
-                {address?.slice(0, 6)}...{address?.slice(-4)}
-              </p>
+            <div className="mb-4 flex justify-center">
+              <div className="scale-90">
+                <ConnectButton 
+                  showBalance={false}
+                  accountStatus="address"
+                  chainStatus="none"
+                />
+              </div>
             </div>
           )}
 
@@ -130,7 +133,7 @@ export default function Home() {
             <p className="text-gray-700 mb-4 text-base">
               {isConnected 
                 ? "You're connected! Create your profile to start matching."
-                : "Your wallet is your dating profile. Build real reputation, meet real people."
+                : "Your wallet is your dating profile. Meet real people"
               }
             </p>
             <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl p-4 text-sm text-gray-700 space-y-2">
