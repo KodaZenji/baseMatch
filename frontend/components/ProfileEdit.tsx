@@ -207,13 +207,19 @@ export default function ProfileEdit() {
             const result = await response.json();
 
             if (response.ok && result.success) {
-                showNotification('Verification email sent! Check your inbox.', 'success');
+                showNotification('Verification code sent! Check your inbox.', 'success');
+                // Store email for verification flow
+                localStorage.setItem('emailForRegistration', formData.email);
+                // Redirect to verification page after a delay
+                setTimeout(() => {
+                    window.location.href = '/verify-email';
+                }, 2000);
             } else {
-                showNotification(result.error || 'Failed to send verification email', 'error');
+                showNotification(result.error || 'Failed to send verification code', 'error');
             }
         } catch (error) {
-            console.error('Error sending verification email:', error);
-            showNotification('Failed to send verification email. Please check your network connection.', 'error');
+            console.error('Error sending verification code:', error);
+            showNotification('Failed to send verification code. Please check your network connection.', 'error');
         } finally {
             setIsSendingVerification(false);
         }
@@ -544,12 +550,12 @@ export default function ProfileEdit() {
                                 disabled={isSendingVerification || !formData.email || !formData.email.includes('@')}
                                 className="w-full px-3 py-2 bg-green-400 text-white text-sm rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                {isSendingVerification ? 'Sending...' : 'Send Verification Email'}
+                                {isSendingVerification ? 'Sending...' : 'Send Verification Code'}
                             </button>
+                            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                <Lock size={12} /> A 6-digit code will be sent to verify your email
+                            </p>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                            <Lock size={12} /> Email stored in database + synced to blockchain for anti-catfish verification
-                        </p>
                     </div>
 
                     {/* Name */}
