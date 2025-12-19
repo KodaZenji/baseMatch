@@ -37,7 +37,6 @@ export default function DateStakeModal({
     const [error, setError] = useState('');
     const [step, setStep] = useState<'form' | 'approval' | 'staking' | 'success'>('form');
     const [meetingTimestamp, setMeetingTimestamp] = useState<number>(0);
-    const [createdStakeId, setCreatedStakeId] = useState<string>('');
 
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
         address: CONTRACTS.USDC as `0x${string}`,
@@ -46,6 +45,7 @@ export default function DateStakeModal({
         args: [address || '0x0', CONTRACTS.STAKING as `0x${string}`],
     });
 
+    // Handle approval success
     useEffect(() => {
         if (isApprovalSuccess && step === 'approval') {
             console.log('✅ Approval confirmed');
@@ -57,17 +57,17 @@ export default function DateStakeModal({
         }
     }, [isApprovalSuccess, step]);
 
+    // Handle stake success
     useEffect(() => {
-        if (isStakeSuccess && address && createdStakeId) {
+        if (isStakeSuccess && address) {
             console.log('✅ Stake created successfully');
-
-            // Send notifications and update database
-            sendStakeNotification();
-            saveToDatabase();
-
             setStep('success');
+
+            // Send notification and sync database in background (non-blocking)
+            sendStakeNotification().catch(console.error);
+            syncStakeToDatabase().catch(console.error);
         }
-    }, [isStakeSuccess, address, createdStakeId]);
+    }, [isStakeSuccess, address, stakeAmount, meetingTimestamp]);
 
     const sendStakeNotification = async () => {
         try {
@@ -78,28 +78,26 @@ export default function DateStakeModal({
                     userAddress: matchedUserAddress.toLowerCase(),
                     type: 'date_stake_created',
                     title: '💕 New Date Stake!',
-                    message: `${matchedUserName || 'Someone'} created a stake for ${new Date(meetingTimestamp * 1000).toLocaleString()}`,
+                    message: `${matchedUserName || 'Someone'} created a stake for a date`,
                     metadata: {
-                        stake_id: createdStakeId,
                         sender_address: address?.toLowerCase(),
                         stake_amount: stakeAmount,
-                        meeting_timestamp: meetingTimestamp,
                     }
                 })
             });
-            console.log('✅ Notification sent');
         } catch (error) {
             console.error('Failed to send notification:', error);
         }
     };
 
-    const saveToDatabase = async () => {
+    const syncStakeToDatabase = async () => {
         try {
-            // Save to stakes table for faster UI queries
+            // Query contract to get the stake ID from the transaction
+            // For now, we'll save the stake with available data
+            // The stake ID can be queried later from the contract
             await supabaseClient
                 .from('stakes')
                 .insert({
-                    id: createdStakeId,
                     user1_address: address?.toLowerCase(),
                     user2_address: matchedUserAddress.toLowerCase(),
                     user1_amount: parseFloat(stakeAmount),
@@ -107,10 +105,11 @@ export default function DateStakeModal({
                     meeting_time: meetingTimestamp,
                     user1_staked: true,
                     user2_staked: false,
+                    status: 'pending'
                 });
-            console.log('✅ Saved to database');
+            console.log('✅ Stake synced to database');
         } catch (error) {
-            console.error('Failed to save to database:', error);
+            console.error('Failed to sync stake to database:', error);
             // Non-critical error - blockchain is source of truth
         }
     };
@@ -120,16 +119,13 @@ export default function DateStakeModal({
         const amount = parseUnits(stakeAmount, 6);
 
         try {
-            console.log('📤 Requesting USDC approval for amount:', amount.toString());
-
-            // Approve exact amount needed
             approveUSDC({
                 address: CONTRACTS.USDC as `0x${string}`,
                 abi: erc20Abi,
                 functionName: 'approve',
                 args: [CONTRACTS.STAKING as `0x${string}`, amount],
             });
-        } catch (err) {
+        } catch (err: any) {
             console.error('Approval error:', err);
             setError('Failed to approve USDC. Please try again.');
         }
@@ -154,8 +150,6 @@ export default function DateStakeModal({
         }
 
         const timestamp = Math.floor(selectedDateTime.getTime() / 1000);
-        setMeetingTimestamp(timestamp);
-
         const amount = parseUnits(stakeAmount, 6);
 
         if (!CONTRACTS.STAKING || !address) {
@@ -173,13 +167,8 @@ export default function DateStakeModal({
                 user2: matchedUserAddress,
                 amount: amount.toString(),
                 meetingTime: timestamp,
-                currentTime: Math.floor(Date.now() / 1000)
             });
             setStep('staking');
-
-            // Get the next stake ID from contract
-            const nextStakeId = await fetch(`/api/stakes/next-id`).then(r => r.json());
-            setCreatedStakeId(nextStakeId.toString());
 
             createStakeContract({
                 address: CONTRACTS.STAKING as `0x${string}`,
@@ -187,7 +176,7 @@ export default function DateStakeModal({
                 functionName: 'createStake',
                 args: [matchedUserAddress as `0x${string}`, amount, BigInt(timestamp)],
             });
-        } catch (err) {
+        } catch (err: any) {
             console.error('Stake creation error:', err);
             setError('Failed to create stake. Please try again.');
             setStep('form');
@@ -263,7 +252,7 @@ export default function DateStakeModal({
                         <p className="text-5xl mb-4">🎉</p>
                         <h3 className="text-xl font-bold text-gray-900 mb-2">Date Stake Created!</h3>
                         <p className="text-gray-600 mb-4">
-                            Stake created for <strong>{new Date(meetingTimestamp * 1000).toLocaleString()}</strong>
+                            Your stake of {stakeAmount} USDC has been created
                         </p>
                         <p className="text-gray-600 mb-6">
                             {matchedUserName} has been notified!
@@ -295,7 +284,7 @@ export default function DateStakeModal({
                                     type="number"
                                     value={stakeAmount}
                                     onChange={(e) => setStakeAmount(e.target.value)}
-                                    placeholder="10"
+                                    placeholder="10 USDC"
                                     min="5"
                                     step="1"
                                     className="w-full px-4 py-2 text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
@@ -346,7 +335,7 @@ export default function DateStakeModal({
                                     disabled={isStakePending || isApprovalConfirming}
                                     className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50"
                                 >
-                                    Create Stake ({stakeAmount} USDC)
+                                    Create Stake
                                 </button>
                             </div>
                         </div>
