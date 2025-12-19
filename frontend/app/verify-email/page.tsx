@@ -1,20 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Heart, Mail, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function VerifyEmailPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isVerifying, setIsVerifying] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');
-
-  // ✅ NEW: countdown timer (10 minutes)
   const [timeLeft, setTimeLeft] = useState(600);
+
+  // Track where the user came from
+  const [cameFromEdit, setCameFromEdit] = useState(false);
 
   useEffect(() => {
     const storedEmail = localStorage.getItem('emailForRegistration');
@@ -24,9 +26,12 @@ export default function VerifyEmailPage() {
       setStatus('error');
       setMessage('No email found. Please start registration again.');
     }
-  }, []);
 
-  // ✅ NEW: countdown effect
+    // Check if user came from profile/edit
+    const fromEdit = searchParams.get('from') === 'edit' || localStorage.getItem('verificationSource') === 'profile-edit';
+    setCameFromEdit(fromEdit);
+  }, [searchParams]);
+
   useEffect(() => {
     if (timeLeft <= 0) return;
 
@@ -37,7 +42,6 @@ export default function VerifyEmailPage() {
     return () => clearInterval(interval);
   }, [timeLeft]);
 
-  // ✅ NEW: time formatter
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -94,24 +98,30 @@ export default function VerifyEmailPage() {
 
       const isExistingUser = data.is_existing_user;
 
-      if (isExistingUser) {
-        setTimeout(() => {
-          router.push('/profile/edit');
-        }, 2000);
-      } else {
-        localStorage.setItem(
-          'emailVerified',
-          JSON.stringify({
-            email,
-            profile_id: data.profile_id,
-            timestamp: Date.now(),
-          })
-        );
+      // Clean up verification source flag
+      localStorage.removeItem('verificationSource');
 
-        setTimeout(() => {
+      // Redirect based on context
+      setTimeout(() => {
+        if (cameFromEdit) {
+          // User came from profile/edit, send them back
+          router.push('/profile/edit');
+        } else if (isExistingUser) {
+          // Existing user verifying from elsewhere
+          router.push('/profile/edit');
+        } else {
+          // New user - complete registration
+          localStorage.setItem(
+            'emailVerified',
+            JSON.stringify({
+              email,
+              profile_id: data.profile_id,
+              timestamp: Date.now(),
+            })
+          );
           router.push('/register/email/complete');
-        }, 2000);
-      }
+        }
+      }, 2000);
     } catch (error) {
       setStatus('error');
       setMessage('An error occurred. Please try again.');
@@ -125,8 +135,6 @@ export default function VerifyEmailPage() {
     setStatus('idle');
     setCode(['', '', '', '', '', '']);
     setMessage('');
-
-    // ✅ reset timer on resend
     setTimeLeft(600);
 
     try {
@@ -158,7 +166,6 @@ export default function VerifyEmailPage() {
                 fill="url(#brandGradient)"
                 stroke="none"
               />
-              {/* ✅ UPDATED: brand gradient */}
               <svg width="0" height="0">
                 <defs>
                   <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -171,7 +178,6 @@ export default function VerifyEmailPage() {
           </div>
         </div>
 
-        {/* ✅ UPDATED: BaseMatch text gradient */}
         <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
           BaseMatch
         </h1>
@@ -253,7 +259,7 @@ export default function VerifyEmailPage() {
           </button>
         </div>
 
-        {/* UPDATED: live expiry timer */}
+        {/* Expiry Timer */}
         <p className="mt-6 text-center text-xs text-gray-500">
           Code expires in{' '}
           <span className="font-semibold text-gray-700">
