@@ -20,15 +20,15 @@ export default function DateStakeModal({
     onSuccess,
 }: DateStakeModalProps) {
     const { address } = useAccount();
-    
+
     const { writeContract: approveUSDC, data: approvalHash, isPending: isApprovePending } = useWriteContract();
     const { writeContract: createStakeContract, data: stakeHash, isPending: isStakePending } = useWriteContract();
-    
-    const { isLoading: isApprovalConfirming, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({ 
-        hash: approvalHash 
+
+    const { isLoading: isApprovalConfirming, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({
+        hash: approvalHash
     });
-    const { isLoading: isStakeConfirming, isSuccess: isStakeSuccess } = useWaitForTransactionReceipt({ 
-        hash: stakeHash 
+    const { isLoading: isStakeConfirming, isSuccess: isStakeSuccess } = useWaitForTransactionReceipt({
+        hash: stakeHash
     });
 
     const [stakeAmount, setStakeAmount] = useState('10');
@@ -60,11 +60,11 @@ export default function DateStakeModal({
     useEffect(() => {
         if (isStakeSuccess && address && createdStakeId) {
             console.log('✅ Stake created successfully');
-            
+
             // Send notifications and update database
             sendStakeNotification();
             saveToDatabase();
-            
+
             setStep('success');
         }
     }, [isStakeSuccess, address, createdStakeId]);
@@ -120,8 +120,9 @@ export default function DateStakeModal({
         const amount = parseUnits(stakeAmount, 6);
 
         try {
-            console.log('📤 Requesting USDC approval');
-            
+            console.log('📤 Requesting USDC approval for amount:', amount.toString());
+
+            // Approve exact amount needed
             approveUSDC({
                 address: CONTRACTS.USDC as `0x${string}`,
                 abi: erc20Abi,
@@ -168,7 +169,12 @@ export default function DateStakeModal({
         }
 
         try {
-            console.log('📤 Creating stake');
+            console.log('📤 Creating stake with:', {
+                user2: matchedUserAddress,
+                amount: amount.toString(),
+                meetingTime: timestamp,
+                currentTime: Math.floor(Date.now() / 1000)
+            });
             setStep('staking');
 
             // Get the next stake ID from contract
@@ -214,7 +220,7 @@ export default function DateStakeModal({
                                 <p className="text-sm text-red-700">{error}</p>
                             </div>
                         )}
-                        
+
                         {isApprovePending || isApprovalConfirming ? (
                             <div className="text-center py-4">
                                 <svg className="animate-spin h-8 w-8 text-pink-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
