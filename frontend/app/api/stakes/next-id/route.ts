@@ -25,7 +25,7 @@ export async function GET() {
             functionName: 'stakeCounter',
         });
 
-        return NextResponse.json(stakeCounter, {
+        return NextResponse.json(stakeCounter.toString(), {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
