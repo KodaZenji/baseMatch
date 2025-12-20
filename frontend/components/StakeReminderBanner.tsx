@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { Clock, AlertCircle, Heart } from 'lucide-react';
-import { supabaseClient } from '@/lib/supabase/client';
 
 interface PendingStake {
   stakeId: string;
@@ -43,56 +42,15 @@ export default function StakeReminderBanner({ onConfirmClick }: StakeReminderBan
     try {
       setLoading(true);
 
-      // Query stakes table for pending confirmations
-      const { data: stakes, error } = await supabaseClient
-        .from('stakes')
-        .select('*')
-        .or(`user1_address.eq.${address.toLowerCase()},user2_address.eq.${address.toLowerCase()}`)
-        .eq('processed', false);
+      // Call API instead of direct database access
+      const response = await fetch(`/api/stakes/pending?address=${address}`);
+      const data = await response.json();
 
-      if (error) throw error;
-
-      // Filter for stakes that need confirmation
-      const now = Math.floor(Date.now() / 1000);
-      const needsConfirmation = stakes?.filter(stake => {
-        const meetingPassed = stake.meeting_time < now;
-        const windowOpen = now < stake.meeting_time + (48 * 60 * 60);
-        const isUser1 = stake.user1_address.toLowerCase() === address.toLowerCase();
-        const hasUserConfirmed = isUser1 ? stake.user1_confirmed : stake.user2_confirmed;
-
-        return meetingPassed && windowOpen && !hasUserConfirmed && stake.user1_staked && stake.user2_staked;
-      }) || [];
-
-      // Get match names from profiles
-      const formatted = await Promise.all(
-        needsConfirmation.map(async (stake) => {
-          const matchAddr = stake.user1_address.toLowerCase() === address.toLowerCase()
-            ? stake.user2_address
-            : stake.user1_address;
-
-          // Fetch match profile for name
-          const { data: profile } = await supabaseClient
-            .from('profiles')
-            .select('name')
-            .eq('address', matchAddr)
-            .single();
-
-          const deadline = stake.meeting_time + (48 * 60 * 60);
-          const timeRemaining = deadline - now;
-
-          return {
-            stakeId: stake.id,
-            matchAddress: matchAddr,
-            matchName: profile?.name || 'Your match',
-            meetingTime: stake.meeting_time,
-            stakeAmount: stake.user1_amount.toString(),
-            deadline,
-            timeRemaining
-          };
-        })
-      );
-
-      setPendingStakes(formatted);
+      if (data.success) {
+        setPendingStakes(data.stakes);
+      } else {
+        console.error('Error fetching stakes:', data.error);
+      }
     } catch (error) {
       console.error('Error fetching pending stakes:', error);
     } finally {
