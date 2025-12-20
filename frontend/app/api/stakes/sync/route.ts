@@ -1,10 +1,10 @@
-// File: frontend/app/api/stakes/sync/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, parseAbiItem } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { supabaseService } from '@/lib/supabase.server';
 import { CONTRACTS, STAKING_ABI } from '@/lib/contracts';
+
+const FIRST_STAKE_BLOCK = 35208690n;
 
 const publicClient = createPublicClient({
   chain: baseSepolia,
@@ -20,7 +20,7 @@ export async function GET() {
     const logs = await publicClient.getLogs({
       address: CONTRACTS.STAKING as `0x${string}`,
       event: parseAbiItem('event StakeCreated(uint256 indexed stakeId, address indexed user1, address indexed user2, uint256 amount, uint256 meetingTime)'),
-      fromBlock: 0n, // Start from beginning
+      fromBlock: FIRST_STAKE_BLOCK, // Changed from 0n
       toBlock: 'latest'
     });
 
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
     const logs = await publicClient.getLogs({
       address: CONTRACTS.STAKING as `0x${string}`,
       event: parseAbiItem('event StakeCreated(uint256 indexed stakeId, address indexed user1, address indexed user2, uint256 amount, uint256 meetingTime)'),
-      fromBlock: 0n,
+      fromBlock: FIRST_STAKE_BLOCK, // Changed from 0n
       toBlock: 'latest'
     });
 
