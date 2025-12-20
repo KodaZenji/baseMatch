@@ -31,7 +31,6 @@ export async function GET() {
     for (const log of logs) {
       if (log.args.stakeId) {
         const id = log.args.stakeId.toString();
-        // Keep the first occurrence (has the meeting details)
         if (!stakeMap.has(id)) {
           stakeMap.set(id, log);
         }
@@ -54,6 +53,8 @@ export async function GET() {
           continue;
         }
 
+        console.log(`📡 Fetching stake ${stakeId} from contract...`);
+        
         // ALWAYS fetch fresh state from contract
         const stakeData = await publicClient.readContract({
           address: CONTRACTS.STAKING as `0x${string}`,
@@ -62,16 +63,35 @@ export async function GET() {
           args: [BigInt(stakeId)]
         }) as any;
 
-        console.log(`📊 Stake ${stakeId} state:`, {
+        console.log(`📊 Stake ${stakeId} contract data:`, {
+          user1: stakeData.user1,
+          user2: stakeData.user2,
+          user1Amount: stakeData.user1Amount?.toString(),
+          user2Amount: stakeData.user2Amount?.toString(),
           user1Staked: stakeData.user1Staked,
           user2Staked: stakeData.user2Staked,
           processed: stakeData.processed
         });
 
-        // Calculate amounts
-        const user1Amount = Number(amount) / 1_000_000;
-        const user2Amount = stakeData.user2Staked ? Number(amount) / 1_000_000 : 0;
-        const totalStaked = user1Amount + user2Amount;
+        // Get confirmations separately
+        const user1Confirmation = await publicClient.readContract({
+          address: CONTRACTS.STAKING as `0x${string}`,
+          abi: STAKING_ABI,
+          functionName: 'getConfirmation',
+          args: [BigInt(stakeId), user1]
+        }) as any;
+
+        const user2Confirmation = await publicClient.readContract({
+          address: CONTRACTS.STAKING as `0x${string}`,
+          abi: STAKING_ABI,
+          functionName: 'getConfirmation',
+          args: [BigInt(stakeId), user2]
+        }) as any;
+
+        // Calculate amounts (convert from contract units)
+        const user1Amount = Number(stakeData.user1Amount) / 1_000_000;
+        const user2Amount = Number(stakeData.user2Amount) / 1_000_000;
+        const totalStaked = Number(stakeData.totalStaked) / 1_000_000;
 
         // Determine status
         let status = 'pending';
@@ -80,6 +100,8 @@ export async function GET() {
         } else if (stakeData.user1Staked && stakeData.user2Staked) {
           status = 'active';
         }
+
+        console.log(`📌 Status: ${status}, user1Staked: ${stakeData.user1Staked}, user2Staked: ${stakeData.user2Staked}`);
 
         const stakeRecord = {
           id: stakeId,
@@ -91,11 +113,13 @@ export async function GET() {
           meeting_time: Number(meetingTime),
           user1_staked: stakeData.user1Staked,
           user2_staked: stakeData.user2Staked,
-          user1_confirmed: stakeData.user1Confirmed || false,
-          user2_confirmed: stakeData.user2Confirmed || false,
+          user1_confirmed: user1Confirmation.hasConfirmed || false,
+          user2_confirmed: user2Confirmation.hasConfirmed || false,
           processed: stakeData.processed || false,
           status: status
         };
+
+        console.log(`💾 Record to save:`, stakeRecord);
 
         // Check if exists
         const { data: existing } = await supabaseService
@@ -115,7 +139,7 @@ export async function GET() {
             console.error(`❌ Failed to update stake ${stakeId}:`, updateError);
             errors++;
           } else {
-            console.log(`🔄 Updated stake ${stakeId}`);
+            console.log(`✅ Updated stake ${stakeId}`);
             updated++;
           }
         } else {
@@ -172,7 +196,6 @@ export async function POST(request: NextRequest) {
 
     console.log('🔍 Syncing stakes for user:', userAddress);
 
-    // Get StakeCreated events involving this user
     const logs = await publicClient.getLogs({
       address: CONTRACTS.STAKING as `0x${string}`,
       event: parseAbiItem('event StakeCreated(uint256 indexed stakeId, address indexed user1, address indexed user2, uint256 amount, uint256 meetingTime)'),
@@ -180,7 +203,6 @@ export async function POST(request: NextRequest) {
       toBlock: 'latest'
     });
 
-    // Filter for stakes involving this user
     const userLogs = logs.filter(log => 
       log.args.user1?.toLowerCase() === userAddress.toLowerCase() ||
       log.args.user2?.toLowerCase() === userAddress.toLowerCase()
@@ -188,7 +210,6 @@ export async function POST(request: NextRequest) {
 
     console.log(`📊 Found ${userLogs.length} stake events for user`);
 
-    // Group by unique stakeId
     const stakeMap = new Map<string, typeof logs[0]>();
     for (const log of userLogs) {
       if (log.args.stakeId) {
@@ -212,7 +233,6 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Get fresh stake state
         const stakeData = await publicClient.readContract({
           address: CONTRACTS.STAKING as `0x${string}`,
           abi: STAKING_ABI,
@@ -220,9 +240,23 @@ export async function POST(request: NextRequest) {
           args: [BigInt(stakeId)]
         }) as any;
 
-        const user1Amount = Number(amount) / 1_000_000;
-        const user2Amount = stakeData.user2Staked ? Number(amount) / 1_000_000 : 0;
-        const totalStaked = user1Amount + user2Amount;
+        const user1Confirmation = await publicClient.readContract({
+          address: CONTRACTS.STAKING as `0x${string}`,
+          abi: STAKING_ABI,
+          functionName: 'getConfirmation',
+          args: [BigInt(stakeId), user1]
+        }) as any;
+
+        const user2Confirmation = await publicClient.readContract({
+          address: CONTRACTS.STAKING as `0x${string}`,
+          abi: STAKING_ABI,
+          functionName: 'getConfirmation',
+          args: [BigInt(stakeId), user2]
+        }) as any;
+
+        const user1Amount = Number(stakeData.user1Amount) / 1_000_000;
+        const user2Amount = Number(stakeData.user2Amount) / 1_000_000;
+        const totalStaked = Number(stakeData.totalStaked) / 1_000_000;
 
         let status = 'pending';
         if (stakeData.processed) {
@@ -241,8 +275,8 @@ export async function POST(request: NextRequest) {
           meeting_time: Number(meetingTime),
           user1_staked: stakeData.user1Staked,
           user2_staked: stakeData.user2Staked,
-          user1_confirmed: stakeData.user1Confirmed || false,
-          user2_confirmed: stakeData.user2Confirmed || false,
+          user1_confirmed: user1Confirmation.hasConfirmed || false,
+          user2_confirmed: user2Confirmation.hasConfirmed || false,
           processed: stakeData.processed || false,
           status: status
         };
