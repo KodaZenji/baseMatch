@@ -125,8 +125,9 @@ async function sendReminderIfNeeded(
     const hoursSince = Math.floor((now - meetingTime) / 3600);
 
     // Send notification
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://basematch.app';
     const notificationResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://basematch.app/api/notifications`,
+      `${appUrl}/api/notifications`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
