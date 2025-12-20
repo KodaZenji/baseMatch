@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { Clock, AlertCircle, Heart } from 'lucide-react';
+import { Clock, AlertCircle, Heart, X, HourglassIcon } from 'lucide-react';
 
 interface PendingStake {
   stakeId: string;
@@ -10,18 +10,25 @@ interface PendingStake {
   matchName: string;
   meetingTime: number;
   stakeAmount: string;
-  deadline: number;
-  timeRemaining: number;
+  deadline?: number;
+  timeRemaining?: number;
+  timeWaiting?: number;
+  timeUntilMeeting?: number;
+  canCancel?: boolean;
+  role?: 'creator' | 'acceptor';
 }
 
 interface StakeReminderBannerProps {
   onConfirmClick: (stake: PendingStake) => void;
+  onAcceptClick?: (stake: PendingStake) => void;
 }
 
-export default function StakeReminderBanner({ onConfirmClick }: StakeReminderBannerProps) {
+export default function StakeReminderBanner({ onConfirmClick, onAcceptClick }: StakeReminderBannerProps) {
   const { address } = useAccount();
-  const [pendingStakes, setPendingStakes] = useState<PendingStake[]>([]);
+  const [waitingStakes, setWaitingStakes] = useState<PendingStake[]>([]);
+  const [confirmationStakes, setConfirmationStakes] = useState<PendingStake[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState<string | null>(null);
 
   useEffect(() => {
     if (!address) {
@@ -42,12 +49,12 @@ export default function StakeReminderBanner({ onConfirmClick }: StakeReminderBan
     try {
       setLoading(true);
 
-      // Call API instead of direct database access
       const response = await fetch(`/api/stakes/pending?address=${address}`);
       const data = await response.json();
 
       if (data.success) {
-        setPendingStakes(data.stakes);
+        setWaitingStakes(data.waitingForAcceptance || []);
+        setConfirmationStakes(data.needingConfirmation || []);
       } else {
         console.error('Error fetching stakes:', data.error);
       }
@@ -58,6 +65,71 @@ export default function StakeReminderBanner({ onConfirmClick }: StakeReminderBan
     }
   };
 
+  const handleCancelStake = async (stakeId: string) => {
+    if (!confirm('Are you sure you want to cancel this stake? Your USDC will be returned.')) {
+      return;
+    }
+
+    setCancelling(stakeId);
+
+    try {
+      const response = await fetch('/api/stakes/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stakeId,
+          userAddress: address
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Remove from list
+        setWaitingStakes(prev => prev.filter(s => s.stakeId !== stakeId));
+      } else {
+        alert(`Failed to cancel: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error cancelling stake:', error);
+      alert('Failed to cancel stake. Please try again.');
+    } finally {
+      setCancelling(null);
+    }
+  };
+
+  const handleProcessExpired = async (stakeId: string) => {
+    setCancelling(stakeId);
+
+    try {
+      // Call smart contract directly to process expired stake
+      // This should be done through wagmi
+      alert('Processing expired stake on blockchain...');
+      // TODO: Implement blockchain call to processExpiredStake(stakeId)
+      
+      // After blockchain confirms, update database
+      const response = await fetch('/api/stakes/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stakeId,
+          userAddress: address,
+          expired: true
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setWaitingStakes(prev => prev.filter(s => s.stakeId !== stakeId));
+      }
+    } catch (error) {
+      console.error('Error processing expired stake:', error);
+      alert('Failed to process. Please try again.');
+    } finally {
+      setCancelling(null);
+    }
+  };
+
   const formatTimeAgo = (timestamp: number) => {
     const now = Math.floor(Date.now() / 1000);
     const diff = now - timestamp;
@@ -65,6 +137,20 @@ export default function StakeReminderBanner({ onConfirmClick }: StakeReminderBan
     if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
     return `${Math.floor(diff / 86400)} days ago`;
+  };
+
+  const formatTimeWaiting = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      return `${days} day${days !== 1 ? 's' : ''}`;
+    }
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes} minutes`;
   };
 
   const formatTimeRemaining = (seconds: number) => {
@@ -83,12 +169,108 @@ export default function StakeReminderBanner({ onConfirmClick }: StakeReminderBan
   };
 
   if (loading) return null;
-  if (pendingStakes.length === 0) return null;
+  if (waitingStakes.length === 0 && confirmationStakes.length === 0) return null;
 
   return (
     <div className="mb-4 space-y-3">
-      {pendingStakes.map(stake => {
-        const isUrgent = stake.timeRemaining < 6 * 60 * 60; // Less than 6 hours
+      {/* CATEGORY 1: Waiting for Acceptance */}
+      {waitingStakes.map(stake => {
+        const meetingDate = new Date(stake.meetingTime * 1000);
+        const isExpiringSoon = (stake.timeUntilMeeting || 0) < 24 * 60 * 60; // Less than 24 hours
+
+        return (
+          <div
+            key={stake.stakeId}
+            className={`rounded-xl p-4 border-2 ${
+              isExpiringSoon 
+                ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-400'
+                : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1">
+                <div className="text-2xl">
+                  {isExpiringSoon ? (
+                    <AlertCircle className="text-orange-600" size={32} />
+                  ) : (
+                    <HourglassIcon className="text-blue-600" size={32} />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-gray-900">
+                    {stake.role === 'creator' 
+                      ? `Waiting for ${stake.matchName} to accept`
+                      : `${stake.matchName} invited you to a date`
+                    }
+                  </p>
+                  <p className="text-sm text-gray-700 mt-1">
+                    Date scheduled: {meetingDate.toLocaleString()}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Clock size={14} className={isExpiringSoon ? 'text-orange-600' : 'text-blue-600'} />
+                    <p className={`text-xs font-semibold ${isExpiringSoon ? 'text-orange-600' : 'text-blue-600'}`}>
+                      {stake.role === 'creator' 
+                        ? `Expires in ${formatTimeRemaining(stake.timeUntilMeeting || 0)}`
+                        : `Accept within ${formatTimeRemaining(stake.timeUntilMeeting || 0)}`
+                      }
+                    </p>
+                  </div>
+                  {isExpiringSoon && (
+                    <p className="text-xs text-orange-600 font-semibold mt-1">
+                      ⚠️ Stake will expire if not accepted by meeting time!
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-600 mt-1">
+                    Stake: {stake.stakeAmount} USDC
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {stake.role === 'creator' && stake.canCancel && (
+                  <>
+                    {(stake.timeUntilMeeting || 0) <= 0 ? (
+                      // Meeting time passed - show "Claim Refund" instead of "Cancel"
+                      <button
+                        onClick={() => handleProcessExpired(stake.stakeId)}
+                        disabled={cancelling === stake.stakeId}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 disabled:opacity-50"
+                      >
+                        {cancelling === stake.stakeId ? 'Processing...' : 'Claim Refund'}
+                      </button>
+                    ) : (
+                      // Before meeting time - show "Cancel"
+                      <button
+                        onClick={() => handleCancelStake(stake.stakeId)}
+                        disabled={cancelling === stake.stakeId}
+                        className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 disabled:opacity-50 flex items-center gap-2"
+                      >
+                        <X size={16} />
+                        {cancelling === stake.stakeId ? 'Cancelling...' : 'Cancel'}
+                      </button>
+                    )}
+                  </>
+                )}
+                {stake.role === 'acceptor' && onAcceptClick && (stake.timeUntilMeeting || 0) > 0 && (
+                  <button
+                    onClick={() => onAcceptClick(stake)}
+                    className={`px-6 py-3 rounded-lg font-semibold hover:opacity-90 ${
+                      isExpiringSoon
+                        ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white animate-pulse'
+                        : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
+                    }`}
+                  >
+                    {isExpiringSoon ? 'Accept Now!' : 'Accept Stake'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* CATEGORY 2: Need Confirmation */}
+      {confirmationStakes.map(stake => {
+        const isUrgent = (stake.timeRemaining || 0) < 6 * 60 * 60; // Less than 6 hours
 
         return (
           <div
@@ -117,9 +299,8 @@ export default function StakeReminderBanner({ onConfirmClick }: StakeReminderBan
                   </p>
                   <div className="flex items-center gap-2 mt-2">
                     <Clock size={14} className={isUrgent ? 'text-red-600' : 'text-orange-600'} />
-                    <p className={`text-xs font-semibold ${isUrgent ? 'text-red-600' : 'text-orange-600'
-                      }`}>
-                      {formatTimeRemaining(stake.timeRemaining)} remaining to confirm
+                    <p className={`text-xs font-semibold ${isUrgent ? 'text-red-600' : 'text-orange-600'}`}>
+                      {formatTimeRemaining(stake.timeRemaining || 0)} remaining to confirm
                     </p>
                   </div>
                   <p className="text-xs text-gray-600 mt-1">
