@@ -18,19 +18,14 @@ export async function GET(request: NextRequest) {
     const address = userAddress.toLowerCase();
     const now = Math.floor(Date.now() / 1000);
 
-    // Find stakes where:
-    // 1. User is involved (user1 or user2)
-    // 2. Meeting time has passed
-    // 3. Still within 48-hour window
-    // 4. User hasn't confirmed yet
-    // 5. Both users have staked (status is active)
+    // Get all non-processed stakes involving this user
+    // Exclude cancelled and expired stakes
     const { data: stakes, error } = await supabaseService
       .from('stakes')
       .select('*')
       .or(`user1_address.eq.${address},user2_address.eq.${address}`)
       .eq('processed', false)
-      .lte('meeting_time', now) // Meeting has passed
-      .gte('meeting_time', now - 48 * 60 * 60); // Within 48hr window
+      .not('status', 'in', '(cancelled,expired)');
 
     if (error) {
       console.error('Error fetching stakes:', error);
@@ -40,43 +35,91 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Filter and format stakes that need confirmation
-    const pendingStakes = [];
+    // Separate into categories
+    const waitingForAcceptance = [];
+    const needingConfirmation = [];
 
     for (const stake of stakes || []) {
       const isUser1 = stake.user1_address === address;
-      const hasUserConfirmed = isUser1 ? stake.user1_confirmed : stake.user2_confirmed;
-      const bothStaked = stake.user1_staked && stake.user2_staked;
+      const matchAddress = isUser1 ? stake.user2_address : stake.user1_address;
 
-      // Only include if user hasn't confirmed and both users have staked
-      if (!hasUserConfirmed && bothStaked) {
-        const matchAddress = isUser1 ? stake.user2_address : stake.user1_address;
+      // Get match profile name
+      const { data: profile } = await supabaseService
+        .from('profiles')
+        .select('name')
+        .eq('wallet_address', matchAddress)
+        .single();
 
-        // Get match profile name
-        const { data: profile } = await supabaseService
-          .from('profiles')
-          .select('name')
-          .eq('wallet_address', matchAddress)
-          .single();
+      const matchName = profile?.name || 'Your match';
 
-        const deadline = stake.meeting_time + (48 * 60 * 60);
-        const timeRemaining = deadline - now;
+      // CATEGORY 1: Waiting for acceptance
+      if (stake.user1_staked && !stake.user2_staked) {
+        const createdAt = new Date(stake.created_at).getTime() / 1000;
+        const timeWaiting = now - createdAt;
+        const timeUntilMeeting = stake.meeting_time - now;
+        const hasMeetingPassed = stake.meeting_time < now;
 
-        pendingStakes.push({
-          stakeId: stake.id,
-          matchAddress,
-          matchName: profile?.name || 'Your match',
-          meetingTime: stake.meeting_time,
-          stakeAmount: (isUser1 ? stake.user1_amount : stake.user2_amount).toString(),
-          deadline,
-          timeRemaining
-        });
+        if (isUser1) {
+          // User1 (creator) - can cancel before meeting or claim refund after
+          waitingForAcceptance.push({
+            stakeId: stake.id,
+            matchAddress,
+            matchName,
+            meetingTime: stake.meeting_time,
+            stakeAmount: stake.user1_amount.toString(),
+            timeWaiting,
+            timeUntilMeeting,
+            hasMeetingPassed,
+            canCancel: true,
+            role: 'creator'
+          });
+        } else {
+          // User2 (acceptor) - can only accept if meeting hasn't passed
+          if (!hasMeetingPassed) {
+            waitingForAcceptance.push({
+              stakeId: stake.id,
+              matchAddress,
+              matchName,
+              meetingTime: stake.meeting_time,
+              stakeAmount: stake.user2_amount || stake.user1_amount, // Amount they need to stake
+              timeWaiting,
+              timeUntilMeeting,
+              hasMeetingPassed: false,
+              canCancel: false,
+              role: 'acceptor'
+            });
+          }
+        }
+      }
+
+      // CATEGORY 2: Both staked, need to confirm date outcome
+      if (stake.user1_staked && stake.user2_staked) {
+        const meetingPassed = stake.meeting_time < now;
+        const windowOpen = now < stake.meeting_time + (48 * 60 * 60);
+        const hasUserConfirmed = isUser1 ? stake.user1_confirmed : stake.user2_confirmed;
+
+        // Only show if meeting passed, window open, and user hasn't confirmed
+        if (meetingPassed && windowOpen && !hasUserConfirmed) {
+          const deadline = stake.meeting_time + (48 * 60 * 60);
+          const timeRemaining = deadline - now;
+
+          needingConfirmation.push({
+            stakeId: stake.id,
+            matchAddress,
+            matchName,
+            meetingTime: stake.meeting_time,
+            stakeAmount: (isUser1 ? stake.user1_amount : stake.user2_amount).toString(),
+            deadline,
+            timeRemaining
+          });
+        }
       }
     }
 
     return NextResponse.json({
       success: true,
-      stakes: pendingStakes
+      waitingForAcceptance,
+      needingConfirmation
     });
 
   } catch (error) {
