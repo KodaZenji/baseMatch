@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, parseAbiItem } from 'viem';
 import { baseSepolia } from 'viem/chains';
-import { supabaseService } from '@/lib/supabase.server'; // Use existing service client!
+import { supabaseService } from '@/lib/supabase.server';
 import { CONTRACTS, STAKING_ABI } from '@/lib/contracts';
 
 const publicClient = createPublicClient({
@@ -87,7 +87,7 @@ export async function GET() {
             meeting_time: Number(meetingTime),
             user1_staked: true,
             user2_staked: stakeData.user2Staked || false,
-            user1_confirmed: false, // We'll need to check confirmations separately
+            user1_confirmed: false,
             user2_confirmed: false,
             processed: stakeData.processed || false,
             status: status
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if already exists
-        const { data: existing } = await supabaseClient
+        const { data: existing } = await supabaseService
           .from('stakes')
           .select('id')
           .eq('id', stakeId.toString())
@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
           status = 'active';
         }
 
-        const { error: insertError } = await supabaseClient
+        const { error: insertError } = await supabaseService
           .from('stakes')
           .insert({
             id: stakeId.toString(),
