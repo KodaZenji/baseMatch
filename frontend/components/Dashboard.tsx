@@ -12,14 +12,21 @@ import RatingModal from './RatingModal';
 import { Star, Calendar, ThumbsUp, AlertCircle, Clock, Trophy, Zap, Flame, Sparkles, Heart, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
+// Updated interface with optional fields for different stake states
 interface PendingStake {
     stakeId: string;
     matchAddress: string;
     matchName: string;
     meetingTime: number;
     stakeAmount: string;
-    deadline: number;
-    timeRemaining: number;
+    // Optional fields - depend on stake state
+    deadline?: number;
+    timeRemaining?: number;
+    timeWaiting?: number;
+    timeUntilMeeting?: number;
+    hasMeetingPassed?: boolean;
+    canCancel?: boolean;
+    role?: 'creator' | 'acceptor';
 }
 
 interface AchievementWithImage {
@@ -351,7 +358,7 @@ export default function Dashboard() {
                 )}
             </div>
 
-            {/* Achievement Image Preview Modal - Same as ProfileCard */}
+            {/* Achievement Image Preview Modal */}
             {selectedAchievementImage && (
                 <div
                     className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4"
@@ -376,7 +383,6 @@ export default function Dashboard() {
                         onTouchStart={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Close button */}
                         <button
                             onMouseDown={(e) => {
                                 e.preventDefault();
@@ -393,14 +399,12 @@ export default function Dashboard() {
                             <X size={20} />
                         </button>
 
-                        {/* Full badge image */}
                         <img
                             src={selectedAchievementImage.imageUrl.replace('ipfs://', 'https://ipfs.io/ipfs/')}
                             alt={selectedAchievementImage.type}
                             className="w-full h-auto object-contain pointer-events-none"
                         />
 
-                        {/* Badge name below image */}
                         <div className="bg-black py-4 text-center border-t border-gray-800">
                             <p className="text-white text-lg font-medium">{selectedAchievementImage.type}</p>
                             <p className="text-gray-400 text-xs mt-1">Tap anywhere to close</p>
@@ -408,6 +412,8 @@ export default function Dashboard() {
                     </div>
                 </div>
             )}
+
+            {/* Date Confirmation Modal */}
             {showDateConfirmation && selectedStake && (
                 <DateConfirmationModal
                     stakeId={selectedStake.stakeId}
