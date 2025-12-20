@@ -7,7 +7,7 @@ import { generateAvatar } from '@/lib/avatarUtils';
 import { handleProfileTextUpdate } from '@/lib/profileMinting';
 import { useProfile } from '@/hooks/useProfile';
 import WalletConnectionSection from './WalletConnectionSection';
-import { User, Edit, Mail, Lock, AlertTriangle, Trash2, Lightbulb, Info } from 'lucide-react';
+import { User, Edit, Mail, Lock, AlertTriangle, Trash2, Lightbulb, Info, ChevronLeft } from 'lucide-react';
 
 export default function ProfileEdit() {
     const { address, isConnected } = useAccount();
@@ -466,7 +466,16 @@ export default function ProfileEdit() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full">
+            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full relative">
+                {/* Back Button */}
+                <button
+                    onClick={() => window.location.href = '/'}
+                    className="absolute top-4 left-4 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full hover:shadow-lg transition-all duration-300 hover:scale-105 z-10"
+                >
+                    <ChevronLeft className="w-5 h-5" />
+                    <span className="text-sm font-medium">Dashboard</span>
+                </button>
+
                 <h2 className="text-3xl font-bold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
                     Edit Your Profile
                 </h2>
@@ -651,9 +660,7 @@ export default function ProfileEdit() {
                     {hasWallet && profile?.exists && (
                         <div className="mt-8 pt-6 border-t-2 border-gray-200">
                             <div className="bg-red-50 rounded-xl p-4 border-2 border-red-200">
-                                <h3 className="text-lg font-semibold text-red-800 mb-2 flex items-center gap-2">
-                                    <AlertTriangle size={20} /> Danger Zone
-                                </h3>
+                                <h3 className="text-lg font-semibold text-red-800 mb-2 flex items-center gap-2"><AlertTriangle size={20} /> Danger Zone</h3>
                                 <p className="text-sm text-red-700 mb-4">
                                     Deleting your account will permanently remove your profile NFT and all associated data. This action cannot be undone.
                                 </p>
@@ -670,9 +677,7 @@ export default function ProfileEdit() {
                                 ) : !showDeleteFinalConfirm ? (
                                     <div className="space-y-3">
                                         <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-3">
-                                            <p className="text-sm font-semibold text-yellow-800 mb-2 flex items-center gap-1">
-                                                <AlertTriangle size={16} /> First Confirmation
-                                            </p>
+                                            <p className="text-sm font-semibold text-yellow-800 mb-2 flex items-center gap-1"><AlertTriangle size={16} /> First Confirmation</p>
                                             <p className="text-sm text-yellow-700 mb-3">
                                                 Are you sure? This will permanently delete everything.
                                             </p>
@@ -700,9 +705,7 @@ export default function ProfileEdit() {
                                 ) : (
                                     <div className="space-y-3">
                                         <div className="bg-red-100 border-2 border-red-500 rounded-lg p-3">
-                                            <p className="text-sm font-bold text-red-900 mb-2 flex items-center gap-1">
-                                                <AlertTriangle size={16} className="text-red-600" /> FINAL CONFIRMATION
-                                            </p>
+                                            <p className="text-sm font-bold text-red-900 mb-2 flex items-center gap-1"><AlertTriangle size={16} className="text-red-600" /> FINAL CONFIRMATION</p>
                                             <p className="text-sm text-red-800">This is your last chance!</p>
                                         </div>
                                         <div className="flex gap-2">
@@ -723,15 +726,11 @@ export default function ProfileEdit() {
                                                 disabled={isPending || isConfirming || isDeleting}
                                                 className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
                                             >
-                                                {isDeleting ? 'Deleting...' : (
-                                                    <span className="flex items-center justify-center gap-2">
-                                                        <Trash2 size={16} /> Delete Forever
-                                                    </span>
-                                                )}
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
+                                                {isDeleting ? 'Deleting...' : <span className="flex items-center gap-2"><Trash2 size={16} /> Permanently Delete</span>}
+                            </button>
+                        </div>
+                    </div>
+                )}
                             </div>
                         </div>
                     )}
