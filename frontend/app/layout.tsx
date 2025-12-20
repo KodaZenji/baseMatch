@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Lexend } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import ReminderCheckerWrapper from "@/components/ReminderCheckerWrapper";
 
 const lexend = Lexend({
   variable: "--font-lexend",
@@ -69,7 +70,10 @@ export default function RootLayout({
         className={`${lexend.variable} font-sans antialiased`}
         style={{ fontFamily: 'var(--font-lexend)' }}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          <ReminderCheckerWrapper />
+          {children}
+        </Providers>
       </body>
     </html>
   );
