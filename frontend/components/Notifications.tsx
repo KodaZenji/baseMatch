@@ -5,6 +5,7 @@ import { useAccount } from 'wagmi';
 import { Heart, Clock, CheckCircle, DollarSign, MessageCircle, Gift, Trash2, AlertCircle, TrendingUp, TrendingDown, ArrowRight, Bell } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import DateConfirmationModal from './DateConfirmationModal';
+import DateStakeAcceptModal from './DateStakeAcceptModal';
 import RatingModal from './RatingModal';
 import ChatWindow from './ChatWindow';
 
@@ -24,10 +25,30 @@ export default function Notifications() {
 
   // Modal states
   const [showDateConfirmation, setShowDateConfirmation] = useState(false);
+  const [showAcceptStakeModal, setShowAcceptStakeModal] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showChatWindow, setShowChatWindow] = useState(false);
   const [selectedChatMessage, setSelectedChatMessage] = useState<{ address: string; name: string } | null>(null);
-  const [selectedMatch, setSelectedMatch] = useState<{ address: string; name: string; stakeId?: string; meetingTime?: number; stakeAmount?: string } | null>(null);
+  
+  // Updated state for accepting stakes
+  const [selectedStakeToAccept, setSelectedStakeToAccept] = useState<{
+    stakeId: string;
+    matchAddress: string;
+    matchName: string;
+    stakeAmount: string;
+    meetingTime: number;
+    notificationId: string;
+  } | null>(null);
+
+  // State for date confirmation
+  const [selectedMatch, setSelectedMatch] = useState<{ 
+    address: string; 
+    name: string; 
+    stakeId?: string; 
+    meetingTime?: number; 
+    stakeAmount?: string 
+  } | null>(null);
+  
   const [countdown, setCountdown] = useState<number | null>(null);
 
   // Handle countdown timer for rating modal
@@ -74,47 +95,53 @@ export default function Notifications() {
     setSelectedChatMessage(null);
   };
 
+  // Handle accepting a stake from notification
+  const handleAcceptStake = (notification: any) => {
+    const senderAddress = notification.metadata?.sender_address || '';
+    const senderName = notification.metadata?.sender_name || 'User';
+    const stakeId = notification.metadata?.stake_id || '0';
+    const stakeAmount = notification.metadata?.stake_amount || '10';
+    const meetingTime = notification.metadata?.meeting_timestamp || Math.floor(Date.now() / 1000);
+
+    setSelectedStakeToAccept({
+      stakeId,
+      matchAddress: senderAddress,
+      matchName: senderName,
+      stakeAmount,
+      meetingTime,
+      notificationId: notification.id
+    });
+    setShowAcceptStakeModal(true);
+    handleMarkAsRead(notification.id);
+  };
+
+  // Handle successful stake acceptance
+  const handleStakeAccepted = () => {
+    setShowAcceptStakeModal(false);
+    setSelectedStakeToAccept(null);
+    // Optionally show a success message or trigger a refresh
+  };
+
   // Handle clicking "Confirm Date" button from notification
   const handleConfirmDateClick = (notification: any) => {
-    const matchAddress = notification.metadata?.match_address || '';
-    const matchName = notification.metadata?.match_name || 'Your match';
+    const matchAddress = notification.metadata?.match_address || notification.metadata?.sender_address || '';
+    const matchName = notification.metadata?.match_name || notification.metadata?.sender_name || 'Your match';
     const stakeId = notification.metadata?.stake_id || '0';
     const meetingTime = notification.metadata?.meeting_timestamp || Math.floor(Date.now() / 1000);
     const stakeAmount = notification.metadata?.stake_amount || '0';
 
     setSelectedMatch({ address: matchAddress, name: matchName, stakeId, meetingTime, stakeAmount });
     setShowDateConfirmation(true);
+    handleMarkAsRead(notification.id);
   };
 
-  // Handle date confirmation
-  const handleDateConfirmed = async () => {
-    try {
-      if (!selectedMatch) return;
-
-      // Call API to confirm the date
-      const response = await fetch('/api/dates/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userAddress: address,
-          matchAddress: selectedMatch.address,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to confirm date');
-      }
-
-      // Close confirmation modal
-      setShowDateConfirmation(false);
-
-      // Start 10-second countdown
-      setCountdown(10);
-
-    } catch (error) {
-      console.error('Error confirming date:', error);
-      alert('Failed to confirm date. Please try again.');
-    }
+  // Handle date confirmation success
+  const handleDateConfirmed = () => {
+    setShowDateConfirmation(false);
+    
+    // If both users showed up, show rating modal after a brief moment
+    // This logic should be handled by the DateConfirmationModal itself
+    // but we can also trigger it here if needed
   };
 
   // Handle rating modal close
@@ -206,6 +233,40 @@ export default function Notifications() {
       they_showed_up
     } = notification.metadata;
 
+    // Date Stake Created - Add "Accept Stake" button
+    if (notification.type === 'date_stake_created') {
+      return (
+        <div className="mt-3 space-y-3">
+          <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-3 border border-pink-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Heart size={16} className="text-pink-600" />
+              <div className="text-sm font-semibold text-pink-900">
+                New Date Stake
+              </div>
+            </div>
+            <div className="space-y-1 text-xs text-pink-700">
+              <div className="flex justify-between">
+                <span>Stake Amount:</span>
+                <span className="font-semibold">{stake_amount} USDC</span>
+              </div>
+              {meeting_timestamp && (
+                <div className="flex justify-between">
+                  <span>Meeting:</span>
+                  <span className="font-semibold">{new Date(meeting_timestamp * 1000).toLocaleDateString()}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => handleAcceptStake(notification)}
+            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-2 px-4 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+          >
+            Accept & Stake
+          </button>
+        </div>
+      );
+    }
+
     // Date Confirmation Reminder - Add "Confirm Date" button
     if (notification.type === 'date_confirmation_reminder') {
       return (
@@ -231,23 +292,28 @@ export default function Notifications() {
       );
     }
 
-    // Other stake notification details...
-    if (notification.type === 'date_stake_created' || notification.type === 'date_stake_accepted') {
+    // Date Stake Accepted
+    if (notification.type === 'date_stake_accepted') {
       return (
-        <div className="mt-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-3 border border-pink-200">
+        <div className="mt-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <Heart size={16} className="text-pink-600" />
+                <CheckCircle size={16} className="text-green-600" />
                 <div className="text-sm font-semibold text-gray-900">
-                  {stake_amount} USDC Stake
+                  Date Confirmed!
                 </div>
               </div>
               <div className="text-xs text-gray-600 mt-1">
-                {meeting_timestamp && `Date: ${new Date(meeting_timestamp * 1000).toLocaleString()}`}
+                Both staked {stake_amount} USDC
               </div>
+              {meeting_timestamp && (
+                <div className="text-xs text-gray-500 mt-1">
+                  {new Date(meeting_timestamp * 1000).toLocaleString()}
+                </div>
+              )}
             </div>
-            <div className="text-xs text-pink-600 font-semibold">
+            <div className="text-xs text-green-600 font-semibold">
               Active
             </div>
           </div>
@@ -255,6 +321,7 @@ export default function Notifications() {
       );
     }
 
+    // Date Confirmed
     if (notification.type === 'date_confirmed') {
       const outcomeMessages = {
         both_showed: { text: 'Both showed up!', icon: '🎉', color: 'green' },
@@ -267,21 +334,17 @@ export default function Notifications() {
       const outcomeInfo = outcome ? outcomeMessages[outcome as keyof typeof outcomeMessages] : null;
 
       return (
-        <div className={`mt-3 rounded-lg p-3 border ${outcomeInfo?.color === 'green' ? 'bg-green-50 border-green-200' :
+        <div className={`mt-3 rounded-lg p-3 border ${
+          outcomeInfo?.color === 'green' ? 'bg-green-50 border-green-200' :
           outcomeInfo?.color === 'blue' ? 'bg-blue-50 border-blue-200' :
-            outcomeInfo?.color === 'orange' ? 'bg-orange-50 border-orange-200' :
-              outcomeInfo?.color === 'yellow' ? 'bg-yellow-50 border-yellow-200' :
-                'bg-gray-50 border-gray-200'
-          }`}>
+          outcomeInfo?.color === 'orange' ? 'bg-orange-50 border-orange-200' :
+          outcomeInfo?.color === 'yellow' ? 'bg-yellow-50 border-yellow-200' :
+          'bg-gray-50 border-gray-200'
+        }`}>
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle size={16} />
             <div className="text-sm font-semibold">
-              {outcomeInfo?.color === 'green' && <span className="inline-flex items-center gap-1">🎉 {outcomeInfo?.text}</span>}
-              {outcomeInfo?.color === 'blue' && <span className="inline-flex items-center gap-1">💪 {outcomeInfo?.text}</span>}
-              {outcomeInfo?.color === 'orange' && <span className="inline-flex items-center gap-1">😞 {outcomeInfo?.text}</span>}
-              {outcomeInfo?.color === 'gray' && <span className="inline-flex items-center gap-1">😔 {outcomeInfo?.text}</span>}
-              {outcomeInfo?.color === 'yellow' && <span className="inline-flex items-center gap-1"><AlertCircle size={14} /> {outcomeInfo?.text}</span>}
-              {!outcomeInfo && 'Confirmed'}
+              {outcomeInfo?.icon} {outcomeInfo?.text || 'Confirmed'}
             </div>
           </div>
           {(i_showed_up !== undefined && they_showed_up !== undefined) && (
@@ -304,6 +367,7 @@ export default function Notifications() {
       );
     }
 
+    // Stake Processed
     if (notification.type === 'stake_processed' && payout_amount) {
       const payoutValue = parseFloat(payout_amount);
       const stakeValue = parseFloat(stake_amount || '10');
@@ -311,16 +375,17 @@ export default function Notifications() {
       const isLoss = payoutValue < stakeValue;
 
       return (
-        <div className={`mt-3 rounded-lg p-3 border ${isProfit ? 'bg-green-50 border-green-200' :
+        <div className={`mt-3 rounded-lg p-3 border ${
+          isProfit ? 'bg-green-50 border-green-200' :
           isLoss ? 'bg-red-50 border-red-200' :
-            'bg-blue-50 border-blue-200'
-          }`}>
+          'bg-blue-50 border-blue-200'
+        }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <DollarSign size={16} className={
                 isProfit ? 'text-green-600' :
-                  isLoss ? 'text-red-600' :
-                    'text-blue-600'
+                isLoss ? 'text-red-600' :
+                'text-blue-600'
               } />
               <div>
                 <div className="text-sm font-semibold text-gray-900">
@@ -328,18 +393,19 @@ export default function Notifications() {
                 </div>
                 <div className="text-xs text-gray-600">
                   {isProfit ? `+${(payoutValue - stakeValue).toFixed(2)} profit` :
-                    isLoss ? `${(stakeValue - payoutValue).toFixed(2)} lost` :
-                      'Even'}
+                   isLoss ? `${(stakeValue - payoutValue).toFixed(2)} lost` :
+                   'Even'}
                 </div>
               </div>
             </div>
-            <div className={`text-xs font-semibold flex items-center gap-1 ${isProfit ? 'text-green-700' :
+            <div className={`text-xs font-semibold flex items-center gap-1 ${
+              isProfit ? 'text-green-700' :
               isLoss ? 'text-red-700' :
-                'text-blue-700'
-              }`}>
+              'text-blue-700'
+            }`}>
               {isProfit ? <><TrendingUp size={14} /> Bonus</> :
-                isLoss ? <><TrendingDown size={14} /> Loss</> :
-                  <><ArrowRight size={14} /> Refund</>
+               isLoss ? <><TrendingDown size={14} /> Loss</> :
+               <><ArrowRight size={14} /> Refund</>
               }
             </div>
           </div>
@@ -425,8 +491,9 @@ export default function Notifications() {
             <div
               key={notification.id}
               onClick={() => !notification.read && handleMarkAsRead(notification.id)}
-              className={`p-6 transition-colors cursor-pointer hover:bg-gray-50 ${!notification.read ? 'bg-blue-50' : ''
-                }`}
+              className={`p-6 transition-colors cursor-pointer hover:bg-gray-50 ${
+                !notification.read ? 'bg-blue-50' : ''
+              }`}
             >
               <div className="flex items-start gap-4">
                 {/* Icon */}
@@ -447,10 +514,10 @@ export default function Notifications() {
                         {notification.message}
                       </p>
 
-                      {/* Stake-specific details with Confirm button */}
+                      {/* Stake-specific details with action buttons */}
                       {renderStakeDetails(notification)}
 
-                      {/* Add clickable button for message notifications */}
+                      {/* Message notification button */}
                       {notification.type === 'message' && (
                         <button
                           onClick={() => handleMessageClick(notification)}
@@ -496,6 +563,18 @@ export default function Notifications() {
           user2Name={selectedChatMessage.name}
           currentUserAddress={address}
           onClose={handleChatClose}
+        />
+      )}
+
+      {/* Date Stake Accept Modal */}
+      {showAcceptStakeModal && selectedStakeToAccept && (
+        <DateStakeAcceptModal
+          stakeId={selectedStakeToAccept.stakeId}
+          matchedUserName={selectedStakeToAccept.matchName}
+          stakeAmount={selectedStakeToAccept.stakeAmount}
+          meetingTime={selectedStakeToAccept.meetingTime}
+          onClose={() => setShowAcceptStakeModal(false)}
+          onSuccess={handleStakeAccepted}
         />
       )}
 
