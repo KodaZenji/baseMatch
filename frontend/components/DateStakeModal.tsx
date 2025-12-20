@@ -84,12 +84,12 @@ export default function DateStakeModal({
                 // topics[2] = user1 (indexed)
                 // topics[3] = user2 (indexed)
                 const stakeId = BigInt(stakeCreatedLog.topics[1]!).toString();
-                
+
                 console.log('🎯 Extracted stake ID:', stakeId);
-                
+
                 await syncStakeToDatabase(stakeId);
                 await sendStakeNotification(stakeId);
-                
+
                 setStep('success');
                 return;
             }
@@ -97,7 +97,7 @@ export default function DateStakeModal({
             // Fallback: Query contract directly
             console.log('⚠️ Event not found in logs, trying fallback...');
             await fallbackQueryMethod();
-            
+
         } catch (error) {
             console.error('❌ Error extracting stake ID:', error);
             setStep('success'); // Still show success to user
@@ -121,10 +121,10 @@ export default function DateStakeModal({
                 const log = logs[i];
                 if (log.topics[2]?.toLowerCase() === `0x${address?.toLowerCase().slice(2).padStart(64, '0')}` &&
                     log.topics[3]?.toLowerCase() === `0x${matchedUserAddress.toLowerCase().slice(2).padStart(64, '0')}`) {
-                    
+
                     const stakeId = BigInt(log.topics[1]!).toString();
                     console.log('🎯 Found stake ID via fallback:', stakeId);
-                    
+
                     await syncStakeToDatabase(stakeId);
                     await sendStakeNotification(stakeId);
                     setStep('success');
@@ -142,7 +142,7 @@ export default function DateStakeModal({
     const syncStakeToDatabase = async (stakeId: string) => {
         try {
             console.log('💾 Syncing stake to database via API:', stakeId);
-            
+
             const response = await fetch('/api/stakes/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -156,7 +156,7 @@ export default function DateStakeModal({
             });
 
             const result = await response.json();
-            
+
             if (result.success) {
                 console.log('✅ Stake synced to database successfully');
             } else {
@@ -180,6 +180,7 @@ export default function DateStakeModal({
                     metadata: {
                         stake_id: stakeId,
                         sender_address: address?.toLowerCase(),
+                        sender_name: matchedUserName || 'User',
                         stake_amount: stakeAmount,
                     }
                 })
