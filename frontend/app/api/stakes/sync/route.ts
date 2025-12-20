@@ -20,49 +20,56 @@ export async function GET() {
     const logs = await publicClient.getLogs({
       address: CONTRACTS.STAKING as `0x${string}`,
       event: parseAbiItem('event StakeCreated(uint256 indexed stakeId, address indexed user1, address indexed user2, uint256 amount, uint256 meetingTime)'),
-      fromBlock: FIRST_STAKE_BLOCK, // Changed from 0n
+      fromBlock: FIRST_STAKE_BLOCK,
       toBlock: 'latest'
     });
 
     console.log(`📊 Found ${logs.length} stake events total`);
 
+    // Group by unique stakeId
+    const stakeMap = new Map<string, typeof logs[0]>();
+    for (const log of logs) {
+      if (log.args.stakeId) {
+        const id = log.args.stakeId.toString();
+        // Keep the first occurrence (has the meeting details)
+        if (!stakeMap.has(id)) {
+          stakeMap.set(id, log);
+        }
+      }
+    }
+
+    console.log(`🎯 Processing ${stakeMap.size} unique stakes`);
+
     let synced = 0;
-    let skipped = 0;
+    let updated = 0;
     let errors = 0;
 
-    for (const log of logs) {
+    for (const [stakeId, log] of stakeMap) {
       try {
-        const { stakeId, user1, user2, amount, meetingTime } = log.args;
+        const { user1, user2, amount, meetingTime } = log.args;
 
-        if (!stakeId || !user1 || !user2 || !amount || !meetingTime) {
-          console.warn('⚠️ Skipping invalid log entry');
+        if (!user1 || !user2 || !amount || !meetingTime) {
+          console.warn(`⚠️ Skipping stake ${stakeId} - missing data`);
           errors++;
           continue;
         }
 
-        // Check if already exists in database
-        const { data: existing } = await supabaseService
-          .from('stakes')
-          .select('id')
-          .eq('id', stakeId.toString())
-          .single();
-
-        if (existing) {
-          console.log(`⏭️  Stake ${stakeId} already exists, skipping`);
-          skipped++;
-          continue;
-        }
-
-        // Get current stake state from contract
+        // ALWAYS fetch fresh state from contract
         const stakeData = await publicClient.readContract({
           address: CONTRACTS.STAKING as `0x${string}`,
           abi: STAKING_ABI,
           functionName: 'getStake',
-          args: [stakeId]
+          args: [BigInt(stakeId)]
         }) as any;
 
-        // Calculate total staked
-        const user1Amount = Number(amount) / 1_000_000; // Convert from 6 decimals
+        console.log(`📊 Stake ${stakeId} state:`, {
+          user1Staked: stakeData.user1Staked,
+          user2Staked: stakeData.user2Staked,
+          processed: stakeData.processed
+        });
+
+        // Calculate amounts
+        const user1Amount = Number(amount) / 1_000_000;
         const user2Amount = stakeData.user2Staked ? Number(amount) / 1_000_000 : 0;
         const totalStaked = user1Amount + user2Amount;
 
@@ -74,46 +81,72 @@ export async function GET() {
           status = 'active';
         }
 
-        // Insert into database
-        const { error: insertError } = await supabaseService
-          .from('stakes')
-          .insert({
-            id: stakeId.toString(),
-            user1_address: user1.toLowerCase(),
-            user2_address: user2.toLowerCase(),
-            user1_amount: user1Amount,
-            user2_amount: user2Amount,
-            total_staked: totalStaked,
-            meeting_time: Number(meetingTime),
-            user1_staked: true,
-            user2_staked: stakeData.user2Staked || false,
-            user1_confirmed: false,
-            user2_confirmed: false,
-            processed: stakeData.processed || false,
-            status: status
-          });
+        const stakeRecord = {
+          id: stakeId,
+          user1_address: user1.toLowerCase(),
+          user2_address: user2.toLowerCase(),
+          user1_amount: user1Amount,
+          user2_amount: user2Amount,
+          total_staked: totalStaked,
+          meeting_time: Number(meetingTime),
+          user1_staked: stakeData.user1Staked,
+          user2_staked: stakeData.user2Staked,
+          user1_confirmed: stakeData.user1Confirmed || false,
+          user2_confirmed: stakeData.user2Confirmed || false,
+          processed: stakeData.processed || false,
+          status: status
+        };
 
-        if (insertError) {
-          console.error(`❌ Failed to insert stake ${stakeId}:`, insertError);
-          errors++;
+        // Check if exists
+        const { data: existing } = await supabaseService
+          .from('stakes')
+          .select('id')
+          .eq('id', stakeId)
+          .single();
+
+        if (existing) {
+          // UPDATE existing stake with fresh contract state
+          const { error: updateError } = await supabaseService
+            .from('stakes')
+            .update(stakeRecord)
+            .eq('id', stakeId);
+
+          if (updateError) {
+            console.error(`❌ Failed to update stake ${stakeId}:`, updateError);
+            errors++;
+          } else {
+            console.log(`🔄 Updated stake ${stakeId}`);
+            updated++;
+          }
         } else {
-          console.log(`✅ Synced stake ${stakeId}`);
-          synced++;
+          // INSERT new stake
+          const { error: insertError } = await supabaseService
+            .from('stakes')
+            .insert(stakeRecord);
+
+          if (insertError) {
+            console.error(`❌ Failed to insert stake ${stakeId}:`, insertError);
+            errors++;
+          } else {
+            console.log(`✅ Synced stake ${stakeId}`);
+            synced++;
+          }
         }
 
       } catch (error) {
-        console.error('❌ Error processing log:', error);
+        console.error(`❌ Error processing stake ${stakeId}:`, error);
         errors++;
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: `Sync complete: ${synced} synced, ${skipped} skipped, ${errors} errors`,
+      message: `Sync complete: ${synced} new, ${updated} updated, ${errors} errors`,
       synced,
-      skipped,
+      updated,
       errors,
-      total: logs.length
+      totalEvents: logs.length,
+      uniqueStakes: stakeMap.size
     });
 
   } catch (error) {
@@ -143,49 +176,48 @@ export async function POST(request: NextRequest) {
     const logs = await publicClient.getLogs({
       address: CONTRACTS.STAKING as `0x${string}`,
       event: parseAbiItem('event StakeCreated(uint256 indexed stakeId, address indexed user1, address indexed user2, uint256 amount, uint256 meetingTime)'),
-      fromBlock: FIRST_STAKE_BLOCK, // Changed from 0n
+      fromBlock: FIRST_STAKE_BLOCK,
       toBlock: 'latest'
     });
 
-    // Filter for stakes involving this user (as user1 or user2)
+    // Filter for stakes involving this user
     const userLogs = logs.filter(log => 
       log.args.user1?.toLowerCase() === userAddress.toLowerCase() ||
       log.args.user2?.toLowerCase() === userAddress.toLowerCase()
     );
 
-    console.log(`📊 Found ${userLogs.length} stakes for this user`);
+    console.log(`📊 Found ${userLogs.length} stake events for user`);
+
+    // Group by unique stakeId
+    const stakeMap = new Map<string, typeof logs[0]>();
+    for (const log of userLogs) {
+      if (log.args.stakeId) {
+        const id = log.args.stakeId.toString();
+        if (!stakeMap.has(id)) {
+          stakeMap.set(id, log);
+        }
+      }
+    }
 
     let synced = 0;
-    let skipped = 0;
+    let updated = 0;
     let errors = 0;
 
-    for (const log of userLogs) {
+    for (const [stakeId, log] of stakeMap) {
       try {
-        const { stakeId, user1, user2, amount, meetingTime } = log.args;
+        const { user1, user2, amount, meetingTime } = log.args;
 
-        if (!stakeId || !user1 || !user2 || !amount || !meetingTime) {
+        if (!user1 || !user2 || !amount || !meetingTime) {
           errors++;
           continue;
         }
 
-        // Check if already exists
-        const { data: existing } = await supabaseService
-          .from('stakes')
-          .select('id')
-          .eq('id', stakeId.toString())
-          .single();
-
-        if (existing) {
-          skipped++;
-          continue;
-        }
-
-        // Get stake state
+        // Get fresh stake state
         const stakeData = await publicClient.readContract({
           address: CONTRACTS.STAKING as `0x${string}`,
           abi: STAKING_ABI,
           functionName: 'getStake',
-          args: [stakeId]
+          args: [BigInt(stakeId)]
         }) as any;
 
         const user1Amount = Number(amount) / 1_000_000;
@@ -199,28 +231,49 @@ export async function POST(request: NextRequest) {
           status = 'active';
         }
 
-        const { error: insertError } = await supabaseService
-          .from('stakes')
-          .insert({
-            id: stakeId.toString(),
-            user1_address: user1.toLowerCase(),
-            user2_address: user2.toLowerCase(),
-            user1_amount: user1Amount,
-            user2_amount: user2Amount,
-            total_staked: totalStaked,
-            meeting_time: Number(meetingTime),
-            user1_staked: true,
-            user2_staked: stakeData.user2Staked || false,
-            user1_confirmed: false,
-            user2_confirmed: false,
-            processed: stakeData.processed || false,
-            status: status
-          });
+        const stakeRecord = {
+          id: stakeId,
+          user1_address: user1.toLowerCase(),
+          user2_address: user2.toLowerCase(),
+          user1_amount: user1Amount,
+          user2_amount: user2Amount,
+          total_staked: totalStaked,
+          meeting_time: Number(meetingTime),
+          user1_staked: stakeData.user1Staked,
+          user2_staked: stakeData.user2Staked,
+          user1_confirmed: stakeData.user1Confirmed || false,
+          user2_confirmed: stakeData.user2Confirmed || false,
+          processed: stakeData.processed || false,
+          status: status
+        };
 
-        if (!insertError) {
-          synced++;
+        const { data: existing } = await supabaseService
+          .from('stakes')
+          .select('id')
+          .eq('id', stakeId)
+          .single();
+
+        if (existing) {
+          const { error: updateError } = await supabaseService
+            .from('stakes')
+            .update(stakeRecord)
+            .eq('id', stakeId);
+          
+          if (!updateError) {
+            updated++;
+          } else {
+            errors++;
+          }
         } else {
-          errors++;
+          const { error: insertError } = await supabaseService
+            .from('stakes')
+            .insert(stakeRecord);
+
+          if (!insertError) {
+            synced++;
+          } else {
+            errors++;
+          }
         }
 
       } catch (error) {
@@ -230,9 +283,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Synced ${synced} stakes for user, skipped ${skipped}, ${errors} errors`,
+      message: `Synced ${synced} new, ${updated} updated, ${errors} errors`,
       synced,
-      skipped,
+      updated,
       errors
     });
 
