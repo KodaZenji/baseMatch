@@ -1,3 +1,6 @@
+// frontend/components/Dashboard.tsx
+// FIXED: Added auto-refresh after date confirmation to show updated stats
+
 'use client';
 
 import { useAccount } from 'wagmi';
@@ -9,17 +12,15 @@ import Link from 'next/link';
 import StakeReminderBanner from './StakeReminderBanner';
 import DateConfirmationModal from './DateConfirmationModal';
 import RatingModal from './RatingModal';
-import { Star, Calendar, ThumbsUp, AlertCircle, Clock, Trophy, Zap, Flame, Sparkles, Heart, X } from 'lucide-react';
+import { Star, Calendar, ThumbsUp, AlertCircle, Clock, Trophy, Zap, Flame, Sparkles, Heart, X, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-// Updated interface with optional fields for different stake states
 interface PendingStake {
     stakeId: string;
     matchAddress: string;
     matchName: string;
     meetingTime: number;
     stakeAmount: string;
-    // Optional fields - depend on stake state
     deadline?: number;
     timeRemaining?: number;
     timeWaiting?: number;
@@ -39,8 +40,12 @@ interface AchievementWithImage {
 export default function Dashboard() {
     const { address } = useAccount();
     const { profile } = useProfile(address);
-    const { reputation, loading: reputationLoading } = useReputation(address);
-    const { achievements, loading: achievementsLoading } = useAchievements(address);
+    
+    // ✅ NEW: Add refresh key to force re-fetch from blockchain
+    const [refreshKey, setRefreshKey] = useState(0);
+    const { reputation, loading: reputationLoading } = useReputation(address, refreshKey);
+    const { achievements, loading: achievementsLoading } = useAchievements(address, refreshKey);
+    
     const [avatarUrl, setAvatarUrl] = useState('');
     const [achievementsWithImages, setAchievementsWithImages] = useState<AchievementWithImage[]>([]);
     const [selectedAchievementImage, setSelectedAchievementImage] = useState<{ imageUrl: string; type: string } | null>(null);
@@ -50,6 +55,9 @@ export default function Dashboard() {
     const [showRatingModal, setShowRatingModal] = useState(false);
     const [selectedStake, setSelectedStake] = useState<PendingStake | null>(null);
     const [countdown, setCountdown] = useState<number | null>(null);
+    
+    // ✅ NEW: Pending state to show when blockchain updates are in progress
+    const [isPendingBlockchainUpdate, setIsPendingBlockchainUpdate] = useState(false);
 
     // Generate avatar based on wallet address
     useEffect(() => {
@@ -67,7 +75,6 @@ export default function Dashboard() {
             }, 1000);
             return () => clearTimeout(timer);
         } else if (countdown === 0) {
-            // Open rating modal after countdown completes
             setShowRatingModal(true);
             setCountdown(null);
         }
@@ -79,7 +86,7 @@ export default function Dashboard() {
         setShowDateConfirmation(true);
     };
 
-    // Handle date confirmation success
+    // ✅ IMPROVED: Handle date confirmation success with blockchain update tracking
     const handleDateConfirmed = async () => {
         try {
             console.log('Date confirmed successfully');
@@ -88,15 +95,37 @@ export default function Dashboard() {
             setShowDateConfirmation(false);
 
             // Refresh the stake reminder banner
-            // This will trigger the StakeReminderBanner to fetch updated stakes
             window.dispatchEvent(new Event('stakeConfirmed'));
 
-            // Start 10-second countdown to rating modal
+            // ✅ NEW: Show pending state
+            setIsPendingBlockchainUpdate(true);
+
+            // ✅ NEW: Wait 10 seconds for blockchain to confirm, then refresh
+            setTimeout(() => {
+                console.log('🔄 Refreshing reputation and achievements from blockchain...');
+                setRefreshKey(prev => prev + 1);
+                setIsPendingBlockchainUpdate(false);
+            }, 10000); // 10 seconds should be enough for blockchain confirmation
+
+            // Start countdown to rating modal
             setCountdown(10);
 
         } catch (error) {
             console.error('Error after confirmation:', error);
+            setIsPendingBlockchainUpdate(false);
         }
+    };
+
+    // ✅ NEW: Handle rating submission with blockchain refresh
+    const handleRatingSubmitted = () => {
+        console.log('🔄 Rating submitted, refreshing stats...');
+        setIsPendingBlockchainUpdate(true);
+        
+        // Wait for blockchain confirmation, then refresh
+        setTimeout(() => {
+            setRefreshKey(prev => prev + 1);
+            setIsPendingBlockchainUpdate(false);
+        }, 10000);
     };
 
     // Handle rating modal close
@@ -111,7 +140,6 @@ export default function Dashboard() {
             const withImages = await Promise.all(
                 achievements.map(async (achievement) => {
                     try {
-                        // Map achievement type to filename
                         const typeMap: { [key: string]: string } = {
                             'First Date': 'first-date',
                             '5 Dates': '5 dates',
@@ -161,6 +189,21 @@ export default function Dashboard() {
 
             {/* Stake Reminder Banner */}
             <StakeReminderBanner onConfirmClick={handleConfirmClick} />
+
+            {/* ✅ NEW: Pending blockchain update indicator */}
+            {isPendingBlockchainUpdate && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-4">
+                    <div className="flex items-center gap-3">
+                        <RefreshCw className="animate-spin text-blue-600" size={24} />
+                        <div>
+                            <p className="font-semibold text-blue-900">Updating Your Stats...</p>
+                            <p className="text-sm text-blue-700">
+                                Your blockchain transaction is being confirmed. Stats will update shortly.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Countdown indicator */}
             {countdown !== null && countdown > 0 && (
@@ -231,7 +274,21 @@ export default function Dashboard() {
 
             {/* Reputation Stats */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-6">Reputation</h3>
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-gray-800">Reputation</h3>
+                    {/* ✅ NEW: Manual refresh button */}
+                    <button
+                        onClick={() => {
+                            console.log('🔄 Manual refresh triggered');
+                            setRefreshKey(prev => prev + 1);
+                        }}
+                        className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                        disabled={reputationLoading}
+                    >
+                        <RefreshCw className={reputationLoading ? 'animate-spin' : ''} size={16} />
+                        Refresh
+                    </button>
+                </div>
                 {reputationLoading ? (
                     <div className="flex justify-center items-center h-32">
                         <div className="text-gray-500">Loading reputation...</div>
@@ -435,6 +492,7 @@ export default function Dashboard() {
                 <RatingModal
                     matchAddress={selectedStake.matchAddress}
                     onClose={handleRatingClose}
+                    onSuccess={handleRatingSubmitted}
                 />
             )}
         </div>
