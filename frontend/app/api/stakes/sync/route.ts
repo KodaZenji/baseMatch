@@ -73,7 +73,7 @@ export async function GET() {
           processed: stakeData.processed
         });
 
-        // Get confirmations separately
+        // ✅ Get confirmations separately with ALL fields
         const user1Confirmation = await publicClient.readContract({
           address: CONTRACTS.STAKING as `0x${string}`,
           abi: STAKING_ABI,
@@ -102,7 +102,18 @@ export async function GET() {
         }
 
         console.log(`📌 Status: ${status}, user1Staked: ${stakeData.user1Staked}, user2Staked: ${stakeData.user2Staked}`);
+        console.log(`✅ User1 confirmation:`, {
+          hasConfirmed: user1Confirmation[0],
+          iShowedUp: user1Confirmation[1],
+          theyShowedUp: user1Confirmation[2]
+        });
+        console.log(`✅ User2 confirmation:`, {
+          hasConfirmed: user2Confirmation[0],
+          iShowedUp: user2Confirmation[1],
+          theyShowedUp: user2Confirmation[2]
+        });
 
+        // ✅ FIXED: Include ALL 6 confirmation fields
         const stakeRecord = {
           id: stakeId,
           user1_address: user1.toLowerCase(),
@@ -113,8 +124,12 @@ export async function GET() {
           meeting_time: Number(meetingTime),
           user1_staked: stakeData.user1Staked,
           user2_staked: stakeData.user2Staked,
-          user1_confirmed: user1Confirmation.hasConfirmed || false,
-          user2_confirmed: user2Confirmation.hasConfirmed || false,
+          user1_confirmed: user1Confirmation[0] || false,
+          user1_i_showed_up: user1Confirmation[1] || false,
+          user1_they_showed_up: user1Confirmation[2] || false,
+          user2_confirmed: user2Confirmation[0] || false,
+          user2_i_showed_up: user2Confirmation[1] || false,
+          user2_they_showed_up: user2Confirmation[2] || false,
           processed: stakeData.processed || false,
           status: status
         };
@@ -240,6 +255,7 @@ export async function POST(request: NextRequest) {
           args: [BigInt(stakeId)]
         }) as any;
 
+        // ✅ Get confirmations with ALL fields
         const user1Confirmation = await publicClient.readContract({
           address: CONTRACTS.STAKING as `0x${string}`,
           abi: STAKING_ABI,
@@ -265,6 +281,7 @@ export async function POST(request: NextRequest) {
           status = 'active';
         }
 
+        // ✅ FIXED: Include ALL 6 confirmation fields
         const stakeRecord = {
           id: stakeId,
           user1_address: user1.toLowerCase(),
@@ -275,8 +292,12 @@ export async function POST(request: NextRequest) {
           meeting_time: Number(meetingTime),
           user1_staked: stakeData.user1Staked,
           user2_staked: stakeData.user2Staked,
-          user1_confirmed: user1Confirmation.hasConfirmed || false,
-          user2_confirmed: user2Confirmation.hasConfirmed || false,
+          user1_confirmed: user1Confirmation[0] || false,
+          user1_i_showed_up: user1Confirmation[1] || false,
+          user1_they_showed_up: user1Confirmation[2] || false,
+          user2_confirmed: user2Confirmation[0] || false,
+          user2_i_showed_up: user2Confirmation[1] || false,
+          user2_they_showed_up: user2Confirmation[2] || false,
           processed: stakeData.processed || false,
           status: status
         };
