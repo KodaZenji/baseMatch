@@ -11,6 +11,7 @@ interface DateStakeAcceptModalProps {
     matchedUserName: string;
     stakeAmount: string;
     meetingTime: number;
+    currentUserName?: string;
     onClose: () => void;
     onSuccess: () => void;
 }
@@ -20,6 +21,7 @@ export default function DateStakeAcceptModal({
     matchedUserName,
     stakeAmount,
     meetingTime,
+    currentUserName,
     onClose,
     onSuccess,
 }: DateStakeAcceptModalProps) {
@@ -54,7 +56,7 @@ export default function DateStakeAcceptModal({
         if (isApprovalSuccess && step === 'approval' && !hasProcessedSuccess) {
             console.log('✅ Approval confirmed, proceeding to accept stake');
             setHasProcessedSuccess(true);
-            
+
             // Refetch allowance to ensure it's updated
             refetchAllowance().then(() => {
                 // Small delay to ensure blockchain state is updated
@@ -70,43 +72,54 @@ export default function DateStakeAcceptModal({
         if (isAcceptSuccess && step === 'accepting') {
             console.log('✅ Stake accepted!');
             setStep('success');
-            
+
             // Sync to database
             syncStakeToDatabase();
+            // Send notification to the stake creator
             sendAcceptanceNotification();
         }
     }, [isAcceptSuccess, step]);
 
     const syncStakeToDatabase = async () => {
         try {
-            await fetch('/api/stakes/sync', {
+            console.log('🔄 Syncing stake to database after acceptance...');
+            const response = await fetch('/api/stakes/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userAddress: address })
             });
+
+            const result = await response.json();
+            console.log('🔄 Stake sync result:', result);
         } catch (error) {
-            console.error('Failed to sync stake:', error);
+            console.error('❌ Failed to sync stake:', error);
         }
     };
 
     const sendAcceptanceNotification = async () => {
         try {
+            console.log('📬 Sending acceptance notification for stake:', stakeId);
+            
             const response = await fetch(`/api/stakes/${stakeId}`);
             const data = await response.json();
+            console.log('📥 Stake data response:', data);
             
             if (data.success && data.stake) {
+                // Determine the other user (the one who created the stake)
                 const otherUserAddress = data.stake.user1_address.toLowerCase() === address?.toLowerCase() 
                     ? data.stake.user2_address 
                     : data.stake.user1_address;
+                    
+                console.log('👥 Notifying other user:', otherUserAddress);
 
-                await fetch('/api/notifications', {
+                const notificationResponse = await fetch('/api/notifications', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         userAddress: otherUserAddress,
                         type: 'date_stake_accepted',
                         title: '🎉 Date Confirmed!',
-                        message: `${matchedUserName} accepted the stake. Your date is locked in!`,
+                        message: `${currentUserName || 'Someone'} accepted the stake. Your date is locked in!`, // Use currentUserName
                         metadata: {
                             stake_id: stakeId,
                             acceptor_address: address?.toLowerCase(),
@@ -115,9 +128,18 @@ export default function DateStakeAcceptModal({
                         }
                     })
                 });
+                
+                const notificationResult = await notificationResponse.json();
+                console.log('📬 Notification result:', notificationResult);
+                
+                if (!notificationResponse.ok) {
+                    console.error('❌ Failed to send notification:', notificationResult.error);
+                }
+            } else {
+                console.error('❌ Failed to get stake data:', data.error);
             }
         } catch (error) {
-            console.error('Failed to send notification:', error);
+            console.error('❌ Failed to send notification:', error);
         }
     };
 
@@ -230,11 +252,11 @@ export default function DateStakeAcceptModal({
                         </div>
                         <h3 className="text-2xl font-bold text-gray-900 mb-2">Date Confirmed!</h3>
                         <p className="text-gray-600 mb-6">You've accepted the stake. Good luck on your date!</p>
-                        <button 
-                            onClick={() => { 
-                                onSuccess(); 
-                                onClose(); 
-                            }} 
+                        <button
+                            onClick={() => {
+                                onSuccess();
+                                onClose();
+                            }}
                             className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity"
                         >
                             Done
@@ -290,15 +312,15 @@ export default function DateStakeAcceptModal({
                         )}
 
                         <div className="flex gap-2 pt-4">
-                            <button 
-                                onClick={onClose} 
+                            <button
+                                onClick={onClose}
                                 className="flex-1 border border-gray-300 px-4 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
                             >
                                 Cancel
                             </button>
-                            <button 
-                                onClick={handleAcceptStake} 
-                                disabled={isAcceptPending} 
+                            <button
+                                onClick={handleAcceptStake}
+                                disabled={isAcceptPending}
                                 className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-3 rounded-lg font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity"
                             >
                                 Accept & Stake
