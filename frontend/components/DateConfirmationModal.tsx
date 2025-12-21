@@ -1,5 +1,5 @@
 // frontend/components/DateConfirmationModal.tsx
-// FIXED: Wait for blockchain confirmation before checking achievements
+// UPDATED: Database as backup only, event fires after blockchain confirmation
 
 'use client';
 
@@ -33,8 +33,6 @@ export default function DateConfirmationModal({
     const [partnerShowedUp, setPartnerShowedUp] = useState<boolean | null>(null);
     const [error, setError] = useState('');
     const [showRatingPrompt, setShowRatingPrompt] = useState(false);
-    
-    // ✅ NEW: Track blockchain confirmation status
     const [isProcessingBlockchain, setIsProcessingBlockchain] = useState(false);
 
     const { writeContract, data: hash, isPending } = useWriteContract();
@@ -116,7 +114,7 @@ export default function DateConfirmationModal({
         setError('');
 
         try {
-            console.log('📤 Confirming date:', { stakeId, iShowedUp, partnerShowedUp });
+            console.log('📤 Confirming date on blockchain:', { stakeId, iShowedUp, partnerShowedUp });
 
             writeContract({
                 address: CONTRACTS.STAKING as `0x${string}`,
@@ -132,51 +130,55 @@ export default function DateConfirmationModal({
 
     useEffect(() => {
         if (isSuccess) {
-            console.log('✅ Blockchain confirmation successful');
+            console.log('✅ Blockchain confirmation successful!');
             setIsProcessingBlockchain(true);
             
-            // ✅ FIXED: Execute tasks in proper sequence
+            // ✅ FIRE EVENT IMMEDIATELY - blockchain is now the source of truth
+            console.log('🔄 Dispatching stakeConfirmed event');
+            window.dispatchEvent(new CustomEvent('stakeConfirmed'));
+            
+            // Then handle post-confirmation tasks (database backup, notifications, etc.)
             processPostConfirmation();
         }
     }, [isSuccess]);
 
-    // ✅ NEW: Properly sequenced post-confirmation flow
     const processPostConfirmation = async () => {
         try {
-            // STEP 1: Update stakes table and send notification (can run in parallel)
-            await Promise.all([
-                updateStakesTable(),
-                sendConfirmationNotification()
-            ]);
-            console.log('✅ Database and notifications updated');
+            // These are now just for database backup and user experience
+            // They don't affect whether the banner shows/hides
+            
+            // STEP 1: Update database as backup (don't await - do in background)
+            updateStakesTableAsBackup();
+            
+            // STEP 2: Send notification to other user
+            sendConfirmationNotification();
 
-            // STEP 2: Record date on blockchain (this takes time!)
-            console.log('⏳ Recording date on blockchain...');
+            // STEP 3: Wait a bit for blockchain state to propagate
+            console.log('⏳ Waiting for blockchain state to propagate...');
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            // STEP 4: Record date (this also reads from blockchain)
+            console.log('📝 Recording date on blockchain...');
             const dateRecordResponse = await recordDateInDatabase();
             
             if (!dateRecordResponse.success) {
                 console.error('❌ Failed to record date on blockchain');
-                setIsProcessingBlockchain(false);
-                return;
+            } else {
+                console.log('✅ Date recorded on blockchain');
             }
 
-            console.log('✅ Date recorded on blockchain');
-            console.log('📊 Blockchain results:', dateRecordResponse.blockchain);
+            // STEP 5: Wait for blockchain state to be readable by achievements
+            console.log('⏳ Waiting for blockchain state update...');
+            await new Promise(resolve => setTimeout(resolve, 5000));
 
-            // STEP 3: Wait additional time to ensure blockchain state is readable
-            console.log('⏳ Waiting for blockchain state to propagate...');
-            await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second buffer
-
-            // STEP 4: NOW trigger achievement minting (blockchain state is updated)
-            console.log('🏆 Now checking achievements...');
+            // STEP 6: Trigger achievement minting
+            console.log('🏆 Checking achievements...');
             await triggerAchievementMinting();
             
             console.log('✅ All post-confirmation tasks completed');
             setIsProcessingBlockchain(false);
             
-            // Dispatch event to refresh the banner
-            window.dispatchEvent(new CustomEvent('stakeConfirmed'));
-            
+            // Show rating prompt or close
             if (iShowedUp === true && partnerShowedUp === true) {
                 setShowRatingPrompt(true);
             } else {
@@ -188,9 +190,8 @@ export default function DateConfirmationModal({
         } catch (error) {
             console.error('❌ Error in post-confirmation tasks:', error);
             setIsProcessingBlockchain(false);
-            // Still proceed to close/show rating
-            window.dispatchEvent(new CustomEvent('stakeConfirmed'));
             
+            // Still proceed even if backup tasks fail
             if (iShowedUp === true && partnerShowedUp === true) {
                 setShowRatingPrompt(true);
             } else {
@@ -199,6 +200,45 @@ export default function DateConfirmationModal({
                     onClose();
                 }, 2000);
             }
+        }
+    };
+
+    // ✅ UPDATED: This is now just for database backup, not critical path
+    const updateStakesTableAsBackup = async () => {
+        try {
+            console.log('💾 Updating database as backup for stake:', stakeId);
+            
+            const { data: stakeData, error: stakeError } = await supabaseClient
+                .from('stakes')
+                .select('user1_address, user2_address')
+                .eq('id', stakeId)
+                .single();
+
+            if (stakeError) {
+                console.error('⚠️ Failed to fetch stake data for backup:', stakeError);
+                return; // Don't throw - this is just backup
+            }
+
+            const isCurrentUserUser1 = address?.toLowerCase() === stakeData.user1_address.toLowerCase();
+            const confirmationField = isCurrentUserUser1 ? 'user1_confirmed' : 'user2_confirmed';
+
+            const { error: updateError } = await supabaseClient
+                .from('stakes')
+                .update({
+                    [confirmationField]: true,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', stakeId);
+
+            if (updateError) {
+                console.error('⚠️ Failed to update database backup:', updateError);
+                return; // Don't throw - this is just backup
+            }
+
+            console.log(`✅ Database backup updated: ${confirmationField} = true`);
+        } catch (error) {
+            console.error('⚠️ Error updating database backup:', error);
+            // Don't throw - database is just backup now
         }
     };
 
@@ -222,50 +262,13 @@ export default function DateConfirmationModal({
             });
             console.log('✅ Notification sent');
         } catch (error) {
-            console.error('❌ Failed to send notification:', error);
+            console.error('⚠️ Failed to send notification:', error);
         }
     };
 
-    const updateStakesTable = async () => {
-        try {
-            console.log('📊 Updating stakes table');
-            const { data: stakeData, error: stakeError } = await supabaseClient
-                .from('stakes')
-                .select('user1_address, user2_address')
-                .eq('id', stakeId)
-                .single();
-
-            if (stakeError) {
-                console.error('❌ Failed to fetch stake data:', stakeError);
-                return;
-            }
-
-            const isCurrentUserUser1 = address?.toLowerCase() === stakeData.user1_address.toLowerCase();
-            const confirmationField = isCurrentUserUser1 ? 'user1_confirmed' : 'user2_confirmed';
-
-            const { error: updateError } = await supabaseClient
-                .from('stakes')
-                .update({
-                    [confirmationField]: true,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', stakeId);
-
-            if (updateError) {
-                console.error('❌ Failed to update stakes table:', updateError);
-                return;
-            }
-
-            console.log(`✅ Updated ${confirmationField} for stake ${stakeId}`);
-        } catch (error) {
-            console.error('❌ Failed to update stakes table:', error);
-        }
-    };
-
-    // ✅ FIXED: Return response data so we can wait for it
     const recordDateInDatabase = async () => {
         try {
-            console.log('📝 Recording date in database and blockchain for both users');
+            console.log('📝 Recording date for both users');
             
             const response = await fetch('/api/date/record', {
                 method: 'POST',
@@ -301,7 +304,6 @@ export default function DateConfirmationModal({
             console.log('🏆 Triggering achievement minting for both users');
             
             // Trigger for current user
-            console.log(`🏆 Checking achievements for current user: ${address}`);
             const userResponse = await fetch('/api/achievements/auto-mint', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -309,19 +311,11 @@ export default function DateConfirmationModal({
             });
             
             const userData = await userResponse.json();
-            console.log('🏆 Current user achievements response:', userData);
-            
-            if (userData.mintedAchievements && userData.mintedAchievements.length > 0) {
-                const successfulMints = userData.mintedAchievements.filter(
-                    (a: any) => a.status === 'success'
-                );
-                if (successfulMints.length > 0) {
-                    console.log(`🎉 Minted ${successfulMints.length} achievement(s) for current user!`);
-                }
+            if (userData.mintedAchievements?.length > 0) {
+                console.log(`🎉 Minted ${userData.mintedAchievements.length} achievement(s) for current user!`);
             }
 
             // Trigger for match user
-            console.log(`🏆 Checking achievements for match user: ${matchAddress}`);
             const matchResponse = await fetch('/api/achievements/auto-mint', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -329,18 +323,11 @@ export default function DateConfirmationModal({
             });
             
             const matchData = await matchResponse.json();
-            console.log('🏆 Match user achievements response:', matchData);
-            
-            if (matchData.mintedAchievements && matchData.mintedAchievements.length > 0) {
-                const successfulMints = matchData.mintedAchievements.filter(
-                    (a: any) => a.status === 'success'
-                );
-                if (successfulMints.length > 0) {
-                    console.log(`🎉 Minted ${successfulMints.length} achievement(s) for match user!`);
-                }
+            if (matchData.mintedAchievements?.length > 0) {
+                console.log(`🎉 Minted ${matchData.mintedAchievements.length} achievement(s) for match user!`);
             }
         } catch (error) {
-            console.error('❌ Failed to trigger achievement minting:', error);
+            console.error('⚠️ Failed to trigger achievement minting:', error);
         }
     };
 
@@ -392,13 +379,12 @@ export default function DateConfirmationModal({
                     </button>
                 </div>
 
-                {/* ✅ NEW: Show blockchain processing state */}
                 {isSuccess && isProcessingBlockchain ? (
                     <div className="text-center py-6">
                         <Loader2 className="animate-spin h-12 w-12 text-green-500 mx-auto mb-4" />
                         <h3 className="text-xl font-bold text-gray-900 mb-2">Processing...</h3>
                         <p className="text-gray-600 mb-2">
-                            Recording your date on the blockchain
+                            Recording your date and checking achievements
                         </p>
                         <p className="text-sm text-gray-500">
                             This may take 10-15 seconds
@@ -409,7 +395,7 @@ export default function DateConfirmationModal({
                         <CheckCircle className="text-green-500 mx-auto mb-4" size={64} />
                         <h3 className="text-xl font-bold text-gray-900 mb-2">All Done!</h3>
                         <p className="text-gray-600 mb-6">
-                            Your confirmation has been fully processed.
+                            Your confirmation has been recorded on the blockchain.
                         </p>
                     </div>
                 ) : isPending || isConfirming ? (
@@ -600,11 +586,11 @@ export default function DateConfirmationModal({
                         <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                             <p className="text-xs text-gray-600 font-semibold mb-2">What happens next:</p>
                             <ul className="text-xs text-gray-600 space-y-1">
-                                <li>• Your answers recorded on-chain</li>
-                                <li>• Date recorded to blockchain</li>
-                                <li>• Achievements checked automatically</li>
-                                <li>• {matchName} confirms independently</li>
-                                <li>• Payouts process automatically</li>
+                                <li>• ✅ Confirmation recorded on blockchain (source of truth)</li>
+                                <li>• 💾 Database backup updated</li>
+                                <li>• 📧 {matchName} gets notified</li>
+                                <li>• 🏆 Achievements checked automatically</li>
+                                <li>• 💰 Payouts process when both confirm</li>
                             </ul>
                         </div>
                     </>
