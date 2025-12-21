@@ -7,6 +7,11 @@ import { supabaseService } from '@/lib/supabase.server';
  * Public endpoint - no auth required
  * Checks all stakes that need confirmation reminders and sends notifications
  * Can be called by any user visiting the app
+ * 
+ * RACE CONDITION PROTECTION:
+ * - Uses database unique constraint on (stake_id, user_address)
+ * - Marks reminder as sent BEFORE sending notification
+ * - Handles duplicate insert errors gracefully
  */
 export async function POST() {
   try {
@@ -44,42 +49,46 @@ export async function POST() {
     console.log(`📋 Found ${stakes.length} stakes to check for reminders`);
 
     let remindersSent = 0;
+    let alreadySent = 0;
+    let failed = 0;
 
     for (const stake of stakes) {
-      console.log(`🔍 Checking stake ${stake.id} for reminders`);
-
       // Check User1
       if (!stake.user1_confirmed) {
-        console.log(`📧 Checking reminder for User1 (${stake.user1_address}) on stake ${stake.id}`);
-        const sent = await sendReminderIfNeeded(
+        const result = await sendReminderIfNeeded(
           stake.id,
           stake.user1_address,
           stake.user2_address,
           stake.meeting_time,
           stake.user1_amount.toString()
         );
-        if (sent) remindersSent++;
+        if (result === 'sent') remindersSent++;
+        else if (result === 'already_sent') alreadySent++;
+        else if (result === 'failed') failed++;
       }
 
       // Check User2
       if (!stake.user2_confirmed) {
-        console.log(`📧 Checking reminder for User2 (${stake.user2_address}) on stake ${stake.id}`);
-        const sent = await sendReminderIfNeeded(
+        const result = await sendReminderIfNeeded(
           stake.id,
           stake.user2_address,
           stake.user1_address,
           stake.meeting_time,
           stake.user2_amount.toString()
         );
-        if (sent) remindersSent++;
+        if (result === 'sent') remindersSent++;
+        else if (result === 'already_sent') alreadySent++;
+        else if (result === 'failed') failed++;
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: `Checked ${stakes.length} stakes, sent ${remindersSent} reminders`,
+      message: `Checked ${stakes.length} stakes`,
       stakesChecked: stakes.length,
-      remindersSent
+      remindersSent,
+      alreadySent,
+      failed
     });
 
   } catch (error) {
@@ -93,6 +102,10 @@ export async function POST() {
 
 /**
  * Send reminder if not already sent
+ * Returns: 'sent' | 'already_sent' | 'failed'
+ * 
+ * CRITICAL: Inserts tracking record BEFORE sending notification
+ * This prevents race conditions from concurrent executions
  */
 async function sendReminderIfNeeded(
   stakeId: string,
@@ -100,95 +113,101 @@ async function sendReminderIfNeeded(
   matchAddress: string,
   meetingTime: number,
   stakeAmount: string
-): Promise<boolean> {
+): Promise<'sent' | 'already_sent' | 'failed'> {
   try {
-    console.log(`🔎 Checking if reminder already sent for stake ${stakeId} to ${userAddress}`);
+    const userAddressLower = userAddress.toLowerCase();
+    const matchAddressLower = matchAddress.toLowerCase();
 
-    // Check if reminder already sent
-    const { data: existing, error: existingError } = await supabaseService
-      .from('confirmation_reminders_sent')
-      .select('id')
-      .eq('stake_id', stakeId)
-      .eq('user_address', userAddress.toLowerCase());
-
-    // Log any errors in the check
-    if (existingError) {
-      console.error(`Error checking existing reminders for stake ${stakeId}:`, existingError);
-      return false; // Don't send reminder if we can't check properly
-    }
-
-    // Log the result of the check
-    console.log(`📊 Existing reminders check result for stake ${stakeId}:`, existing);
-
-    // Check if any records exist (more robust than .single())
-    if (existing && existing.length > 0) {
-      console.log(`✓ Reminder already sent for stake ${stakeId} to ${userAddress.slice(0, 8)}`);
-      return false;
-    }
-
-    console.log(`🚀 Sending new reminder for stake ${stakeId} to ${userAddress}`);
-
-    // Get match profile name
-    const { data: profile } = await supabaseService
-      .from('profiles')
-      .select('name')
-      .eq('wallet_address', matchAddress.toLowerCase())
-      .single();
-
-    const matchName = profile?.name || 'Your match';
-
-    // Calculate time since meeting
-    const now = Math.floor(Date.now() / 1000);
-    const hoursSince = Math.floor((now - meetingTime) / 3600);
-
-    // Send notification
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://basematch.app';
-    const notificationResponse = await fetch(
-      `${appUrl}/api/notifications`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userAddress: userAddress.toLowerCase(),
-          type: 'date_confirmation_reminder',
-          title: '⏰ Time to Confirm Your Date',
-          message: `Your date with ${matchName} was ${hoursSince}h ago. Please confirm what happened within 48 hours.`,
-          metadata: {
-            stake_id: stakeId,
-            match_address: matchAddress.toLowerCase(),
-            match_name: matchName,
-            meeting_timestamp: meetingTime,
-            stake_amount: stakeAmount,
-            hours_since_meeting: hoursSince
-          }
-        })
-      }
-    );
-
-    if (!notificationResponse.ok) {
-      console.error(`Failed to send notification for stake ${stakeId}`, await notificationResponse.text());
-      return false;
-    }
-
-    // Mark reminder as sent
+    // STEP 1: Try to insert tracking record FIRST
+    // This acts as a distributed lock - only one process can succeed
     const { error: insertError } = await supabaseService
       .from('confirmation_reminders_sent')
       .insert({
         stake_id: stakeId,
-        user_address: userAddress.toLowerCase()
+        user_address: userAddressLower
       });
 
+    // If insert failed, reminder was already sent (or DB error)
     if (insertError) {
-      console.error(`Failed to mark reminder as sent:`, insertError);
-      return false;
+      // Check if it's a duplicate key error (code 23505 in PostgreSQL)
+      if (insertError.code === '23505' || insertError.message?.includes('duplicate')) {
+        console.log(`✓ Reminder already sent for stake ${stakeId} to ${userAddressLower.slice(0, 8)}`);
+        return 'already_sent';
+      }
+      
+      // Other database error
+      console.error(`❌ Database error inserting reminder for stake ${stakeId}:`, insertError);
+      return 'failed';
     }
 
-    console.log(`✅ Sent reminder for stake ${stakeId} to ${userAddress.slice(0, 8)}`);
-    return true;
+    console.log(`🔒 Locked reminder slot for stake ${stakeId} to ${userAddressLower}`);
+
+    // STEP 2: Now that we've locked this reminder, send the notification
+    try {
+      // Get match profile name
+      const { data: profile } = await supabaseService
+        .from('profiles')
+        .select('name')
+        .eq('wallet_address', matchAddressLower)
+        .single();
+
+      const matchName = profile?.name || 'Your match';
+
+      // Calculate time since meeting
+      const now = Math.floor(Date.now() / 1000);
+      const hoursSince = Math.floor((now - meetingTime) / 3600);
+      
+      // Create dynamic time description
+      const timeDescription = hoursSince === 0 ? 'just now' :
+                            hoursSince < 24 ? `${hoursSince}h ago` :
+                            `${Math.floor(hoursSince / 24)}d ago`;
+
+      // Send notification
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://basematch.app';
+      const notificationResponse = await fetch(
+        `${appUrl}/api/notifications`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userAddress: userAddressLower,
+            type: 'date_confirmation_reminder',
+            title: '⏰ Time to Confirm Your Date',
+            message: `Your date with ${matchName} was ${timeDescription}. Please confirm what happened within 48 hours.`,
+            metadata: {
+              stake_id: stakeId,
+              match_address: matchAddressLower,
+              match_name: matchName,
+              meeting_timestamp: meetingTime,
+              stake_amount: stakeAmount,
+              hours_since_meeting: hoursSince
+            }
+          })
+        }
+      );
+
+      if (!notificationResponse.ok) {
+        const errorText = await notificationResponse.text();
+        console.error(`❌ Failed to send notification for stake ${stakeId}:`, errorText);
+        
+        // Notification failed but we've already marked it as sent
+        // This is acceptable - prevents infinite retry loops
+        // The user can still see the reminder in StakeReminderBanner
+        return 'failed';
+      }
+
+      console.log(`✅ Sent reminder for stake ${stakeId} to ${userAddressLower.slice(0, 8)}`);
+      return 'sent';
+
+    } catch (notificationError) {
+      console.error(`❌ Error sending notification for stake ${stakeId}:`, notificationError);
+      // Already marked as sent in DB, so return 'failed' not 'already_sent'
+      return 'failed';
+    }
 
   } catch (error) {
-    console.error(`Error sending reminder for stake ${stakeId}:`, error);
-    return false;
+    console.error(`❌ Unexpected error for stake ${stakeId}:`, error);
+    return 'failed';
   }
 }
 
@@ -197,6 +216,7 @@ export async function GET() {
   return NextResponse.json({
     message: 'Reminder checker is active. Use POST to trigger a check.',
     endpoint: '/api/stakes/check-reminders',
-    method: 'POST'
+    method: 'POST',
+    note: 'Protected against race conditions via database constraints'
   });
 }

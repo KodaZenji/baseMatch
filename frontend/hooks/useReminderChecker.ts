@@ -2,29 +2,41 @@
 
 import { useEffect, useRef } from 'react';
 
+// Global flag to ensure only one reminder checker runs per session
+let isCheckingReminders = false;
+let lastCheckTime = 0;
+const MIN_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes minimum between checks
+
 /**
  * Hook to periodically check and send confirmation reminders
  * Runs in the background whenever the app is open
  */
 export function useReminderChecker() {
-  const hasCheckedRef = useRef(false);
-
   useEffect(() => {
     // Check immediately on mount (but only once per session)
-    if (!hasCheckedRef.current) {
+    if (!isCheckingReminders) {
+      isCheckingReminders = true;
       checkReminders();
-      hasCheckedRef.current = true;
     }
 
     // Then check every 5 minutes
     const interval = setInterval(() => {
       checkReminders();
-    }, 5 * 60 * 1000); // 5 minutes
+    }, MIN_CHECK_INTERVAL);
 
     return () => clearInterval(interval);
   }, []);
 
   const checkReminders = async () => {
+    const now = Date.now();
+
+    // Prevent checking too frequently
+    if (now - lastCheckTime < MIN_CHECK_INTERVAL) {
+      return;
+    }
+
+    lastCheckTime = now;
+
     try {
       const response = await fetch('/api/stakes/check-reminders', {
         method: 'POST',

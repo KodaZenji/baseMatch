@@ -44,6 +44,12 @@ export default function DateConfirmationModal({
     const isAfterDeadline = Date.now() > confirmationDeadline.getTime();
     const canConfirm = !isBeforeMeeting && !isAfterDeadline;
 
+    // Calculate time since meeting for display purposes
+    const hoursSinceMeeting = Math.floor((Date.now() - meetingTime * 1000) / (1000 * 60 * 60));
+    const timeSinceMeetingText = hoursSinceMeeting === 0 ? 'just now' :
+        hoursSinceMeeting < 24 ? `${hoursSinceMeeting}h ago` :
+            `${Math.floor(hoursSinceMeeting / 24)}d ago`;
+
     const calculatePayout = () => {
         if (iShowedUp === null || partnerShowedUp === null) return null;
 
@@ -320,8 +326,8 @@ export default function DateConfirmationModal({
                                     onClick={() => setIShowedUp(false)}
                                     disabled={!canConfirm}
                                     className={`px-4 py-3 border-2 rounded-lg font-semibold transition-all ${iShowedUp === false
-                                            ? 'border-orange-500 bg-orange-50 text-orange-700'
-                                            : 'border-gray-300 hover:border-gray-400 text-gray-700'
+                                        ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                        : 'border-gray-300 hover:border-gray-400 text-gray-700'
                                         } disabled:opacity-50`}
                                 >
                                     <span className="text-2xl block mb-1">❌</span>
@@ -331,8 +337,8 @@ export default function DateConfirmationModal({
                                     onClick={() => setIShowedUp(true)}
                                     disabled={!canConfirm}
                                     className={`px-4 py-3 border-2 rounded-lg font-semibold transition-all ${iShowedUp === true
-                                            ? 'border-green-500 bg-green-50 text-green-700'
-                                            : 'border-gray-300 hover:border-gray-400 text-gray-700'
+                                        ? 'border-green-500 bg-green-50 text-green-700'
+                                        : 'border-gray-300 hover:border-gray-400 text-gray-700'
                                         } disabled:opacity-50`}
                                 >
                                     <span className="text-2xl block mb-1">✅</span>
@@ -351,8 +357,8 @@ export default function DateConfirmationModal({
                                     onClick={() => setPartnerShowedUp(false)}
                                     disabled={!canConfirm}
                                     className={`px-4 py-3 border-2 rounded-lg font-semibold transition-all ${partnerShowedUp === false
-                                            ? 'border-orange-500 bg-orange-50 text-orange-700'
-                                            : 'border-gray-300 hover:border-gray-400 text-gray-700'
+                                        ? 'border-orange-500 bg-orange-50 text-orange-700'
+                                        : 'border-gray-300 hover:border-gray-400 text-gray-700'
                                         } disabled:opacity-50`}
                                 >
                                     <span className="text-2xl block mb-1">❌</span>
@@ -362,8 +368,8 @@ export default function DateConfirmationModal({
                                     onClick={() => setPartnerShowedUp(true)}
                                     disabled={!canConfirm}
                                     className={`px-4 py-3 border-2 rounded-lg font-semibold transition-all ${partnerShowedUp === true
-                                            ? 'border-green-500 bg-green-50 text-green-700'
-                                            : 'border-gray-300 hover:border-gray-400 text-gray-700'
+                                        ? 'border-green-500 bg-green-50 text-green-700'
+                                        : 'border-gray-300 hover:border-gray-400 text-gray-700'
                                         } disabled:opacity-50`}
                                 >
                                     <span className="text-2xl block mb-1">✅</span>
@@ -392,9 +398,9 @@ export default function DateConfirmationModal({
                         {/* Payout Preview */}
                         {payout && (
                             <div className={`mb-4 p-4 rounded-lg border-2 ${payout.color === 'green' ? 'bg-green-50 border-green-200' :
-                                    payout.color === 'blue' ? 'bg-blue-50 border-blue-200' :
-                                        payout.color === 'orange' ? 'bg-orange-50 border-orange-200' :
-                                            'bg-gray-50 border-gray-200'
+                                payout.color === 'blue' ? 'bg-blue-50 border-blue-200' :
+                                    payout.color === 'orange' ? 'bg-orange-50 border-orange-200' :
+                                        'bg-gray-50 border-gray-200'
                                 }`}>
                                 <div className="flex items-center gap-2 mb-3">
                                     <DollarSign size={20} />

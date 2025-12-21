@@ -8,11 +8,11 @@ import DateConfirmationModal from './DateConfirmationModal';
 import DateStakeAcceptModal from './DateStakeAcceptModal';
 import RatingModal from './RatingModal';
 import ChatWindow from './ChatWindow';
-import { useProfile } from '@/hooks/useProfile'; // Add this import
+import { useProfile } from '@/hooks/useProfile';
 
 export default function Notifications() {
   const { address } = useAccount();
-  const { profile } = useProfile(); // Get current user's profile
+  const { profile } = useProfile();
   const {
     notifications,
     unreadCount,
@@ -121,7 +121,6 @@ export default function Notifications() {
   const handleStakeAccepted = () => {
     setShowAcceptStakeModal(false);
     setSelectedStakeToAccept(null);
-    // Optionally show a success message or trigger a refresh
   };
 
   // Handle clicking "Confirm Date" button from notification
@@ -140,10 +139,6 @@ export default function Notifications() {
   // Handle date confirmation success
   const handleDateConfirmed = () => {
     setShowDateConfirmation(false);
-
-    // If both users showed up, show rating modal after a brief moment
-    // This logic should be handled by the DateConfirmationModal itself
-    // but we can also trigger it here if needed
   };
 
   // Handle rating modal close
@@ -271,32 +266,50 @@ export default function Notifications() {
       );
     }
 
-    // Date Confirmation Reminder - Add "Confirm Date" button
+    // Date Confirmation Reminder - SIMPLIFIED (no duplicate details)
     if (notification.type === 'date_confirmation_reminder') {
-      // Use dynamic time calculation from metadata if available, otherwise fallback
-      const hoursSinceMeeting = notification.metadata?.hours_since_meeting || 0;
+      // Calculate time dynamically on each render
+      const meetingTime = notification.metadata?.meeting_timestamp || 0;
+      const now = Math.floor(Date.now() / 1000);
+      const hoursSinceMeeting = Math.floor((now - meetingTime) / 3600);
+      const confirmationDeadline = meetingTime + (48 * 60 * 60);
+      const hoursRemaining = Math.floor((confirmationDeadline - now) / 3600);
+      
       const timeDescription = hoursSinceMeeting === 0 ? 'just now' :
         hoursSinceMeeting < 24 ? `${hoursSinceMeeting}h ago` :
           `${Math.floor(hoursSinceMeeting / 24)}d ago`;
 
+      const isUrgent = hoursRemaining < 6;
+
       return (
         <div className="mt-3 space-y-3">
-          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg p-3 border border-orange-200">
+          <div className={`rounded-lg p-3 border ${
+            isUrgent 
+              ? 'bg-gradient-to-r from-red-50 to-orange-50 border-red-200' 
+              : 'bg-gradient-to-r from-orange-50 to-yellow-50 border-orange-200'
+          }`}>
             <div className="flex items-center gap-2 mb-2">
-              <Clock size={16} className="text-orange-600" />
-              <div className="text-sm font-semibold text-orange-900">
-                Time to Confirm!
+              <Clock size={16} className={isUrgent ? 'text-red-600' : 'text-orange-600'} />
+              <div className="text-sm font-semibold text-gray-900">
+                {isUrgent ? '⚠️ URGENT: ' : ''}Confirm Your Date
               </div>
             </div>
-            <div className="text-xs text-orange-700">
-              Your date was {timeDescription}. Please confirm what happened.
+            <div className="space-y-1 text-xs text-gray-700">
+              <div>Your date was {timeDescription}</div>
+              <div className={`font-semibold ${isUrgent ? 'text-red-600' : 'text-orange-600'}`}>
+                {hoursRemaining > 0 ? `${hoursRemaining}h remaining to confirm` : 'Deadline passed'}
+              </div>
             </div>
           </div>
           <button
             onClick={() => handleConfirmDateClick(notification)}
-            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-2 px-4 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+            className={`w-full text-white py-2 px-4 rounded-lg font-semibold hover:opacity-90 transition-opacity ${
+              isUrgent 
+                ? 'bg-gradient-to-r from-red-500 to-orange-600 animate-pulse' 
+                : 'bg-gradient-to-r from-pink-500 to-purple-600'
+            }`}
           >
-            Confirm Date Now
+            {isUrgent ? 'Confirm Now! ⏰' : 'Confirm Date'}
           </button>
         </div>
       );
@@ -351,12 +364,13 @@ export default function Notifications() {
       const outcomeInfo = outcome ? outcomeMessages[outcome as keyof typeof outcomeMessages] : null;
 
       return (
-        <div className={`mt-3 rounded-lg p-3 border ${outcomeInfo?.color === 'green' ? 'bg-green-50 border-green-200' :
+        <div className={`mt-3 rounded-lg p-3 border ${
+          outcomeInfo?.color === 'green' ? 'bg-green-50 border-green-200' :
           outcomeInfo?.color === 'blue' ? 'bg-blue-50 border-blue-200' :
-            outcomeInfo?.color === 'orange' ? 'bg-orange-50 border-orange-200' :
-              outcomeInfo?.color === 'yellow' ? 'bg-yellow-50 border-yellow-200' :
-                'bg-gray-50 border-gray-200'
-          }`}>
+          outcomeInfo?.color === 'orange' ? 'bg-orange-50 border-orange-200' :
+          outcomeInfo?.color === 'yellow' ? 'bg-yellow-50 border-yellow-200' :
+          'bg-gray-50 border-gray-200'
+        }`}>
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle size={16} />
             <div className="text-sm font-semibold">
@@ -391,16 +405,17 @@ export default function Notifications() {
       const isLoss = payoutValue < stakeValue;
 
       return (
-        <div className={`mt-3 rounded-lg p-3 border ${isProfit ? 'bg-green-50 border-green-200' :
+        <div className={`mt-3 rounded-lg p-3 border ${
+          isProfit ? 'bg-green-50 border-green-200' :
           isLoss ? 'bg-red-50 border-red-200' :
-            'bg-blue-50 border-blue-200'
-          }`}>
+          'bg-blue-50 border-blue-200'
+        }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <DollarSign size={16} className={
                 isProfit ? 'text-green-600' :
-                  isLoss ? 'text-red-600' :
-                    'text-blue-600'
+                isLoss ? 'text-red-600' :
+                'text-blue-600'
               } />
               <div>
                 <div className="text-sm font-semibold text-gray-900">
@@ -409,17 +424,18 @@ export default function Notifications() {
                 <div className="text-xs text-gray-600">
                   {isProfit ? `+${(payoutValue - stakeValue).toFixed(2)} profit` :
                     isLoss ? `${(stakeValue - payoutValue).toFixed(2)} lost` :
-                      'Even'}
+                    'Even'}
                 </div>
               </div>
             </div>
-            <div className={`text-xs font-semibold flex items-center gap-1 ${isProfit ? 'text-green-700' :
+            <div className={`text-xs font-semibold flex items-center gap-1 ${
+              isProfit ? 'text-green-700' :
               isLoss ? 'text-red-700' :
-                'text-blue-700'
-              }`}>
+              'text-blue-700'
+            }`}>
               {isProfit ? <><TrendingUp size={14} /> Bonus</> :
                 isLoss ? <><TrendingDown size={14} /> Loss</> :
-                  <><ArrowRight size={14} /> Refund</>
+                <><ArrowRight size={14} /> Refund</>
               }
             </div>
           </div>
@@ -505,8 +521,9 @@ export default function Notifications() {
             <div
               key={notification.id}
               onClick={() => !notification.read && handleMarkAsRead(notification.id)}
-              className={`p-6 transition-colors cursor-pointer hover:bg-gray-50 ${!notification.read ? 'bg-blue-50' : ''
-                }`}
+              className={`p-6 transition-colors cursor-pointer hover:bg-gray-50 ${
+                !notification.read ? 'bg-blue-50' : ''
+              }`}
             >
               <div className="flex items-start gap-4">
                 {/* Icon */}
@@ -527,15 +544,9 @@ export default function Notifications() {
                         <p className="text-sm text-gray-600 mt-1">
                           <span className="font-semibold">{notification.metadata.sender_name}</span> wants to go on a date with you!
                         </p>
-                      ) : notification.type === 'date_confirmation_reminder' && notification.metadata ? (
-                        // Use dynamic time in the main message too
+                      ) : notification.type === 'date_confirmation_reminder' && notification.metadata?.match_name ? (
                         <p className="text-sm text-gray-600 mt-1">
-                          Your date with <span className="font-semibold">{notification.metadata.match_name || 'your match'}</span> was {
-                            notification.metadata.hours_since_meeting === 0 ? 'just now' :
-                              notification.metadata.hours_since_meeting && notification.metadata.hours_since_meeting < 24 ? `${notification.metadata.hours_since_meeting}h ago` :
-                                notification.metadata.hours_since_meeting ? `${Math.floor(notification.metadata.hours_since_meeting / 24)}d ago` :
-                                  'recently'
-                          }. Please confirm what happened within 48 hours.
+                          Time to confirm your date with <span className="font-semibold">{notification.metadata.match_name}</span>
                         </p>
                       ) : (
                         <p className="text-sm text-gray-600 mt-1">
