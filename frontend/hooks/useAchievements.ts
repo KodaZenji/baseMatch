@@ -1,6 +1,4 @@
 // frontend/hooks/useAchievements.ts
-// UPDATED: Added refreshKey parameter to force re-fetch from blockchain
-
 import { useState, useEffect } from 'react';
 import { useReadContract } from 'wagmi';
 import { ACHIEVEMENT_ABI, CONTRACTS } from '@/lib/contracts';
@@ -16,31 +14,35 @@ export function useAchievements(userAddress: string | undefined, refreshKey: num
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    const isContractDeployed = CONTRACTS.ACHIEVEMENT && 
+    // ✅ FIXED: Explicitly cast to boolean using !! to avoid "boolean | """ type issues
+    const isContractDeployed = !!(
+        CONTRACTS.ACHIEVEMENT && 
         CONTRACTS.ACHIEVEMENT.startsWith('0x') && 
-        CONTRACTS.ACHIEVEMENT.length === 42;
+        CONTRACTS.ACHIEVEMENT.length === 42
+    );
 
-    // ✅ Add refreshKey to query key
     const { data: tokenIds, isLoading: isLoadingTokens, error: readError, refetch } = useReadContract({
         address: isContractDeployed ? (CONTRACTS.ACHIEVEMENT as `0x${string}`) : undefined,
         abi: ACHIEVEMENT_ABI,
         functionName: 'getUserAchievements',
-        args: userAddress && isContractDeployed ? [userAddress as `0x${string}`] : undefined,
+        // ✅ Ensure args is either the array or undefined (no empty strings)
+        args: (userAddress && isContractDeployed) ? [userAddress as `0x${string}`] : undefined,
         query: {
-            enabled: !!userAddress && isContractDeployed,
+            enabled: Boolean(userAddress) && isContractDeployed,
         }
     });
 
-    // ✅ Refetch when refreshKey changes
     useEffect(() => {
         if (refreshKey > 0 && userAddress && isContractDeployed) {
-            console.log('🔄 Refetching achievements data from blockchain...');
             refetch();
         }
     }, [refreshKey, refetch, userAddress, isContractDeployed]);
 
     useEffect(() => {
         const fetchAchievements = async () => {
+            // Check loading state from the contract read
+            if (isLoadingTokens) return;
+
             if (!tokenIds || !isContractDeployed) {
                 setAchievements([]);
                 setLoading(false);
@@ -62,7 +64,6 @@ export function useAchievements(userAddress: string | undefined, refreshKey: num
 
                 setAchievements(achievementsList);
             } catch (err) {
-                console.error('Error fetching achievements:', err);
                 setError(err instanceof Error ? err : new Error('Unknown error'));
             } finally {
                 setLoading(false);
@@ -70,35 +71,39 @@ export function useAchievements(userAddress: string | undefined, refreshKey: num
         };
 
         fetchAchievements();
-    }, [tokenIds, isContractDeployed]);
+    }, [tokenIds, isContractDeployed, isLoadingTokens]);
 
     useEffect(() => {
         if (readError) {
-            console.error('Error reading achievements:', readError);
             setError(readError);
             setLoading(false);
         }
     }, [readError]);
 
-    return { achievements, loading, error };
+    return { achievements, loading: loading || isLoadingTokens, error };
 }
 
+// Helper functions (same as before)
 function getAchievementType(tokenId: number): string {
-    if (tokenId === 1) return 'First Date';
-    if (tokenId === 2) return '5 Dates';
-    if (tokenId === 3) return '10 Dates';
-    if (tokenId === 4) return '5 Star Rating';
-    if (tokenId === 5) return 'Perfect Week';
-    if (tokenId === 6) return 'Match Maker';
-    return `Achievement #${tokenId}`;
+    const types: Record<number, string> = {
+        1: 'First Date',
+        2: '5 Dates',
+        3: '10 Dates',
+        4: '5 Star Rating',
+        5: 'Perfect Week',
+        6: 'Match Maker'
+    };
+    return types[tokenId] || `Achievement #${tokenId}`;
 }
 
 function getAchievementDescription(tokenId: number): string {
-    if (tokenId === 1) return 'Completed your first date!';
-    if (tokenId === 2) return 'Went on 5 successful dates!';
-    if (tokenId === 3) return 'Reached 10 dates milestone!';
-    if (tokenId === 4) return 'Received a perfect 5-star rating!';
-    if (tokenId === 5) return 'Had dates every day this week!';
-    if (tokenId === 6) return 'Helped create 10 matches!';
-    return 'Special achievement unlocked!';
+    const descriptions: Record<number, string> = {
+        1: 'Completed your first date!',
+        2: 'Went on 5 successful dates!',
+        3: 'Reached 10 dates milestone!',
+        4: 'Received a perfect 5-star rating!',
+        5: 'Had dates every day this week!',
+        6: 'Helped create 10 matches!'
+    };
+    return descriptions[tokenId] || 'Special achievement unlocked!';
 }
