@@ -1,5 +1,5 @@
 // frontend/lib/blockchain/stakeQueries.ts
-// Reusable blockchain query utilities
+// Reusable blockchain query utilities using actual contract functions
 
 import { createPublicClient, http } from 'viem';
 import { baseSepolia } from 'viem/chains';
@@ -16,15 +16,19 @@ export interface StakeBlockchainData {
   user2: string;
   user1Amount: bigint;
   user2Amount: bigint;
+  totalStaked: bigint;
   meetingTime: bigint;
   user1Staked: boolean;
   user2Staked: boolean;
-  user1Confirmed: boolean;
-  user2Confirmed: boolean;
-  user1ShowedUp: boolean;
-  user2ShowedUp: boolean;
   processed: boolean;
+  createdAt: bigint;
   exists: boolean;
+}
+
+export interface ConfirmationData {
+  hasConfirmed: boolean;
+  iShowedUp: boolean;
+  theyShowedUp: boolean;
 }
 
 /**
@@ -40,25 +44,22 @@ export async function getStakeFromBlockchain(stakeId: string | bigint): Promise<
     const stakeData = await publicClient.readContract({
       address: CONTRACTS.STAKING as `0x${string}`,
       abi: STAKING_ABI,
-      functionName: 'stakes',
+      functionName: 'getStake',
       args: [stakeIdBigInt]
     }) as any;
 
-    // Parse the stake data based on your contract's Stake struct
-    // Adjust field names based on your actual contract
+    // Parse the stake data tuple
     const result: StakeBlockchainData = {
-      user1: stakeData.user1 || stakeData[0],
-      user2: stakeData.user2 || stakeData[1],
-      user1Amount: stakeData.user1Amount || stakeData[2],
-      user2Amount: stakeData.user2Amount || stakeData[3],
-      meetingTime: stakeData.meetingTime || stakeData[4],
-      user1Staked: stakeData.user1Staked || stakeData[5] || false,
-      user2Staked: stakeData.user2Staked || stakeData[6] || false,
-      user1Confirmed: stakeData.user1Confirmed || stakeData[7] || false,
-      user2Confirmed: stakeData.user2Confirmed || stakeData[8] || false,
-      user1ShowedUp: stakeData.user1ShowedUp || stakeData[9] || false,
-      user2ShowedUp: stakeData.user2ShowedUp || stakeData[10] || false,
-      processed: stakeData.processed || stakeData[11] || false,
+      user1: stakeData[0],
+      user2: stakeData[1],
+      user1Amount: stakeData[2],
+      user2Amount: stakeData[3],
+      totalStaked: stakeData[4],
+      meetingTime: stakeData[5],
+      user1Staked: stakeData[6],
+      user2Staked: stakeData[7],
+      processed: stakeData[8],
+      createdAt: stakeData[9],
       exists: true
     };
 
@@ -72,52 +73,109 @@ export async function getStakeFromBlockchain(stakeId: string | bigint): Promise<
 }
 
 /**
+ * Get confirmation status for a specific user and stake
+ */
+export async function getConfirmationFromBlockchain(
+  stakeId: string | bigint,
+  userAddress: string
+): Promise<ConfirmationData | null> {
+  try {
+    const stakeIdBigInt = typeof stakeId === 'string' ? BigInt(stakeId) : stakeId;
+    
+    console.log(`🔗 Querying confirmation for stake ${stakeIdBigInt}, user ${userAddress}...`);
+    
+    const confirmationData = await publicClient.readContract({
+      address: CONTRACTS.STAKING as `0x${string}`,
+      abi: STAKING_ABI,
+      functionName: 'getConfirmation',
+      args: [stakeIdBigInt, userAddress as `0x${string}`]
+    }) as any;
+
+    const result: ConfirmationData = {
+      hasConfirmed: confirmationData[0],
+      iShowedUp: confirmationData[1],
+      theyShowedUp: confirmationData[2]
+    };
+
+    console.log(`✅ Confirmation data for stake ${stakeIdBigInt}:`, result);
+    return result;
+
+  } catch (error) {
+    console.error(`❌ Failed to query confirmation for stake ${stakeId}:`, error);
+    return null;
+  }
+}
+
+/**
  * Check if a specific user has confirmed a stake
  */
 export async function hasUserConfirmedStake(
   stakeId: string | bigint,
   userAddress: string
 ): Promise<boolean | null> {
-  const stakeData = await getStakeFromBlockchain(stakeId);
+  const confirmationData = await getConfirmationFromBlockchain(stakeId, userAddress);
   
-  if (!stakeData) {
+  if (!confirmationData) {
     return null; // Blockchain query failed
   }
 
-  const isUser1 = stakeData.user1.toLowerCase() === userAddress.toLowerCase();
-  return isUser1 ? stakeData.user1Confirmed : stakeData.user2Confirmed;
+  return confirmationData.hasConfirmed;
 }
 
 /**
  * Check if both users have confirmed a stake
  */
-export async function haveBothUsersConfirmed(stakeId: string | bigint): Promise<boolean | null> {
-  const stakeData = await getStakeFromBlockchain(stakeId);
-  
-  if (!stakeData) {
-    return null; // Blockchain query failed
-  }
+export async function haveBothUsersConfirmed(
+  stakeId: string | bigint,
+  user1Address: string,
+  user2Address: string
+): Promise<boolean | null> {
+  try {
+    const [user1Confirmation, user2Confirmation] = await Promise.all([
+      getConfirmationFromBlockchain(stakeId, user1Address),
+      getConfirmationFromBlockchain(stakeId, user2Address)
+    ]);
+    
+    if (!user1Confirmation || !user2Confirmation) {
+      return null; // One or both queries failed
+    }
 
-  return stakeData.user1Confirmed && stakeData.user2Confirmed;
+    return user1Confirmation.hasConfirmed && user2Confirmation.hasConfirmed;
+  } catch (error) {
+    console.error('Failed to check if both users confirmed:', error);
+    return null;
+  }
 }
 
 /**
  * Get the confirmation status for both users
  */
-export async function getConfirmationStatus(stakeId: string | bigint): Promise<{
+export async function getConfirmationStatus(
+  stakeId: string | bigint,
+  user1Address: string,
+  user2Address: string
+): Promise<{
   user1Confirmed: boolean;
   user2Confirmed: boolean;
   bothConfirmed: boolean;
 } | null> {
-  const stakeData = await getStakeFromBlockchain(stakeId);
-  
-  if (!stakeData) {
+  try {
+    const [user1Confirmation, user2Confirmation] = await Promise.all([
+      getConfirmationFromBlockchain(stakeId, user1Address),
+      getConfirmationFromBlockchain(stakeId, user2Address)
+    ]);
+    
+    if (!user1Confirmation || !user2Confirmation) {
+      return null;
+    }
+
+    return {
+      user1Confirmed: user1Confirmation.hasConfirmed,
+      user2Confirmed: user2Confirmation.hasConfirmed,
+      bothConfirmed: user1Confirmation.hasConfirmed && user2Confirmation.hasConfirmed
+    };
+  } catch (error) {
+    console.error('Failed to get confirmation status:', error);
     return null;
   }
-
-  return {
-    user1Confirmed: stakeData.user1Confirmed,
-    user2Confirmed: stakeData.user2Confirmed,
-    bothConfirmed: stakeData.user1Confirmed && stakeData.user2Confirmed
-  };
 }
