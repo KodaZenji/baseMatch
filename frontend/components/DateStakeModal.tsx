@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract, usePublicClient } from 'wagmi';
 import { STAKING_ABI, CONTRACTS } from '@/lib/contracts';
 import { parseUnits, erc20Abi, Log } from 'viem';
-
-// No direct database imports - using API instead!
+import { Heart, X, Lock, CheckCircle2, Loader2, PartyPopper, DollarSign, Calendar, Clock } from 'lucide-react';
 
 interface DateStakeModalProps {
     matchedUserAddress: string;
@@ -52,10 +51,22 @@ export default function DateStakeModal({
         args: [(currentUserAddress as `0x${string}`) || ('0x0' as `0x${string}`), CONTRACTS.STAKING as `0x${string}`],
     });
 
+    // Set default date and time on mount
+    useEffect(() => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        setMeetingDate(tomorrow.toISOString().split('T')[0]);
+        setMeetingTime('19:00'); // Default to 7 PM
+    }, []);
+
     useEffect(() => {
         if (isApprovalSuccess && step === 'approval') {
-            console.log('✅ Approval confirmed');
+            console.log('✅ Approval confirmed, proceeding to stake creation...');
             setStep('confirming');
+            // Auto-proceed to create stake after approval
+            setTimeout(() => {
+                handleCreateStakeAfterApproval();
+            }, 1000);
         }
     }, [isApprovalSuccess, step]);
 
@@ -72,23 +83,16 @@ export default function DateStakeModal({
                 hash: stakeHash!
             });
 
-            console.log('📜 Got transaction receipt');
+            console.log('📜 Got transaction receipt, parsing logs...');
 
-            // Find StakeCreated event in logs
-            const stakeCreatedLog = receipt.logs.find((log: Log) => {
-                // The StakeCreated event signature
-                const stakeCreatedTopic = '0x...'; // You can calculate this or match by contract address
+            // Find the log from the staking contract
+            const stakeLog = receipt.logs.find((log: Log) => {
                 return log.address.toLowerCase() === CONTRACTS.STAKING.toLowerCase();
             });
 
-            if (stakeCreatedLog) {
-                // Decode the log - stakeId is the first indexed parameter (topics[1])
-                // topics[0] = event signature
-                // topics[1] = stakeId (indexed)
-                // topics[2] = user1 (indexed)
-                // topics[3] = user2 (indexed)
-                const stakeId = BigInt(stakeCreatedLog.topics[1]!).toString();
-
+            if (stakeLog && stakeLog.topics[1]) {
+                // The stakeId is in topics[1] (first indexed parameter after event signature)
+                const stakeId = BigInt(stakeLog.topics[1]).toString();
                 console.log('🎯 Extracted stake ID:', stakeId);
 
                 await syncStakeToDatabase(stakeId);
@@ -98,7 +102,7 @@ export default function DateStakeModal({
                 return;
             }
 
-            // Fallback: Query contract directly
+            // Fallback: Query recent events
             console.log('⚠️ Event not found in logs, trying fallback...');
             await fallbackQueryMethod();
 
@@ -110,9 +114,8 @@ export default function DateStakeModal({
 
     const fallbackQueryMethod = async () => {
         try {
-            // Query for recent StakeCreated events
             const currentBlock = await publicClient!.getBlockNumber();
-            const fromBlock = currentBlock - 100n; // Last 100 blocks
+            const fromBlock = currentBlock - 100n;
 
             const logs = await publicClient!.getLogs({
                 address: CONTRACTS.STAKING as `0x${string}`,
@@ -120,12 +123,12 @@ export default function DateStakeModal({
                 toBlock: 'latest'
             });
 
-            // Find the most recent stake created by this user to this partner
+            // Find the most recent log from this transaction
             for (let i = logs.length - 1; i >= 0; i--) {
                 const log = logs[i];
-                if (log.topics[2]?.toLowerCase() === `0x${currentUserAddress?.toLowerCase().slice(2).padStart(64, '0')}` &&
-                    log.topics[3]?.toLowerCase() === `0x${matchedUserAddress.toLowerCase().slice(2).padStart(64, '0')}`) {
 
+                // Check if this log is from our transaction
+                if (log.transactionHash?.toLowerCase() === stakeHash?.toLowerCase()) {
                     const stakeId = BigInt(log.topics[1]!).toString();
                     console.log('🎯 Found stake ID via fallback:', stakeId);
 
@@ -136,6 +139,7 @@ export default function DateStakeModal({
                 }
             }
 
+            console.log('⚠️ Could not find matching stake event');
             setStep('success');
         } catch (error) {
             console.error('❌ Fallback failed:', error);
@@ -189,6 +193,7 @@ export default function DateStakeModal({
                     }
                 })
             });
+            console.log('📬 Notification sent');
         } catch (error) {
             console.error('Failed to send notification:', error);
         }
@@ -199,6 +204,7 @@ export default function DateStakeModal({
         const amount = parseUnits(stakeAmount, 6);
 
         try {
+            setStep('approval');
             approveUSDC({
                 chainId: 84532,
                 address: CONTRACTS.USDC as `0x${string}`,
@@ -209,14 +215,34 @@ export default function DateStakeModal({
         } catch (err) {
             console.error('Approval error:', err);
             setError('Failed to approve USDC');
+            setStep('form');
+        }
+    };
+
+    const handleCreateStakeAfterApproval = async () => {
+        try {
+            setStep('staking');
+            const amount = parseUnits(stakeAmount, 6);
+
+            createStakeContract({
+                chainId: 84532,
+                address: CONTRACTS.STAKING as `0x${string}`,
+                abi: STAKING_ABI,
+                functionName: 'createStake',
+                args: [matchedUserAddress as `0x${string}`, amount, BigInt(meetingTimestamp)],
+            });
+        } catch (err) {
+            console.error('Stake creation error:', err);
+            setError('Failed to create stake');
+            setStep('form');
         }
     };
 
     const handleCreateStake = async () => {
         setError('');
 
-        if (!stakeAmount || parseFloat(stakeAmount) < 5) {
-            setError('Minimum stake amount is 5 USDC');
+        if (!stakeAmount || parseFloat(stakeAmount) < 10) {
+            setError('Minimum stake amount is 10 USDC');
             return;
         }
         if (!meetingDate || !meetingTime) {
@@ -234,15 +260,16 @@ export default function DateStakeModal({
         setMeetingTimestamp(timestamp);
         const amount = parseUnits(stakeAmount, 6);
 
+        // Check if approval is needed
         if (!allowance || allowance < amount) {
-            setMeetingTimestamp(timestamp);
-            setStep('approval');
+            console.log('⚠️ Insufficient allowance, requesting approval...');
+            handleApproveUSDC();
             return;
         }
 
+        // If already approved, create stake directly
         try {
             setStep('staking');
-
             createStakeContract({
                 chainId: 84532,
                 address: CONTRACTS.STAKING as `0x${string}`,
@@ -261,70 +288,72 @@ export default function DateStakeModal({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-bold text-gray-900">💕 Plan a Date</h2>
+                    <div className="flex items-center gap-2">
+                        <Heart className="w-6 h-6 text-pink-500 fill-pink-500" />
+                        <h2 className="text-2xl font-bold text-gray-900">Plan a Date</h2>
+                    </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 text-2xl"
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
                         disabled={isApprovalConfirming || isStakeConfirming}
                     >
-                        ✕
+                        <X className="w-6 h-6" />
                     </button>
                 </div>
 
                 {step === 'approval' && (
                     <div className="text-center py-6">
-                        <p className="text-5xl mb-4">🔐</p>
+                        <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Lock className="w-8 h-8 text-pink-600" />
+                        </div>
                         <h3 className="text-xl font-bold text-gray-900 mb-2">Approve USDC</h3>
                         <p className="text-gray-600 mb-6">
-                            Approve the contract to spend {stakeAmount} USDC.
+                            Please approve the contract to spend {stakeAmount} USDC.
                         </p>
-                        {isApprovePending || isApprovalConfirming ? (
-                            <div className="text-center py-4">
-                                <div className="animate-spin h-8 w-8 border-4 border-pink-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                                <p className="text-gray-600">
-                                    {isApprovePending ? 'Waiting for wallet...' : 'Confirming...'}
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="flex gap-2">
-                                <button onClick={() => setStep('form')} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg">
-                                    Back
-                                </button>
-                                <button onClick={handleApproveUSDC} className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-lg">
-                                    Approve
-                                </button>
-                            </div>
-                        )}
+                        <div className="text-center py-4">
+                            <Loader2 className="w-8 h-8 text-pink-500 animate-spin mx-auto mb-4" />
+                            <p className="text-gray-600">
+                                {isApprovePending ? 'Waiting for wallet confirmation...' : 'Confirming approval on blockchain...'}
+                            </p>
+                        </div>
                     </div>
                 )}
 
                 {step === 'confirming' && (
                     <div className="text-center py-6">
-                        <p className="text-5xl mb-4">✅</p>
-                        <h3 className="text-xl font-bold mb-2">Approved!</h3>
-                        <p className="text-gray-600 mb-6">Ready to stake {stakeAmount} USDC?</p>
-                        <div className="flex gap-2">
-                            <button onClick={() => setStep('form')} className="flex-1 border px-4 py-2 rounded-lg">Back</button>
-                            <button onClick={handleCreateStake} className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-lg">
-                                Create Stake
-                            </button>
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <CheckCircle2 className="w-8 h-8 text-green-600" />
                         </div>
+                        <h3 className="text-xl font-bold mb-2">Approved!</h3>
+                        <p className="text-gray-600 mb-4">Creating your stake now...</p>
+                        <Loader2 className="w-6 h-6 text-pink-500 animate-spin mx-auto" />
                     </div>
                 )}
 
                 {step === 'staking' && (
                     <div className="text-center py-6">
-                        <div className="animate-spin h-8 w-8 border-4 border-pink-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                        <p className="text-gray-600">{isStakePending ? 'Waiting for wallet...' : 'Creating stake...'}</p>
+                        <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Heart className="w-8 h-8 text-purple-600 fill-purple-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Creating Stake</h3>
+                        <Loader2 className="w-8 h-8 text-pink-500 animate-spin mx-auto mb-4" />
+                        <p className="text-gray-600">
+                            {isStakePending ? 'Waiting for wallet confirmation...' : 'Processing on blockchain...'}
+                        </p>
                     </div>
                 )}
 
                 {step === 'success' && (
                     <div className="text-center py-6">
-                        <p className="text-5xl mb-4">🎉</p>
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <PartyPopper className="w-8 h-8 text-green-600" />
+                        </div>
                         <h3 className="text-xl font-bold mb-2">Stake Created!</h3>
                         <p className="text-gray-600 mb-6">{matchedUserName} has been notified!</p>
-                        <button onClick={() => { onSuccess(); onClose(); }} className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 rounded-lg">
+                        <button
+                            onClick={() => { onSuccess(); onClose(); }}
+                            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-pink-600 hover:to-purple-700 transition-all"
+                        >
                             Done
                         </button>
                     </div>
@@ -332,43 +361,54 @@ export default function DateStakeModal({
 
                 {step === 'form' && (
                     <div className="space-y-4">
-                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
+                            <DollarSign className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                             <p className="text-sm text-blue-800">
-                                💡 Both stake USDC. Show up → get 95-142.5% back. Ghost → 20% compassion refund.
+                                Both stake USDC. Show up → get 95-142.5% back. Ghost → 20% compassion refund.
                             </p>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-semibold mb-1">Stake Amount (USDC)</label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+                                <DollarSign className="w-4 h-4 text-gray-600" />
+                                Stake Amount (USDC)
+                            </label>
                             <input
                                 type="number"
                                 value={stakeAmount}
                                 onChange={(e) => setStakeAmount(e.target.value)}
-                                min="5"
+                                min="10"
                                 step="1"
-                                className="w-full px-4 py-2 border rounded-lg"
+                                placeholder="10"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-gray-900 placeholder-gray-500"
                             />
-                            <p className="text-xs text-gray-500 mt-1">Minimum: 10 USDC</p>
+                            <p className="text-xs text-gray-600 mt-1">Minimum: 10 USDC</p>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-semibold mb-1">Meeting Date</label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-gray-600" />
+                                Meeting Date
+                            </label>
                             <input
                                 type="date"
                                 value={meetingDate}
                                 onChange={(e) => setMeetingDate(e.target.value)}
                                 min={new Date().toISOString().split('T')[0]}
-                                className="w-full px-4 py-2 border rounded-lg"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-gray-900"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-semibold mb-1">Meeting Time</label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-gray-600" />
+                                Meeting Time
+                            </label>
                             <input
                                 type="time"
                                 value={meetingTime}
                                 onChange={(e) => setMeetingTime(e.target.value)}
-                                className="w-full px-4 py-2 border rounded-lg"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-gray-900"
                             />
                         </div>
 
@@ -379,8 +419,22 @@ export default function DateStakeModal({
                         )}
 
                         <div className="flex gap-2 pt-4">
-                            <button onClick={onClose} className="flex-1 border px-4 py-2 rounded-lg">Cancel</button>
-                            <button onClick={handleCreateStake} disabled={isStakePending} className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-lg disabled:opacity-50">
+                            <button
+                                onClick={onClose}
+                                className="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCreateStake}
+                                disabled={isStakePending || isApprovePending}
+                                className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:from-pink-600 hover:to-purple-700 transition-all font-semibold flex items-center justify-center gap-2"
+                            >
+                                {(isStakePending || isApprovePending) ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <Heart className="w-4 h-4 fill-white" />
+                                )}
                                 Create Stake
                             </button>
                         </div>
