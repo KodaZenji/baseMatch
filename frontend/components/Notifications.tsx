@@ -273,6 +273,12 @@ export default function Notifications() {
 
     // Date Confirmation Reminder - Add "Confirm Date" button
     if (notification.type === 'date_confirmation_reminder') {
+      // Use dynamic time calculation from metadata if available, otherwise fallback
+      const hoursSinceMeeting = notification.metadata?.hours_since_meeting || 0;
+      const timeDescription = hoursSinceMeeting === 0 ? 'just now' :
+        hoursSinceMeeting < 24 ? `${hoursSinceMeeting}h ago` :
+          `${Math.floor(hoursSinceMeeting / 24)}d ago`;
+
       return (
         <div className="mt-3 space-y-3">
           <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg p-3 border border-orange-200">
@@ -283,7 +289,7 @@ export default function Notifications() {
               </div>
             </div>
             <div className="text-xs text-orange-700">
-              Your date was 48 hours ago. Please confirm what happened.
+              Your date was {timeDescription}. Please confirm what happened.
             </div>
           </div>
           <button
@@ -520,6 +526,16 @@ export default function Notifications() {
                       {notification.type === 'date_stake_created' && notification.metadata?.sender_name ? (
                         <p className="text-sm text-gray-600 mt-1">
                           <span className="font-semibold">{notification.metadata.sender_name}</span> wants to go on a date with you!
+                        </p>
+                      ) : notification.type === 'date_confirmation_reminder' && notification.metadata ? (
+                        // Use dynamic time in the main message too
+                        <p className="text-sm text-gray-600 mt-1">
+                          Your date with <span className="font-semibold">{notification.metadata.match_name || 'your match'}</span> was {
+                            notification.metadata.hours_since_meeting === 0 ? 'just now' :
+                              notification.metadata.hours_since_meeting && notification.metadata.hours_since_meeting < 24 ? `${notification.metadata.hours_since_meeting}h ago` :
+                                notification.metadata.hours_since_meeting ? `${Math.floor(notification.metadata.hours_since_meeting / 24)}d ago` :
+                                  'recently'
+                          }. Please confirm what happened within 48 hours.
                         </p>
                       ) : (
                         <p className="text-sm text-gray-600 mt-1">

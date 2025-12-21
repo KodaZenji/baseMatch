@@ -38,6 +38,9 @@ export interface Notification {
     payout_amount?: string;
     i_showed_up?: boolean;
     they_showed_up?: boolean;
+    // Date confirmation reminder notifications
+    hours_since_meeting?: number;
+    acceptor_address?: string;
   };
   created_at: string;
 }

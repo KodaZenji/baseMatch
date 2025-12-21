@@ -11,7 +11,7 @@ import { supabaseService } from '@/lib/supabase.server';
 export async function POST() {
   try {
     const now = Math.floor(Date.now() / 1000);
-    
+
     // Find all stakes where:
     // - Meeting time has passed (0-48 hours ago)
     // - Both users have staked (status is active)
@@ -46,8 +46,11 @@ export async function POST() {
     let remindersSent = 0;
 
     for (const stake of stakes) {
+      console.log(`🔍 Checking stake ${stake.id} for reminders`);
+
       // Check User1
       if (!stake.user1_confirmed) {
+        console.log(`📧 Checking reminder for User1 (${stake.user1_address}) on stake ${stake.id}`);
         const sent = await sendReminderIfNeeded(
           stake.id,
           stake.user1_address,
@@ -60,6 +63,7 @@ export async function POST() {
 
       // Check User2
       if (!stake.user2_confirmed) {
+        console.log(`📧 Checking reminder for User2 (${stake.user2_address}) on stake ${stake.id}`);
         const sent = await sendReminderIfNeeded(
           stake.id,
           stake.user2_address,
@@ -98,18 +102,31 @@ async function sendReminderIfNeeded(
   stakeAmount: string
 ): Promise<boolean> {
   try {
+    console.log(`🔎 Checking if reminder already sent for stake ${stakeId} to ${userAddress}`);
+
     // Check if reminder already sent
-    const { data: existing } = await supabaseService
+    const { data: existing, error: existingError } = await supabaseService
       .from('confirmation_reminders_sent')
       .select('id')
       .eq('stake_id', stakeId)
-      .eq('user_address', userAddress.toLowerCase())
-      .single();
+      .eq('user_address', userAddress.toLowerCase());
 
-    if (existing) {
+    // Log any errors in the check
+    if (existingError) {
+      console.error(`Error checking existing reminders for stake ${stakeId}:`, existingError);
+      return false; // Don't send reminder if we can't check properly
+    }
+
+    // Log the result of the check
+    console.log(`📊 Existing reminders check result for stake ${stakeId}:`, existing);
+
+    // Check if any records exist (more robust than .single())
+    if (existing && existing.length > 0) {
       console.log(`✓ Reminder already sent for stake ${stakeId} to ${userAddress.slice(0, 8)}`);
       return false;
     }
+
+    console.log(`🚀 Sending new reminder for stake ${stakeId} to ${userAddress}`);
 
     // Get match profile name
     const { data: profile } = await supabaseService
@@ -149,7 +166,7 @@ async function sendReminderIfNeeded(
     );
 
     if (!notificationResponse.ok) {
-      console.error(`Failed to send notification for stake ${stakeId}`);
+      console.error(`Failed to send notification for stake ${stakeId}`, await notificationResponse.text());
       return false;
     }
 
