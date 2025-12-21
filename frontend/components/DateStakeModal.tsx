@@ -10,6 +10,8 @@ import { parseUnits, erc20Abi, Log } from 'viem';
 interface DateStakeModalProps {
     matchedUserAddress: string;
     matchedUserName: string;
+    currentUserAddress: string;
+    currentUserName: string;
     onClose: () => void;
     onSuccess: () => void;
 }
@@ -17,6 +19,8 @@ interface DateStakeModalProps {
 export default function DateStakeModal({
     matchedUserAddress,
     matchedUserName,
+    currentUserAddress,
+    currentUserName,
     onClose,
     onSuccess,
 }: DateStakeModalProps) {
@@ -45,7 +49,7 @@ export default function DateStakeModal({
         address: CONTRACTS.USDC as `0x${string}`,
         abi: erc20Abi,
         functionName: 'allowance',
-        args: [address || '0x0', CONTRACTS.STAKING as `0x${string}`],
+        args: [(currentUserAddress as `0x${string}`) || ('0x0' as `0x${string}`), CONTRACTS.STAKING as `0x${string}`],
     });
 
     useEffect(() => {
@@ -119,7 +123,7 @@ export default function DateStakeModal({
             // Find the most recent stake created by this user to this partner
             for (let i = logs.length - 1; i >= 0; i--) {
                 const log = logs[i];
-                if (log.topics[2]?.toLowerCase() === `0x${address?.toLowerCase().slice(2).padStart(64, '0')}` &&
+                if (log.topics[2]?.toLowerCase() === `0x${currentUserAddress?.toLowerCase().slice(2).padStart(64, '0')}` &&
                     log.topics[3]?.toLowerCase() === `0x${matchedUserAddress.toLowerCase().slice(2).padStart(64, '0')}`) {
 
                     const stakeId = BigInt(log.topics[1]!).toString();
@@ -148,7 +152,7 @@ export default function DateStakeModal({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     stakeId,
-                    userAddress: address,
+                    userAddress: currentUserAddress,
                     matchAddress: matchedUserAddress,
                     stakeAmount: parseFloat(stakeAmount),
                     meetingTimestamp
@@ -176,11 +180,11 @@ export default function DateStakeModal({
                     userAddress: matchedUserAddress.toLowerCase(),
                     type: 'date_stake_created',
                     title: '💕 New Date Stake!',
-                    message: `${matchedUserName || 'Someone'} created a stake for a date`,
+                    message: `${currentUserName || 'Someone'} created a stake for a date`,
                     metadata: {
                         stake_id: stakeId,
-                        sender_address: address?.toLowerCase(),
-                        sender_name: matchedUserName || 'User',
+                        sender_address: currentUserAddress?.toLowerCase(),
+                        sender_name: currentUserName || 'User',
                         stake_amount: stakeAmount,
                     }
                 })

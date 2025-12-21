@@ -29,7 +29,7 @@ export default function Notifications() {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showChatWindow, setShowChatWindow] = useState(false);
   const [selectedChatMessage, setSelectedChatMessage] = useState<{ address: string; name: string } | null>(null);
-  
+
   // Updated state for accepting stakes
   const [selectedStakeToAccept, setSelectedStakeToAccept] = useState<{
     stakeId: string;
@@ -41,14 +41,14 @@ export default function Notifications() {
   } | null>(null);
 
   // State for date confirmation
-  const [selectedMatch, setSelectedMatch] = useState<{ 
-    address: string; 
-    name: string; 
-    stakeId?: string; 
-    meetingTime?: number; 
-    stakeAmount?: string 
+  const [selectedMatch, setSelectedMatch] = useState<{
+    address: string;
+    name: string;
+    stakeId?: string;
+    meetingTime?: number;
+    stakeAmount?: string
   } | null>(null);
-  
+
   const [countdown, setCountdown] = useState<number | null>(null);
 
   // Handle countdown timer for rating modal
@@ -138,7 +138,7 @@ export default function Notifications() {
   // Handle date confirmation success
   const handleDateConfirmed = () => {
     setShowDateConfirmation(false);
-    
+
     // If both users showed up, show rating modal after a brief moment
     // This logic should be handled by the DateConfirmationModal itself
     // but we can also trigger it here if needed
@@ -235,24 +235,26 @@ export default function Notifications() {
 
     // Date Stake Created - Add "Accept Stake" button
     if (notification.type === 'date_stake_created') {
+      const senderName = notification.metadata?.sender_name || 'Someone';
+
       return (
         <div className="mt-3 space-y-3">
           <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-3 border border-pink-200">
             <div className="flex items-center gap-2 mb-2">
               <Heart size={16} className="text-pink-600" />
               <div className="text-sm font-semibold text-pink-900">
-                New Date Stake
+                {senderName}
               </div>
             </div>
             <div className="space-y-1 text-xs text-pink-700">
               <div className="flex justify-between">
-                <span>Stake Amount:</span>
+                <span>Your stake:</span>
                 <span className="font-semibold">{stake_amount} USDC</span>
               </div>
               {meeting_timestamp && (
                 <div className="flex justify-between">
-                  <span>Meeting:</span>
-                  <span className="font-semibold">{new Date(meeting_timestamp * 1000).toLocaleDateString()}</span>
+                  <span>Date:</span>
+                  <span className="font-semibold">{new Date(meeting_timestamp * 1000).toLocaleString()}</span>
                 </div>
               )}
             </div>
@@ -334,13 +336,12 @@ export default function Notifications() {
       const outcomeInfo = outcome ? outcomeMessages[outcome as keyof typeof outcomeMessages] : null;
 
       return (
-        <div className={`mt-3 rounded-lg p-3 border ${
-          outcomeInfo?.color === 'green' ? 'bg-green-50 border-green-200' :
-          outcomeInfo?.color === 'blue' ? 'bg-blue-50 border-blue-200' :
-          outcomeInfo?.color === 'orange' ? 'bg-orange-50 border-orange-200' :
-          outcomeInfo?.color === 'yellow' ? 'bg-yellow-50 border-yellow-200' :
-          'bg-gray-50 border-gray-200'
-        }`}>
+        <div className={`mt-3 rounded-lg p-3 border ${outcomeInfo?.color === 'green' ? 'bg-green-50 border-green-200' :
+            outcomeInfo?.color === 'blue' ? 'bg-blue-50 border-blue-200' :
+              outcomeInfo?.color === 'orange' ? 'bg-orange-50 border-orange-200' :
+                outcomeInfo?.color === 'yellow' ? 'bg-yellow-50 border-yellow-200' :
+                  'bg-gray-50 border-gray-200'
+          }`}>
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle size={16} />
             <div className="text-sm font-semibold">
@@ -375,17 +376,16 @@ export default function Notifications() {
       const isLoss = payoutValue < stakeValue;
 
       return (
-        <div className={`mt-3 rounded-lg p-3 border ${
-          isProfit ? 'bg-green-50 border-green-200' :
-          isLoss ? 'bg-red-50 border-red-200' :
-          'bg-blue-50 border-blue-200'
-        }`}>
+        <div className={`mt-3 rounded-lg p-3 border ${isProfit ? 'bg-green-50 border-green-200' :
+            isLoss ? 'bg-red-50 border-red-200' :
+              'bg-blue-50 border-blue-200'
+          }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <DollarSign size={16} className={
                 isProfit ? 'text-green-600' :
-                isLoss ? 'text-red-600' :
-                'text-blue-600'
+                  isLoss ? 'text-red-600' :
+                    'text-blue-600'
               } />
               <div>
                 <div className="text-sm font-semibold text-gray-900">
@@ -393,19 +393,18 @@ export default function Notifications() {
                 </div>
                 <div className="text-xs text-gray-600">
                   {isProfit ? `+${(payoutValue - stakeValue).toFixed(2)} profit` :
-                   isLoss ? `${(stakeValue - payoutValue).toFixed(2)} lost` :
-                   'Even'}
+                    isLoss ? `${(stakeValue - payoutValue).toFixed(2)} lost` :
+                      'Even'}
                 </div>
               </div>
             </div>
-            <div className={`text-xs font-semibold flex items-center gap-1 ${
-              isProfit ? 'text-green-700' :
-              isLoss ? 'text-red-700' :
-              'text-blue-700'
-            }`}>
+            <div className={`text-xs font-semibold flex items-center gap-1 ${isProfit ? 'text-green-700' :
+                isLoss ? 'text-red-700' :
+                  'text-blue-700'
+              }`}>
               {isProfit ? <><TrendingUp size={14} /> Bonus</> :
-               isLoss ? <><TrendingDown size={14} /> Loss</> :
-               <><ArrowRight size={14} /> Refund</>
+                isLoss ? <><TrendingDown size={14} /> Loss</> :
+                  <><ArrowRight size={14} /> Refund</>
               }
             </div>
           </div>
@@ -491,9 +490,8 @@ export default function Notifications() {
             <div
               key={notification.id}
               onClick={() => !notification.read && handleMarkAsRead(notification.id)}
-              className={`p-6 transition-colors cursor-pointer hover:bg-gray-50 ${
-                !notification.read ? 'bg-blue-50' : ''
-              }`}
+              className={`p-6 transition-colors cursor-pointer hover:bg-gray-50 ${!notification.read ? 'bg-blue-50' : ''
+                }`}
             >
               <div className="flex items-start gap-4">
                 {/* Icon */}
@@ -510,9 +508,15 @@ export default function Notifications() {
                       <h3 className="text-base font-semibold text-gray-900">
                         {notification.title}
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {notification.message}
-                      </p>
+                      {notification.type === 'date_stake_created' && notification.metadata?.sender_name ? (
+                        <p className="text-sm text-gray-600 mt-1">
+                          <span className="font-semibold">{notification.metadata.sender_name}</span> wants to go on a date with you!
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-600 mt-1">
+                          {notification.message}
+                        </p>
+                      )}
 
                       {/* Stake-specific details with action buttons */}
                       {renderStakeDetails(notification)}

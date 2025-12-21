@@ -84,7 +84,7 @@ export default function ChatWindow({
         setDeletingMessageId(messageId);
         setLongPressMessageId(null);
         const success = await deleteMessage(messageId);
-        
+
         if (success) {
             setSuccessMessage('Message deleted');
             setTimeout(() => setSuccessMessage(''), 2000);
@@ -103,7 +103,7 @@ export default function ChatWindow({
             if (navigator.vibrate) {
                 navigator.vibrate(50);
             }
-        }, 500); 
+        }, 500);
     };
 
     const handleTouchEnd = () => {
@@ -115,6 +115,7 @@ export default function ChatWindow({
 
     const otherUserName = currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user2Name : user1Name;
     const otherUserAddress = currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user2Address : user1Address;
+    const currentUserName = currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user1Name : user2Name;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -152,14 +153,14 @@ export default function ChatWindow({
                     🔒 End-to-end encrypted - Only you and your match can read these messages
                 </div>
 
-                <div 
+                <div
                     ref={messagesContainerRef}
                     onScroll={handleScroll}
                     className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
                     style={{ display: 'flex', flexDirection: 'column-reverse' }}
                 >
                     <div ref={messagesEndRef} />
-                    
+
                     {loading && messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
                             <div className="text-gray-500 text-center">
@@ -179,7 +180,7 @@ export default function ChatWindow({
                                 const isCurrentUser = msg.sender_address.toLowerCase() === currentUserAddress.toLowerCase();
                                 const isDeleting = deletingMessageId === msg.id;
                                 const showDeleteButton = longPressMessageId === msg.id;
-                                
+
                                 return (
                                     <div
                                         key={msg.id}
@@ -199,7 +200,7 @@ export default function ChatWindow({
                                                     🗑️
                                                 </button>
                                             )}
-                                            
+
                                             <div
                                                 onTouchStart={() => isCurrentUser && !isDeleting && handleTouchStart(msg.id)}
                                                 onTouchEnd={handleTouchEnd}
@@ -217,9 +218,8 @@ export default function ChatWindow({
                                             >
                                                 <p className="break-words">{msg.decrypted_text || '[Decrypting...]'}</p>
                                                 <p
-                                                    className={`text-xs mt-1 ${
-                                                        isCurrentUser ? 'text-pink-100' : 'text-gray-500'
-                                                    }`}
+                                                    className={`text-xs mt-1 ${isCurrentUser ? 'text-pink-100' : 'text-gray-500'
+                                                        }`}
                                                 >
                                                     {new Date(msg.created_at).toLocaleTimeString([], {
                                                         hour: '2-digit',
@@ -236,7 +236,7 @@ export default function ChatWindow({
 
                     {hasMore && (
                         <div className="text-center py-2">
-                            <button 
+                            <button
                                 onClick={loadMore}
                                 disabled={loading}
                                 className="text-sm text-purple-600 hover:text-purple-700 disabled:opacity-50"
@@ -249,11 +249,10 @@ export default function ChatWindow({
 
                 {(error || sendError || successMessage) && (
                     <div
-                        className={`px-4 py-3 text-sm ${
-                            successMessage
+                        className={`px-4 py-3 text-sm ${successMessage
                                 ? 'bg-green-100 border border-green-300 text-green-700'
                                 : 'bg-red-100 border border-red-300 text-red-700'
-                        }`}
+                            }`}
                     >
                         {successMessage || error || sendError}
                     </div>
@@ -285,6 +284,8 @@ export default function ChatWindow({
                 <DateStakeModal
                     matchedUserAddress={otherUserAddress}
                     matchedUserName={otherUserName}
+                    currentUserAddress={currentUserAddress}
+                    currentUserName={currentUserName}
                     onClose={() => setShowDateModal(false)}
                     onSuccess={() => {
                         setShowDateModal(false);

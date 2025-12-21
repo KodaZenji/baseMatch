@@ -29,6 +29,15 @@ export interface Notification {
       photoUrl?: boolean;
     };
     new_interests?: string;
+    // Stake notifications
+    stake_id?: string;
+    stake_amount?: string;
+    meeting_timestamp?: number;
+    sender_name?: string;
+    outcome?: string;
+    payout_amount?: string;
+    i_showed_up?: boolean;
+    they_showed_up?: boolean;
   };
   created_at: string;
 }
@@ -38,15 +47,15 @@ interface UseNotificationsProps {
   autoRefresh?: boolean;
 }
 
-export function useNotifications({ 
-  userAddress, 
-  autoRefresh = true 
+export function useNotifications({
+  userAddress,
+  autoRefresh = true
 }: UseNotificationsProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const realtimeChannelRef = useRef<any>(null);
 
   const fetchNotifications = useCallback(async () => {
