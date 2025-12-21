@@ -103,14 +103,14 @@ export async function GET() {
 
         console.log(`📌 Status: ${status}, user1Staked: ${stakeData.user1Staked}, user2Staked: ${stakeData.user2Staked}`);
         console.log(`✅ User1 confirmation:`, {
-          hasConfirmed: user1Confirmation[0],
-          iShowedUp: user1Confirmation[1],
-          theyShowedUp: user1Confirmation[2]
+          hasConfirmed: user1Confirmation.hasConfirmed,
+          iShowedUp: user1Confirmation.iShowedUp,
+          theyShowedUp: user1Confirmation.theyShowedUp
         });
         console.log(`✅ User2 confirmation:`, {
-          hasConfirmed: user2Confirmation[0],
-          iShowedUp: user2Confirmation[1],
-          theyShowedUp: user2Confirmation[2]
+          hasConfirmed: user2Confirmation.hasConfirmed,
+          iShowedUp: user2Confirmation.iShowedUp,
+          theyShowedUp: user2Confirmation.theyShowedUp
         });
 
         // ✅ FIXED: Include ALL 6 confirmation fields
@@ -124,12 +124,12 @@ export async function GET() {
           meeting_time: Number(meetingTime),
           user1_staked: stakeData.user1Staked,
           user2_staked: stakeData.user2Staked,
-          user1_confirmed: user1Confirmation[0] || false,
-          user1_i_showed_up: user1Confirmation[1] || false,
-          user1_they_showed_up: user1Confirmation[2] || false,
-          user2_confirmed: user2Confirmation[0] || false,
-          user2_i_showed_up: user2Confirmation[1] || false,
-          user2_they_showed_up: user2Confirmation[2] || false,
+          user1_confirmed: user1Confirmation.hasConfirmed || false,
+          user1_i_showed_up: user1Confirmation.iShowedUp || false,
+          user1_they_showed_up: user1Confirmation.theyShowedUp || false,
+          user2_confirmed: user2Confirmation.hasConfirmed || false,
+          user2_i_showed_up: user2Confirmation.iShowedUp || false,
+          user2_they_showed_up: user2Confirmation.theyShowedUp || false,
           processed: stakeData.processed || false,
           status: status
         };
@@ -292,12 +292,12 @@ export async function POST(request: NextRequest) {
           meeting_time: Number(meetingTime),
           user1_staked: stakeData.user1Staked,
           user2_staked: stakeData.user2Staked,
-          user1_confirmed: user1Confirmation[0] || false,
-          user1_i_showed_up: user1Confirmation[1] || false,
-          user1_they_showed_up: user1Confirmation[2] || false,
-          user2_confirmed: user2Confirmation[0] || false,
-          user2_i_showed_up: user2Confirmation[1] || false,
-          user2_they_showed_up: user2Confirmation[2] || false,
+          user1_confirmed: user1Confirmation.hasConfirmed || false,
+          user1_i_showed_up: user1Confirmation.iShowedUp || false,
+          user1_they_showed_up: user1Confirmation.theyShowedUp || false,
+          user2_confirmed: user2Confirmation.hasConfirmed || false,
+          user2_i_showed_up: user2Confirmation.iShowedUp || false,
+          user2_they_showed_up: user2Confirmation.theyShowedUp || false,
           processed: stakeData.processed || false,
           status: status
         };
