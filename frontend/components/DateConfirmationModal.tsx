@@ -1,3 +1,6 @@
+// frontend/components/DateConfirmationModal.tsx
+// FIXED: Wait for blockchain confirmation before checking achievements
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -30,6 +33,9 @@ export default function DateConfirmationModal({
     const [partnerShowedUp, setPartnerShowedUp] = useState<boolean | null>(null);
     const [error, setError] = useState('');
     const [showRatingPrompt, setShowRatingPrompt] = useState(false);
+    
+    // ✅ NEW: Track blockchain confirmation status
+    const [isProcessingBlockchain, setIsProcessingBlockchain] = useState(false);
 
     const { writeContract, data: hash, isPending } = useWriteContract();
     const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
@@ -127,34 +133,74 @@ export default function DateConfirmationModal({
     useEffect(() => {
         if (isSuccess) {
             console.log('✅ Blockchain confirmation successful');
+            setIsProcessingBlockchain(true);
             
-            // Execute all post-confirmation tasks in parallel
-            Promise.all([
-                updateStakesTable(),
-                recordDateInDatabase(),
-                sendConfirmationNotification(),
-                triggerAchievementMinting()
-            ]).then(() => {
-                console.log('✅ All post-confirmation tasks completed');
-                
-                // FIXED: Dispatch event to refresh the banner
-                window.dispatchEvent(new CustomEvent('stakeConfirmed'));
-                
-                if (iShowedUp === true && partnerShowedUp === true) {
-                    setShowRatingPrompt(true);
-                } else {
-                    setTimeout(() => {
-                        onSuccess();
-                        onClose();
-                    }, 2000);
-                }
-            }).catch((error) => {
-                console.error('❌ Error in post-confirmation tasks:', error);
-                // Still proceed even if some tasks fail
-                window.dispatchEvent(new CustomEvent('stakeConfirmed'));
-            });
+            // ✅ FIXED: Execute tasks in proper sequence
+            processPostConfirmation();
         }
     }, [isSuccess]);
+
+    // ✅ NEW: Properly sequenced post-confirmation flow
+    const processPostConfirmation = async () => {
+        try {
+            // STEP 1: Update stakes table and send notification (can run in parallel)
+            await Promise.all([
+                updateStakesTable(),
+                sendConfirmationNotification()
+            ]);
+            console.log('✅ Database and notifications updated');
+
+            // STEP 2: Record date on blockchain (this takes time!)
+            console.log('⏳ Recording date on blockchain...');
+            const dateRecordResponse = await recordDateInDatabase();
+            
+            if (!dateRecordResponse.success) {
+                console.error('❌ Failed to record date on blockchain');
+                setIsProcessingBlockchain(false);
+                return;
+            }
+
+            console.log('✅ Date recorded on blockchain');
+            console.log('📊 Blockchain results:', dateRecordResponse.blockchain);
+
+            // STEP 3: Wait additional time to ensure blockchain state is readable
+            console.log('⏳ Waiting for blockchain state to propagate...');
+            await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second buffer
+
+            // STEP 4: NOW trigger achievement minting (blockchain state is updated)
+            console.log('🏆 Now checking achievements...');
+            await triggerAchievementMinting();
+            
+            console.log('✅ All post-confirmation tasks completed');
+            setIsProcessingBlockchain(false);
+            
+            // Dispatch event to refresh the banner
+            window.dispatchEvent(new CustomEvent('stakeConfirmed'));
+            
+            if (iShowedUp === true && partnerShowedUp === true) {
+                setShowRatingPrompt(true);
+            } else {
+                setTimeout(() => {
+                    onSuccess();
+                    onClose();
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('❌ Error in post-confirmation tasks:', error);
+            setIsProcessingBlockchain(false);
+            // Still proceed to close/show rating
+            window.dispatchEvent(new CustomEvent('stakeConfirmed'));
+            
+            if (iShowedUp === true && partnerShowedUp === true) {
+                setShowRatingPrompt(true);
+            } else {
+                setTimeout(() => {
+                    onSuccess();
+                    onClose();
+                }, 2000);
+            }
+        }
+    };
 
     const sendConfirmationNotification = async () => {
         try {
@@ -216,10 +262,10 @@ export default function DateConfirmationModal({
         }
     };
 
-    // FIXED: Record date for BOTH users, not just one
+    // ✅ FIXED: Return response data so we can wait for it
     const recordDateInDatabase = async () => {
         try {
-            console.log('📝 Recording date in database for both users');
+            console.log('📝 Recording date in database and blockchain for both users');
             
             const response = await fetch('/api/date/record', {
                 method: 'POST',
@@ -238,12 +284,15 @@ export default function DateConfirmationModal({
             const data = await response.json();
             
             if (data.success) {
-                console.log('✅ Date recorded for both users in database');
+                console.log('✅ Date recorded for both users');
+                return data;
             } else {
                 console.error('❌ Failed to record date:', data.error);
+                return { success: false, error: data.error };
             }
         } catch (error) {
-            console.error('❌ Failed to record date in database:', error);
+            console.error('❌ Failed to record date:', error);
+            return { success: false, error };
         }
     };
 
@@ -252,6 +301,7 @@ export default function DateConfirmationModal({
             console.log('🏆 Triggering achievement minting for both users');
             
             // Trigger for current user
+            console.log(`🏆 Checking achievements for current user: ${address}`);
             const userResponse = await fetch('/api/achievements/auto-mint', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -259,9 +309,19 @@ export default function DateConfirmationModal({
             });
             
             const userData = await userResponse.json();
-            console.log('🏆 Current user achievements:', userData);
+            console.log('🏆 Current user achievements response:', userData);
+            
+            if (userData.mintedAchievements && userData.mintedAchievements.length > 0) {
+                const successfulMints = userData.mintedAchievements.filter(
+                    (a: any) => a.status === 'success'
+                );
+                if (successfulMints.length > 0) {
+                    console.log(`🎉 Minted ${successfulMints.length} achievement(s) for current user!`);
+                }
+            }
 
             // Trigger for match user
+            console.log(`🏆 Checking achievements for match user: ${matchAddress}`);
             const matchResponse = await fetch('/api/achievements/auto-mint', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -269,7 +329,16 @@ export default function DateConfirmationModal({
             });
             
             const matchData = await matchResponse.json();
-            console.log('🏆 Match user achievements:', matchData);
+            console.log('🏆 Match user achievements response:', matchData);
+            
+            if (matchData.mintedAchievements && matchData.mintedAchievements.length > 0) {
+                const successfulMints = matchData.mintedAchievements.filter(
+                    (a: any) => a.status === 'success'
+                );
+                if (successfulMints.length > 0) {
+                    console.log(`🎉 Minted ${successfulMints.length} achievement(s) for match user!`);
+                }
+            }
         } catch (error) {
             console.error('❌ Failed to trigger achievement minting:', error);
         }
@@ -317,18 +386,30 @@ export default function DateConfirmationModal({
                     <button
                         onClick={onClose}
                         className="text-gray-400 hover:text-gray-600 transition-colors"
-                        disabled={isPending || isConfirming}
+                        disabled={isPending || isConfirming || isProcessingBlockchain}
                     >
                         <X size={24} />
                     </button>
                 </div>
 
-                {isSuccess ? (
+                {/* ✅ NEW: Show blockchain processing state */}
+                {isSuccess && isProcessingBlockchain ? (
+                    <div className="text-center py-6">
+                        <Loader2 className="animate-spin h-12 w-12 text-green-500 mx-auto mb-4" />
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Processing...</h3>
+                        <p className="text-gray-600 mb-2">
+                            Recording your date on the blockchain
+                        </p>
+                        <p className="text-sm text-gray-500">
+                            This may take 10-15 seconds
+                        </p>
+                    </div>
+                ) : isSuccess ? (
                     <div className="text-center py-6">
                         <CheckCircle className="text-green-500 mx-auto mb-4" size={64} />
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Confirmation Recorded!</h3>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">All Done!</h3>
                         <p className="text-gray-600 mb-6">
-                            Your confirmation has been recorded on the blockchain.
+                            Your confirmation has been fully processed.
                         </p>
                     </div>
                 ) : isPending || isConfirming ? (
@@ -520,9 +601,10 @@ export default function DateConfirmationModal({
                             <p className="text-xs text-gray-600 font-semibold mb-2">What happens next:</p>
                             <ul className="text-xs text-gray-600 space-y-1">
                                 <li>• Your answers recorded on-chain</li>
+                                <li>• Date recorded to blockchain</li>
+                                <li>• Achievements checked automatically</li>
                                 <li>• {matchName} confirms independently</li>
                                 <li>• Payouts process automatically</li>
-                                <li>• If neither confirms in 48h, both get 90%</li>
                             </ul>
                         </div>
                     </>
