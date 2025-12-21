@@ -1,3 +1,6 @@
+// frontend/hooks/useReputation.ts
+// UPDATED: Added refreshKey parameter to force re-fetch from blockchain
+
 import { useState, useEffect } from 'react';
 import { useReadContract } from 'wagmi';
 import { REPUTATION_ABI, CONTRACTS } from '@/lib/contracts';
@@ -10,31 +13,45 @@ interface ReputationData {
     averageRating: number;
 }
 
-export function useReputation(address: string | undefined) {
+export function useReputation(address: string | undefined, refreshKey: number = 0) {
     const [reputation, setReputation] = useState<ReputationData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    // Check if contract is deployed
     const isContractDeployed = CONTRACTS.REPUTATION &&
         CONTRACTS.REPUTATION.startsWith('0x') &&
         CONTRACTS.REPUTATION.length === 42;
 
-    // Fetch reputation data from the Reputation contract
-    const { data: reputationData, isLoading: isReputationLoading, error: readError } = useReadContract({
+    // ✅ Add refreshKey to query key to force re-fetch
+    const { data: reputationData, isLoading: isReputationLoading, error: readError, refetch } = useReadContract({
         address: isContractDeployed ? (CONTRACTS.REPUTATION as `0x${string}`) : undefined,
         abi: REPUTATION_ABI,
         functionName: 'getReputation',
         args: address && isContractDeployed ? [address as `0x${string}`] : undefined,
+        query: {
+            // Force refetch when refreshKey changes
+            enabled: !!address && isContractDeployed,
+        }
     });
 
-    // Fetch average rating
-    const { data: averageRatingData } = useReadContract({
+    const { data: averageRatingData, refetch: refetchRating } = useReadContract({
         address: isContractDeployed ? (CONTRACTS.REPUTATION as `0x${string}`) : undefined,
         abi: REPUTATION_ABI,
         functionName: 'getAverageRating',
         args: address && isContractDeployed ? [address as `0x${string}`] : undefined,
+        query: {
+            enabled: !!address && isContractDeployed,
+        }
     });
+
+    // ✅ Refetch when refreshKey changes
+    useEffect(() => {
+        if (refreshKey > 0 && address && isContractDeployed) {
+            console.log('🔄 Refetching reputation data from blockchain...');
+            refetch();
+            refetchRating();
+        }
+    }, [refreshKey, refetch, refetchRating, address, isContractDeployed]);
 
     useEffect(() => {
         if (!isReputationLoading && reputationData) {
@@ -56,7 +73,6 @@ export function useReputation(address: string | undefined) {
                 setLoading(false);
             }
         } else if (!isReputationLoading) {
-            // Contract not deployed or no address
             setReputation({
                 totalDates: 0,
                 noShows: 0,
