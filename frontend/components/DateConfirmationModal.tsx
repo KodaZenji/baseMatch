@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { STAKING_ABI, CONTRACTS } from '@/lib/contracts';
-import { Heart, DollarSign, AlertTriangle, CheckCircle, X } from 'lucide-react';
+import { Heart, DollarSign, AlertTriangle, CheckCircle, X, Loader2 } from 'lucide-react';
 import { supabaseClient } from '@/lib/supabase/client';
 
 interface DateConfirmationModalProps {
@@ -16,10 +16,6 @@ interface DateConfirmationModalProps {
     onSuccess: () => void;
 }
 
-/**
- * HYBRID TWO-QUESTION SYSTEM (9.5/10 Anti-Fraud)
- * Compassionate 20% Refund Model
- */
 export default function DateConfirmationModal({
     stakeId,
     matchAddress,
@@ -43,12 +39,6 @@ export default function DateConfirmationModal({
     const isBeforeMeeting = Date.now() < meetingTime * 1000;
     const isAfterDeadline = Date.now() > confirmationDeadline.getTime();
     const canConfirm = !isBeforeMeeting && !isAfterDeadline;
-
-    // Calculate time since meeting for display purposes
-    const hoursSinceMeeting = Math.floor((Date.now() - meetingTime * 1000) / (1000 * 60 * 60));
-    const timeSinceMeetingText = hoursSinceMeeting === 0 ? 'just now' :
-        hoursSinceMeeting < 24 ? `${hoursSinceMeeting}h ago` :
-            `${Math.floor(hoursSinceMeeting / 24)}d ago`;
 
     const calculatePayout = () => {
         if (iShowedUp === null || partnerShowedUp === null) return null;
@@ -120,11 +110,7 @@ export default function DateConfirmationModal({
         setError('');
 
         try {
-            console.log('📤 Confirming date:', {
-                stakeId,
-                iShowedUp,
-                partnerShowedUp,
-            });
+            console.log('📤 Confirming date:', { stakeId, iShowedUp, partnerShowedUp });
 
             writeContract({
                 address: CONTRACTS.STAKING as `0x${string}`,
@@ -140,28 +126,39 @@ export default function DateConfirmationModal({
 
     useEffect(() => {
         if (isSuccess) {
-            // Send notification to partner
-            sendConfirmationNotification();
-
-            // Update stakes table
-            updateStakesTable();
-
-            // Trigger achievement minting for both users
-            triggerAchievementMinting();
-
-            if (iShowedUp === true && partnerShowedUp === true) {
-                setShowRatingPrompt(true);
-            } else {
-                setTimeout(() => {
-                    onSuccess();
-                    onClose();
-                }, 2000);
-            }
+            console.log('✅ Blockchain confirmation successful');
+            
+            // Execute all post-confirmation tasks in parallel
+            Promise.all([
+                updateStakesTable(),
+                recordDateInDatabase(),
+                sendConfirmationNotification(),
+                triggerAchievementMinting()
+            ]).then(() => {
+                console.log('✅ All post-confirmation tasks completed');
+                
+                // FIXED: Dispatch event to refresh the banner
+                window.dispatchEvent(new CustomEvent('stakeConfirmed'));
+                
+                if (iShowedUp === true && partnerShowedUp === true) {
+                    setShowRatingPrompt(true);
+                } else {
+                    setTimeout(() => {
+                        onSuccess();
+                        onClose();
+                    }, 2000);
+                }
+            }).catch((error) => {
+                console.error('❌ Error in post-confirmation tasks:', error);
+                // Still proceed even if some tasks fail
+                window.dispatchEvent(new CustomEvent('stakeConfirmed'));
+            });
         }
-    }, [isSuccess, iShowedUp, partnerShowedUp]);
+    }, [isSuccess]);
 
     const sendConfirmationNotification = async () => {
         try {
+            console.log('📧 Sending confirmation notification');
             await fetch('/api/notifications', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -177,14 +174,15 @@ export default function DateConfirmationModal({
                     }
                 })
             });
+            console.log('✅ Notification sent');
         } catch (error) {
-            console.error('Failed to send notification:', error);
+            console.error('❌ Failed to send notification:', error);
         }
     };
 
     const updateStakesTable = async () => {
         try {
-            // Get the stake data to determine if current user is user1 or user2
+            console.log('📊 Updating stakes table');
             const { data: stakeData, error: stakeError } = await supabaseClient
                 .from('stakes')
                 .select('user1_address, user2_address')
@@ -192,7 +190,7 @@ export default function DateConfirmationModal({
                 .single();
 
             if (stakeError) {
-                console.error('Failed to fetch stake data:', stakeError);
+                console.error('❌ Failed to fetch stake data:', stakeError);
                 return;
             }
 
@@ -208,33 +206,72 @@ export default function DateConfirmationModal({
                 .eq('id', stakeId);
 
             if (updateError) {
-                console.error('Failed to update stakes table:', updateError);
+                console.error('❌ Failed to update stakes table:', updateError);
                 return;
             }
 
             console.log(`✅ Updated ${confirmationField} for stake ${stakeId}`);
         } catch (error) {
-            console.error('Failed to update stakes table:', error);
+            console.error('❌ Failed to update stakes table:', error);
+        }
+    };
+
+    // FIXED: Record date for BOTH users, not just one
+    const recordDateInDatabase = async () => {
+        try {
+            console.log('📝 Recording date in database for both users');
+            
+            const response = await fetch('/api/date/record', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    stakeId,
+                    user1Address: address?.toLowerCase(),
+                    user2Address: matchAddress.toLowerCase(),
+                    meetingTime,
+                    bothShowedUp: iShowedUp && partnerShowedUp,
+                    user1ShowedUp: iShowedUp,
+                    user2ShowedUp: partnerShowedUp
+                })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                console.log('✅ Date recorded for both users in database');
+            } else {
+                console.error('❌ Failed to record date:', data.error);
+            }
+        } catch (error) {
+            console.error('❌ Failed to record date in database:', error);
         }
     };
 
     const triggerAchievementMinting = async () => {
         try {
-            // Trigger achievement minting for the current user
-            await fetch('/api/achievements/auto-mint', {
+            console.log('🏆 Triggering achievement minting for both users');
+            
+            // Trigger for current user
+            const userResponse = await fetch('/api/achievements/auto-mint', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userAddress: address })
             });
+            
+            const userData = await userResponse.json();
+            console.log('🏆 Current user achievements:', userData);
 
-            // Also trigger for the match user
-            await fetch('/api/achievements/auto-mint', {
+            // Trigger for match user
+            const matchResponse = await fetch('/api/achievements/auto-mint', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userAddress: matchAddress })
             });
+            
+            const matchData = await matchResponse.json();
+            console.log('🏆 Match user achievements:', matchData);
         } catch (error) {
-            console.error('Failed to trigger achievement minting:', error);
+            console.error('❌ Failed to trigger achievement minting:', error);
         }
     };
 
@@ -273,10 +310,13 @@ export default function DateConfirmationModal({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-bold text-gray-900">✅ Confirm Date</h2>
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        <CheckCircle className="text-pink-500" size={28} />
+                        Confirm Date
+                    </h2>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600"
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
                         disabled={isPending || isConfirming}
                     >
                         <X size={24} />
@@ -285,7 +325,7 @@ export default function DateConfirmationModal({
 
                 {isSuccess ? (
                     <div className="text-center py-6">
-                        <p className="text-5xl mb-4">✅</p>
+                        <CheckCircle className="text-green-500 mx-auto mb-4" size={64} />
                         <h3 className="text-xl font-bold text-gray-900 mb-2">Confirmation Recorded!</h3>
                         <p className="text-gray-600 mb-6">
                             Your confirmation has been recorded on the blockchain.
@@ -293,16 +333,10 @@ export default function DateConfirmationModal({
                     </div>
                 ) : isPending || isConfirming ? (
                     <div className="text-center py-6">
-                        <svg
-                            className="animate-spin h-8 w-8 text-pink-500 mx-auto mb-4"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                        >
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        <p className="text-gray-600">Confirming on blockchain...</p>
+                        <Loader2 className="animate-spin h-12 w-12 text-pink-500 mx-auto mb-4" />
+                        <p className="text-gray-600">
+                            {isPending ? 'Waiting for wallet confirmation...' : 'Confirming on blockchain...'}
+                        </p>
                     </div>
                 ) : (
                     <>
