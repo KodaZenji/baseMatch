@@ -1,7 +1,38 @@
 // File: frontend/app/api/stakes/check-reminders/route.ts
+// FIXED: Query blockchain for confirmation status before sending reminders
 
 import { NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
+import { createPublicClient, http } from 'viem';
+import { baseSepolia } from 'viem/chains';
+import { STAKING_ABI, CONTRACTS } from '@/lib/contracts';
+
+// Create viem client for reading blockchain
+const publicClient = createPublicClient({
+  chain: baseSepolia,
+  transport: http()
+});
+
+// Helper function to get confirmation status from blockchain
+async function getBlockchainConfirmationStatus(stakeId: string, userAddress: string) {
+  try {
+    const confirmationData = await publicClient.readContract({
+      address: CONTRACTS.STAKING as `0x${string}`,
+      abi: STAKING_ABI,
+      functionName: 'getConfirmation',
+      args: [BigInt(stakeId), userAddress as `0x${string}`]
+    }) as any;
+
+    return {
+      hasConfirmed: confirmationData[0] || false,
+      iShowedUp: confirmationData[1] || false,
+      theyShowedUp: confirmationData[2] || false
+    };
+  } catch (error) {
+    console.error(`Failed to read confirmation for stake ${stakeId}:`, error);
+    return null;
+  }
+}
 
 // In-memory cache for recently sent reminders to prevent duplicates within the same request
 const recentlySentReminders = new Map<string, number>();
@@ -77,9 +108,19 @@ export async function POST() {
     for (const stake of stakes) {
       console.log(`🔍 Checking stake ${stake.id} for reminders`);
 
-      // Check User1 - only if not already confirmed
-      if (!stake.user1_confirmed) {
-        console.log(`📧 Checking reminder for User1 (${stake.user1_address}) on stake ${stake.id}`);
+      // ✅ QUERY BLOCKCHAIN for User1 confirmation status
+      const user1BlockchainConfirmation = await getBlockchainConfirmationStatus(
+        stake.id,
+        stake.user1_address
+      );
+      
+      const user1Confirmed = user1BlockchainConfirmation 
+        ? user1BlockchainConfirmation.hasConfirmed 
+        : stake.user1_confirmed; // Fallback to database
+
+      // Check User1 - only if not already confirmed ON BLOCKCHAIN
+      if (!user1Confirmed) {
+        console.log(`📧 User1 (${stake.user1_address}) has NOT confirmed stake ${stake.id} on blockchain`);
         const result = await sendReminderIfNeeded(
           stake.id,
           stake.user1_address,
@@ -91,12 +132,31 @@ export async function POST() {
         else if (result === 'already_sent') alreadySent++;
         else if (result === 'failed') failed++;
       } else {
-        console.log(`✅ User1 already confirmed stake ${stake.id}`);
+        console.log(`✅ User1 already confirmed stake ${stake.id} on blockchain`);
+        
+        // ✅ Update database to match blockchain
+        if (!stake.user1_confirmed) {
+          console.log(`🔄 Syncing User1 confirmation to database for stake ${stake.id}`);
+          await supabaseService
+            .from('stakes')
+            .update({ user1_confirmed: true })
+            .eq('id', stake.id);
+        }
       }
 
-      // Check User2 - only if not already confirmed
-      if (!stake.user2_confirmed) {
-        console.log(`📧 Checking reminder for User2 (${stake.user2_address}) on stake ${stake.id}`);
+      // ✅ QUERY BLOCKCHAIN for User2 confirmation status
+      const user2BlockchainConfirmation = await getBlockchainConfirmationStatus(
+        stake.id,
+        stake.user2_address
+      );
+      
+      const user2Confirmed = user2BlockchainConfirmation 
+        ? user2BlockchainConfirmation.hasConfirmed 
+        : stake.user2_confirmed; // Fallback to database
+
+      // Check User2 - only if not already confirmed ON BLOCKCHAIN
+      if (!user2Confirmed) {
+        console.log(`📧 User2 (${stake.user2_address}) has NOT confirmed stake ${stake.id} on blockchain`);
         const result = await sendReminderIfNeeded(
           stake.id,
           stake.user2_address,
@@ -108,7 +168,16 @@ export async function POST() {
         else if (result === 'already_sent') alreadySent++;
         else if (result === 'failed') failed++;
       } else {
-        console.log(`✅ User2 already confirmed stake ${stake.id}`);
+        console.log(`✅ User2 already confirmed stake ${stake.id} on blockchain`);
+        
+        // ✅ Update database to match blockchain
+        if (!stake.user2_confirmed) {
+          console.log(`🔄 Syncing User2 confirmation to database for stake ${stake.id}`);
+          await supabaseService
+            .from('stakes')
+            .update({ user2_confirmed: true })
+            .eq('id', stake.id);
+        }
       }
     }
 
