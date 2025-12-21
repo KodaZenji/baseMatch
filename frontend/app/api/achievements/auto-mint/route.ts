@@ -1,10 +1,11 @@
 // frontend/app/api/achievements/auto-mint/route.ts
-// This API endpoint checks user stats and mints achievements automatically
+// Checks blockchain as source of truth, syncs to DB, then mints achievements
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, createWalletClient, http } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
+import { createClient } from '@supabase/supabase-js';
 
 const ACHIEVEMENT_ABI = [
   {
@@ -30,13 +31,6 @@ const ACHIEVEMENT_ABI = [
     stateMutability: "view",
     inputs: [{ name: "tokenId", type: "uint256" }],
     outputs: [{ name: "", type: "string" }]
-  },
-  {
-    type: "function",
-    name: "getTokenIdFromType",
-    stateMutability: "pure",
-    inputs: [{ name: "achievementType", type: "string" }],
-    outputs: [{ name: "", type: "uint256" }]
   }
 ] as const;
 
@@ -72,6 +66,22 @@ const MATCHING_ABI = [
   }
 ] as const;
 
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { userAddress } = await request.json();
@@ -80,28 +90,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing userAddress' }, { status: 400 });
     }
 
+    console.log(`🏆 Checking achievements for ${userAddress}`);
+
     // Initialize clients
+    const supabase = getSupabaseAdmin();
     const publicClient = createPublicClient({
       chain: baseSepolia,
       transport: http(process.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org'),
     });
 
-    // Get admin wallet to mint achievements
     const privateKeyStr = process.env.ADMIN_PRIVATE_KEY;
     if (!privateKeyStr) {
       return NextResponse.json(
-        { error: 'ADMIN_PRIVATE_KEY not set in environment variables' },
+        { error: 'ADMIN_PRIVATE_KEY not set' },
         { status: 500 }
       );
     }
 
-    // Ensure key has 0x prefix and is valid hex
     const privateKeyWithPrefix = privateKeyStr.startsWith('0x') ? privateKeyStr : `0x${privateKeyStr}`;
 
-    // Validate private key format (should be 66 chars with 0x or 64 hex chars)
     if (!/^0x[a-fA-F0-9]{64}$/.test(privateKeyWithPrefix)) {
       return NextResponse.json(
-        { error: `Invalid ADMIN_PRIVATE_KEY format. Got: ${privateKeyWithPrefix.slice(0, 10)}... (length: ${privateKeyWithPrefix.length})` },
+        { error: 'Invalid ADMIN_PRIVATE_KEY format' },
         { status: 500 }
       );
     }
@@ -117,7 +127,7 @@ export async function POST(request: NextRequest) {
     const reputationAddress = process.env.NEXT_PUBLIC_REPUTATION_ADDRESS as `0x${string}`;
     const matchingAddress = process.env.NEXT_PUBLIC_MATCHING_ADDRESS as `0x${string}`;
 
-    // 1. Check what achievements user already has
+    // 1. Get existing achievements from blockchain
     const existingAchievements = await publicClient.readContract({
       address: achievementAddress,
       abi: ACHIEVEMENT_ABI,
@@ -125,7 +135,9 @@ export async function POST(request: NextRequest) {
       args: [userAddress as `0x${string}`],
     });
 
-    // 2. Get user's reputation stats
+    console.log('📊 Existing achievements on-chain:', existingAchievements.map(id => Number(id)));
+
+    // 2. Get reputation from blockchain (SOURCE OF TRUTH)
     const reputation = await publicClient.readContract({
       address: reputationAddress,
       abi: REPUTATION_ABI,
@@ -133,77 +145,183 @@ export async function POST(request: NextRequest) {
       args: [userAddress as `0x${string}`],
     });
 
-    console.log('📊 Reputation data:', reputation);
+    const totalDatesBlockchain = Number(reputation[0]);
+    const noShows = Number(reputation[1]);
+    console.log(`📅 Total dates from BLOCKCHAIN: ${totalDatesBlockchain}`);
+    console.log(`❌ No-shows: ${noShows}`);
 
-    const averageRating = await publicClient.readContract({
-      address: reputationAddress,
-      abi: REPUTATION_ABI,
-      functionName: 'getAverageRating',
-      args: [userAddress as `0x${string}`],
-    });
+    // 3. Get current database count
+    const { data: dbDateHistory, error: dbError } = await supabase
+      .from('date_history')
+      .select('id')
+      .eq('user_address', userAddress.toLowerCase());
 
-    // 3. Get user's matches
-    const matches = await publicClient.readContract({
-      address: matchingAddress,
-      abi: MATCHING_ABI,
-      functionName: 'getMatches',
-      args: [userAddress as `0x${string}`],
-    });
+    const totalDatesDB = dbDateHistory?.length || 0;
+    console.log(`💾 Total dates in DATABASE: ${totalDatesDB}`);
 
-    const totalDates = Number(reputation[0]);
-    const avgRating = Number(averageRating);
-    const totalMatches = matches.length;
+    // 4. Sync database with blockchain if out of sync
+    if (totalDatesBlockchain > totalDatesDB) {
+      const datesToAdd = totalDatesBlockchain - totalDatesDB;
+      console.log(`⚠️ Database out of sync! Adding ${datesToAdd} date record(s)...`);
+      
+      const newRecords = Array.from({ length: datesToAdd }, (_, i) => ({
+        user_address: userAddress.toLowerCase(),
+        date_occurred_at: new Date().toISOString(),
+      }));
 
-    // 4. Determine which achievements to mint based on tokenId mapping
-    const achievementsToMint: Array<{ tokenId: number; type: string }> = [];
+      const { error: insertError } = await supabase
+        .from('date_history')
+        .insert(newRecords);
 
-    // tokenId 1: First Date - Completed your first date!
-    if (totalDates >= 1 && !hasAchievement(existingAchievements, 1)) {
-      achievementsToMint.push({ tokenId: 1, type: 'First Date' });
+      if (insertError) {
+        console.error('Failed to sync database:', insertError);
+      } else {
+        console.log(`✅ Added ${datesToAdd} date(s) to database`);
+      }
+    } else if (totalDatesBlockchain === totalDatesDB) {
+      console.log('✅ Database is in sync with blockchain');
+    } else {
+      console.log('⚠️ Database has MORE dates than blockchain (unusual)');
     }
 
-    // tokenId 2: 5 Dates - Went on 5 successful dates!
-    if (totalDates >= 5 && !hasAchievement(existingAchievements, 2)) {
-      achievementsToMint.push({ tokenId: 2, type: '5 Dates' });
+    // 5. Get average rating
+    let avgRating = 0;
+    try {
+      const averageRatingBigInt = await publicClient.readContract({
+        address: reputationAddress,
+        abi: REPUTATION_ABI,
+        functionName: 'getAverageRating',
+        args: [userAddress as `0x${string}`],
+      });
+      avgRating = Number(averageRatingBigInt) / 100;
+      console.log(`⭐ Average rating: ${avgRating}`);
+    } catch (error) {
+      console.log('ℹ️ No ratings yet');
     }
 
-    // tokenId 3: 10 Dates - Reached 10 dates milestone!
-    if (totalDates >= 10 && !hasAchievement(existingAchievements, 3)) {
-      achievementsToMint.push({ tokenId: 3, type: '10 Dates' });
+    // 6. Get matches
+    let totalMatches = 0;
+    try {
+      const matches = await publicClient.readContract({
+        address: matchingAddress,
+        abi: MATCHING_ABI,
+        functionName: 'getMatches',
+        args: [userAddress as `0x${string}`],
+      });
+      totalMatches = matches.length;
+      console.log(`🤝 Total matches: ${totalMatches}`);
+    } catch (error) {
+      console.log('ℹ️ No matches yet');
     }
 
-    // tokenId 4: 5 Star Rating - Received a perfect 5-star rating!
+    // 7. Determine achievements to mint (using BLOCKCHAIN data)
+    const achievementsToMint: Array<{ tokenId: number; type: string; reason: string }> = [];
+
+    // tokenId 1: First Date
+    if (totalDatesBlockchain >= 1 && !hasAchievement(existingAchievements, 1)) {
+      achievementsToMint.push({ 
+        tokenId: 1, 
+        type: 'First Date',
+        reason: `User has ${totalDatesBlockchain} date(s) on blockchain`
+      });
+      console.log('✅ Qualifies for First Date achievement');
+    }
+
+    // tokenId 2: 5 Dates
+    if (totalDatesBlockchain >= 5 && !hasAchievement(existingAchievements, 2)) {
+      achievementsToMint.push({ 
+        tokenId: 2, 
+        type: '5 Dates',
+        reason: `User has ${totalDatesBlockchain} dates on blockchain`
+      });
+      console.log('✅ Qualifies for 5 Dates achievement');
+    }
+
+    // tokenId 3: 10 Dates
+    if (totalDatesBlockchain >= 10 && !hasAchievement(existingAchievements, 3)) {
+      achievementsToMint.push({ 
+        tokenId: 3, 
+        type: '10 Dates',
+        reason: `User has ${totalDatesBlockchain} dates on blockchain`
+      });
+      console.log('✅ Qualifies for 10 Dates achievement');
+    }
+
+    // tokenId 4: 5 Star Rating
     if (avgRating >= 5 && !hasAchievement(existingAchievements, 4)) {
-      achievementsToMint.push({ tokenId: 4, type: '5 Star Rating' });
+      achievementsToMint.push({ 
+        tokenId: 4, 
+        type: '5 Star Rating',
+        reason: `User has ${avgRating} average rating`
+      });
+      console.log('✅ Qualifies for 5 Star Rating achievement');
     }
 
-    // tokenId 5: Perfect Week - Had dates every day this week!
-    // This requires tracking date timestamps - implement via database or event logs
-    const hasPerfectWeek = await checkPerfectWeek(userAddress);
+    // tokenId 5: Perfect Week (use DB for this since it requires date tracking)
+    const { data: recentDates } = await supabase
+      .from('date_history')
+      .select('date_occurred_at')
+      .eq('user_address', userAddress.toLowerCase())
+      .gte('date_occurred_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      .order('date_occurred_at', { ascending: true });
+
+    const hasPerfectWeek = checkPerfectWeek(recentDates || []);
     if (hasPerfectWeek && !hasAchievement(existingAchievements, 5)) {
-      achievementsToMint.push({ tokenId: 5, type: 'Perfect Week' });
+      achievementsToMint.push({ 
+        tokenId: 5, 
+        type: 'Perfect Week',
+        reason: 'User has dates on 7 consecutive days'
+      });
+      console.log('✅ Qualifies for Perfect Week achievement');
     }
 
-    // tokenId 6: Match Maker - Helped create 10 matches!
+    // tokenId 6: Match Maker
     if (totalMatches >= 10 && !hasAchievement(existingAchievements, 6)) {
-      achievementsToMint.push({ tokenId: 6, type: 'Match Maker' });
+      achievementsToMint.push({ 
+        tokenId: 6, 
+        type: 'Match Maker',
+        reason: `User has ${totalMatches} matches`
+      });
+      console.log('✅ Qualifies for Match Maker achievement');
     }
 
-    // 5. Mint the achievements
+    if (achievementsToMint.length === 0) {
+      console.log('ℹ️ No new achievements to mint');
+      return NextResponse.json({
+        success: true,
+        stats: {
+          totalDatesBlockchain,
+          totalDatesDB,
+          synced: totalDatesBlockchain === totalDatesDB,
+          averageRating: avgRating,
+          totalMatches,
+        },
+        mintedAchievements: [],
+        message: 'No new achievements to mint',
+      });
+    }
+
+    console.log(`🎯 Attempting to mint ${achievementsToMint.length} achievement(s):`, 
+      achievementsToMint.map(a => a.type).join(', '));
+
+    // 8. Mint achievements
     const mintedAchievements = [];
     for (const achievement of achievementsToMint) {
       try {
-        const success = await walletClient.writeContract({
+        console.log(`🔨 Minting ${achievement.type} (tokenId: ${achievement.tokenId})...`);
+        
+        const hash = await walletClient.writeContract({
           address: achievementAddress,
           abi: ACHIEVEMENT_ABI,
           functionName: 'mintAchievement',
           args: [userAddress as `0x${string}`, achievement.type],
         });
 
-        if (!success) {
-          console.log(`Achievement ${achievement.type} already earned by ${userAddress}`);
-          continue;
-        }
+        console.log(`⛓️ Transaction hash: ${hash}`);
+
+        // Wait for confirmation
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        console.log(`✅ Transaction confirmed in block ${receipt.blockNumber}`);
 
         // Get token URI
         const tokenURI = await publicClient.readContract({
@@ -217,84 +335,91 @@ export async function POST(request: NextRequest) {
           type: achievement.type,
           tokenId: achievement.tokenId,
           tokenURI: tokenURI as string,
+          reason: achievement.reason,
+          transactionHash: hash,
+          blockNumber: receipt.blockNumber.toString(),
           status: 'success'
         });
 
-        console.log(`✅ Minted ${achievement.type} (tokenId: ${achievement.tokenId}) for ${userAddress}`);
+        // BONUS: Save to database as backup
+        try {
+          await supabase.from('achievements').insert({
+            user_address: userAddress.toLowerCase(),
+            achievement_type: achievement.type,
+            token_id: achievement.tokenId,
+            transaction_hash: hash,
+            block_number: receipt.blockNumber.toString(),
+          });
+          console.log(`💾 Saved achievement to database`);
+        } catch (dbError) {
+          console.log(`⚠️ Failed to save to database (non-critical):`, dbError);
+        }
+
+        console.log(`✅ Successfully minted ${achievement.type}`);
       } catch (error) {
-        console.error(`Failed to mint ${achievement.type}:`, error);
+        console.error(`❌ Failed to mint ${achievement.type}:`, error);
+        
+        // Check if it's because achievement already exists
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const alreadyMinted = errorMessage.includes('already') || errorMessage.includes('exists');
+        
         mintedAchievements.push({
           type: achievement.type,
           tokenId: achievement.tokenId,
-          status: 'failed',
-          error: error instanceof Error ? error.message : 'Unknown error'
+          reason: achievement.reason,
+          status: alreadyMinted ? 'already_minted' : 'failed',
+          error: errorMessage
         });
       }
     }
 
+    const successfulMints = mintedAchievements.filter(a => a.status === 'success');
+    console.log(`🎉 Successfully minted ${successfulMints.length}/${achievementsToMint.length} achievements`);
+
     return NextResponse.json({
       success: true,
       stats: {
-        totalDates,
+        totalDatesBlockchain,
+        totalDatesDB,
+        synced: totalDatesBlockchain === (totalDatesDB + (totalDatesBlockchain - totalDatesDB)),
         averageRating: avgRating,
         totalMatches,
       },
       mintedAchievements,
-      message: mintedAchievements.length > 0
-        ? `Minted ${mintedAchievements.length} new achievement(s)!`
-        : 'No new achievements to mint',
+      message: successfulMints.length > 0
+        ? `Minted ${successfulMints.length} new achievement(s)!`
+        : achievementsToMint.length > 0 
+          ? 'Achievements already minted or failed to mint'
+          : 'No new achievements to mint',
     });
   } catch (error) {
-    console.error('Error in auto-mint:', error);
+    console.error('❌ Error in auto-mint:', error);
     return NextResponse.json(
-      { error: 'Failed to process achievements' },
+      { 
+        error: 'Failed to process achievements',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
 }
 
-// Helper to check if user has a specific achievement token ID
 function hasAchievement(achievements: readonly bigint[], tokenId: number): boolean {
-  return achievements.some(id => Number(id) === tokenId);
+  const has = achievements.some(id => Number(id) === tokenId);
+  if (has) {
+    console.log(`ℹ️ User already has achievement tokenId ${tokenId}`);
+  }
+  return has;
 }
 
-// Helper to check Perfect Week achievement
-async function checkPerfectWeek(userAddress: string): Promise<boolean> {
-  try {
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+function checkPerfectWeek(recentDates: Array<{ date_occurred_at: string }>): boolean {
+  if (recentDates.length < 7) return false;
 
-    // Get dates from the past 7 days
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const daysWithDates = new Set<string>();
+  recentDates.forEach(record => {
+    const day = new Date(record.date_occurred_at).toISOString().split('T')[0];
+    daysWithDates.add(day);
+  });
 
-    const { data: dateHistory, error } = await supabase
-      .from('date_history')
-      .select('date_occurred_at')
-      .eq('user_address', userAddress.toLowerCase())
-      .gte('date_occurred_at', sevenDaysAgo.toISOString())
-      .order('date_occurred_at', { ascending: true });
-
-    if (error) {
-      console.error('Error checking perfect week:', error);
-      return false;
-    }
-
-    if (!dateHistory || dateHistory.length < 7) return false;
-
-    // Check if there's at least one date on each of the past 7 days
-    const daysWithDates = new Set<string>();
-    dateHistory.forEach(record => {
-      const day = new Date(record.date_occurred_at).toISOString().split('T')[0]; // YYYY-MM-DD
-      daysWithDates.add(day);
-    });
-
-    // Need 7 unique days with dates
-    return daysWithDates.size >= 7;
-  } catch (error) {
-    console.error('Error in checkPerfectWeek:', error);
-    return false;
-  }
+  return daysWithDates.size >= 7;
 }
