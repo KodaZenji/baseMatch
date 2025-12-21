@@ -1,6 +1,4 @@
 // frontend/hooks/useReputation.ts
-// UPDATED: Added refreshKey parameter to force re-fetch from blockchain
-
 import { useState, useEffect } from 'react';
 import { useReadContract } from 'wagmi';
 import { REPUTATION_ABI, CONTRACTS } from '@/lib/contracts';
@@ -18,19 +16,26 @@ export function useReputation(address: string | undefined, refreshKey: number = 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    const isContractDeployed = CONTRACTS.REPUTATION &&
+    // Ensure this evaluates strictly to a boolean to satisfy wagmi types
+    const isContractDeployed: boolean = !!(
+        CONTRACTS.REPUTATION &&
         CONTRACTS.REPUTATION.startsWith('0x') &&
-        CONTRACTS.REPUTATION.length === 42;
+        CONTRACTS.REPUTATION.length === 42
+    );
 
-    // ✅ Add refreshKey to query key to force re-fetch
-    const { data: reputationData, isLoading: isReputationLoading, error: readError, refetch } = useReadContract({
+    const { 
+        data: reputationData, 
+        isLoading: isReputationLoading, 
+        error: readError, 
+        refetch 
+    } = useReadContract({
         address: isContractDeployed ? (CONTRACTS.REPUTATION as `0x${string}`) : undefined,
         abi: REPUTATION_ABI,
         functionName: 'getReputation',
         args: address && isContractDeployed ? [address as `0x${string}`] : undefined,
         query: {
-            // Force refetch when refreshKey changes
-            enabled: !!address && isContractDeployed,
+            // Explicitly cast to boolean to fix the "Type 'string | boolean'" build error
+            enabled: Boolean(address && isContractDeployed),
         }
     });
 
@@ -40,14 +45,13 @@ export function useReputation(address: string | undefined, refreshKey: number = 
         functionName: 'getAverageRating',
         args: address && isContractDeployed ? [address as `0x${string}`] : undefined,
         query: {
-            enabled: !!address && isContractDeployed,
+            enabled: Boolean(address && isContractDeployed),
         }
     });
 
-    // ✅ Refetch when refreshKey changes
+    // Refetch when refreshKey changes
     useEffect(() => {
         if (refreshKey > 0 && address && isContractDeployed) {
-            console.log('🔄 Refetching reputation data from blockchain...');
             refetch();
             refetchRating();
         }
@@ -56,14 +60,15 @@ export function useReputation(address: string | undefined, refreshKey: number = 
     useEffect(() => {
         if (!isReputationLoading && reputationData) {
             try {
+                // reputationData is typically returned as a readonly array/tuple from wagmi
                 const data = reputationData as any;
                 const avgRating = averageRatingData ? Number(averageRatingData) : 0;
 
                 setReputation({
-                    totalDates: Number(data.totalDates || 0),
-                    noShows: Number(data.noShows || 0),
-                    totalRating: Number(data.totalRating || 0),
-                    ratingCount: Number(data.ratingCount || 0),
+                    totalDates: Number(data[0] ?? data.totalDates ?? 0),
+                    noShows: Number(data[1] ?? data.noShows ?? 0),
+                    totalRating: Number(data[2] ?? data.totalRating ?? 0),
+                    ratingCount: Number(data[3] ?? data.ratingCount ?? 0),
                     averageRating: avgRating,
                 });
                 setLoading(false);
@@ -72,7 +77,7 @@ export function useReputation(address: string | undefined, refreshKey: number = 
                 setError(err instanceof Error ? err : new Error('Unknown error'));
                 setLoading(false);
             }
-        } else if (!isReputationLoading) {
+        } else if (!isReputationLoading && !reputationData) {
             setReputation({
                 totalDates: 0,
                 noShows: 0,
@@ -86,8 +91,7 @@ export function useReputation(address: string | undefined, refreshKey: number = 
 
     useEffect(() => {
         if (readError) {
-            console.error('Error fetching reputation:', readError);
-            setError(readError);
+            setError(readError as Error);
         }
     }, [readError]);
 
