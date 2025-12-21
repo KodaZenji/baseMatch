@@ -95,25 +95,6 @@ export default function StakeReminderBanner({ onConfirmClick, onAcceptClick }: S
     }
   };
 
-  const handleProcessExpired = async (stakeId: string) => {
-    setCancelling(stakeId);
-
-    try {
-      // Call smart contract directly to process expired stake using wagmi
-      writeStakingContract({
-        chainId: 84532, // Base Sepolia
-        address: CONTRACTS.STAKING as `0x${string}`,
-        abi: STAKING_ABI,
-        functionName: 'processExpiredStake',
-        args: [BigInt(stakeId)]
-      });
-    } catch (error) {
-      console.error('Error processing expired stake:', error);
-      alert('Failed to process. Please try again.');
-      setCancelling(null);
-    }
-  };
-
   // Update the useEffect to handle both cancel and expired stake operations
   useEffect(() => {
     const updateDatabaseAfterSuccess = async (stakeId: string, isExpired: boolean = false) => {
@@ -250,9 +231,9 @@ export default function StakeReminderBanner({ onConfirmClick, onAcceptClick }: S
                 {stake.role === 'creator' && stake.canCancel && (
                   <>
                     {(stake.timeUntilMeeting || 0) <= 0 ? (
-                      // Meeting time passed - show "Claim Refund" instead of "Cancel"
+                      // FIXED: Meeting time passed and user2 never accepted - use cancelStake to get refund
                       <button
-                        onClick={() => handleProcessExpired(stake.stakeId)}
+                        onClick={() => handleCancelStake(stake.stakeId)}
                         disabled={cancelling === stake.stakeId || isTxPending || isTxConfirming}
                         className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 disabled:opacity-50"
                       >
