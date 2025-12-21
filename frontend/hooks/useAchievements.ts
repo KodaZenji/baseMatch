@@ -1,3 +1,6 @@
+// frontend/hooks/useAchievements.ts
+// UPDATED: Added refreshKey parameter to force re-fetch from blockchain
+
 import { useState, useEffect } from 'react';
 import { useReadContract } from 'wagmi';
 import { ACHIEVEMENT_ABI, CONTRACTS } from '@/lib/contracts';
@@ -8,7 +11,7 @@ interface Achievement {
     description: string;
 }
 
-export function useAchievements(userAddress: string | undefined) {
+export function useAchievements(userAddress: string | undefined, refreshKey: number = 0) {
     const [achievements, setAchievements] = useState<Achievement[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -17,13 +20,24 @@ export function useAchievements(userAddress: string | undefined) {
         CONTRACTS.ACHIEVEMENT.startsWith('0x') && 
         CONTRACTS.ACHIEVEMENT.length === 42;
 
-    // Fetch achievement token IDs for the user
-    const { data: tokenIds, isLoading: isLoadingTokens, error: readError } = useReadContract({
+    // ✅ Add refreshKey to query key
+    const { data: tokenIds, isLoading: isLoadingTokens, error: readError, refetch } = useReadContract({
         address: isContractDeployed ? (CONTRACTS.ACHIEVEMENT as `0x${string}`) : undefined,
         abi: ACHIEVEMENT_ABI,
         functionName: 'getUserAchievements',
         args: userAddress && isContractDeployed ? [userAddress as `0x${string}`] : undefined,
+        query: {
+            enabled: !!userAddress && isContractDeployed,
+        }
     });
+
+    // ✅ Refetch when refreshKey changes
+    useEffect(() => {
+        if (refreshKey > 0 && userAddress && isContractDeployed) {
+            console.log('🔄 Refetching achievements data from blockchain...');
+            refetch();
+        }
+    }, [refreshKey, refetch, userAddress, isContractDeployed]);
 
     useEffect(() => {
         const fetchAchievements = async () => {
@@ -37,8 +51,6 @@ export function useAchievements(userAddress: string | undefined) {
                 setLoading(true);
                 const tokenIdArray = tokenIds as bigint[];
                 
-                // Map achievement types based on token ID patterns
-                // You can enhance this by fetching tokenURI for each token
                 const achievementsList: Achievement[] = tokenIdArray.map((tokenId) => {
                     const id = Number(tokenId);
                     return {
@@ -71,8 +83,6 @@ export function useAchievements(userAddress: string | undefined) {
     return { achievements, loading, error };
 }
 
-// Helper function to determine achievement type based on token ID
-// This is a simple mapping - enhance based on your achievement logic
 function getAchievementType(tokenId: number): string {
     if (tokenId === 1) return 'First Date';
     if (tokenId === 2) return '5 Dates';
