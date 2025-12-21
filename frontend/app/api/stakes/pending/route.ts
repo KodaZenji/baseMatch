@@ -1,5 +1,5 @@
 // frontend/app/api/stakes/pending/route.ts
-// FIXED: Query blockchain as source of truth, database as backup
+// FIXED: Query blockchain using getStake and getConfirmation functions
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
@@ -13,41 +13,78 @@ const publicClient = createPublicClient({
   transport: http()
 });
 
-// Helper function to get stake confirmation status from blockchain
-async function getBlockchainConfirmationStatus(stakeId: string) {
+// Helper function to get confirmation status from blockchain for a specific user
+async function getBlockchainConfirmationStatus(stakeId: string, userAddress: string) {
   try {
-    // Read the stake data from blockchain
-    const stakeData = await publicClient.readContract({
+    console.log(`🔗 Querying blockchain confirmation for stake ${stakeId}, user ${userAddress}`);
+    
+    // Read confirmation data from blockchain using getConfirmation function
+    const confirmationData = await publicClient.readContract({
       address: CONTRACTS.STAKING as `0x${string}`,
       abi: STAKING_ABI,
-      functionName: 'stakes',
-      args: [BigInt(stakeId)]
+      functionName: 'getConfirmation',
+      args: [BigInt(stakeId), userAddress as `0x${string}`]
     }) as any;
 
-    // The stake struct should have these fields (adjust based on your contract)
+    // Parse the tuple response: (hasConfirmed, iShowedUp, theyShowedUp)
     return {
-      user1Confirmed: stakeData.user1Confirmed || false,
-      user2Confirmed: stakeData.user2Confirmed || false,
-      user1ShowedUp: stakeData.user1ShowedUp || false,
-      user2ShowedUp: stakeData.user2ShowedUp || false,
-      processed: stakeData.processed || false,
+      hasConfirmed: confirmationData[0] || false,
+      iShowedUp: confirmationData[1] || false,
+      theyShowedUp: confirmationData[2] || false,
       exists: true
     };
   } catch (error) {
-    console.error(`Failed to read stake ${stakeId} from blockchain:`, error);
+    console.error(`Failed to read confirmation for stake ${stakeId}:`, error);
+    return null;
+  }
+}
+
+// Helper function to get stake data from blockchain
+async function getStakeFromBlockchain(stakeId: string) {
+  try {
+    console.log(`🔗 Querying blockchain for stake ${stakeId} data`);
+    
+    const stakeData = await publicClient.readContract({
+      address: CONTRACTS.STAKING as `0x${string}`,
+      abi: STAKING_ABI,
+      functionName: 'getStake',
+      args: [BigInt(stakeId)]
+    }) as any;
+
+    // Parse the stake tuple
+    return {
+      user1: stakeData[0],
+      user2: stakeData[1],
+      user1Amount: stakeData[2],
+      user2Amount: stakeData[3],
+      totalStaked: stakeData[4],
+      meetingTime: stakeData[5],
+      user1Staked: stakeData[6],
+      user2Staked: stakeData[7],
+      processed: stakeData[8],
+      createdAt: stakeData[9],
+      exists: true
+    };
+  } catch (error) {
+    console.error(`Failed to read stake ${stakeId}:`, error);
     return null;
   }
 }
 
 // Helper function to sync blockchain state to database
-async function syncStakeToDatabase(stakeId: string, blockchainData: any) {
+async function syncConfirmationToDatabase(
+  stakeId: string,
+  user1Address: string,
+  user2Address: string,
+  user1Confirmed: boolean,
+  user2Confirmed: boolean
+) {
   try {
     const { error } = await supabaseService
       .from('stakes')
       .update({
-        user1_confirmed: blockchainData.user1Confirmed,
-        user2_confirmed: blockchainData.user2Confirmed,
-        processed: blockchainData.processed,
+        user1_confirmed: user1Confirmed,
+        user2_confirmed: user2Confirmed,
         updated_at: new Date().toISOString()
       })
       .eq('id', stakeId);
@@ -55,7 +92,7 @@ async function syncStakeToDatabase(stakeId: string, blockchainData: any) {
     if (error) {
       console.error(`Failed to sync stake ${stakeId} to database:`, error);
     } else {
-      console.log(`✅ Synced stake ${stakeId} from blockchain to database`);
+      console.log(`✅ Synced stake ${stakeId} confirmations to database`);
     }
   } catch (error) {
     console.error(`Error syncing stake ${stakeId}:`, error);
@@ -151,35 +188,44 @@ export async function GET(request: NextRequest) {
       }
 
       // CATEGORY 2: Both staked, need to confirm date outcome
-      // ✅ QUERY BLOCKCHAIN FIRST for confirmation status
+      // ✅ QUERY BLOCKCHAIN for confirmation status
       if (stake.user1_staked && stake.user2_staked) {
         const meetingPassed = stake.meeting_time < now;
         const windowOpen = now < stake.meeting_time + (48 * 60 * 60);
 
         if (meetingPassed && windowOpen) {
-          // ✅ Query blockchain for the TRUE confirmation status
+          // ✅ Query blockchain for both users' confirmation status
           console.log(`🔗 Querying blockchain for stake ${stake.id} confirmation status`);
-          const blockchainData = await getBlockchainConfirmationStatus(stake.id);
+          
+          const [user1ConfirmationData, user2ConfirmationData] = await Promise.all([
+            getBlockchainConfirmationStatus(stake.id, stake.user1_address),
+            getBlockchainConfirmationStatus(stake.id, stake.user2_address)
+          ]);
 
           let user1Confirmed: boolean;
           let user2Confirmed: boolean;
 
-          if (blockchainData && blockchainData.exists) {
+          if (user1ConfirmationData && user2ConfirmationData) {
             // ✅ USE BLOCKCHAIN DATA (source of truth)
-            user1Confirmed = blockchainData.user1Confirmed;
-            user2Confirmed = blockchainData.user2Confirmed;
+            user1Confirmed = user1ConfirmationData.hasConfirmed;
+            user2Confirmed = user2ConfirmationData.hasConfirmed;
             
-            console.log(`✅ Blockchain data for stake ${stake.id}:`, {
+            console.log(`✅ Blockchain confirmation data for stake ${stake.id}:`, {
               user1Confirmed,
-              user2Confirmed,
-              processed: blockchainData.processed
+              user2Confirmed
             });
 
             // ✅ Sync blockchain state to database in background (don't await)
             if (user1Confirmed !== stake.user1_confirmed || 
                 user2Confirmed !== stake.user2_confirmed) {
               console.log(`🔄 Database out of sync, updating stake ${stake.id}`);
-              syncStakeToDatabase(stake.id, blockchainData);
+              syncConfirmationToDatabase(
+                stake.id,
+                stake.user1_address,
+                stake.user2_address,
+                user1Confirmed,
+                user2Confirmed
+              );
             }
           } else {
             // ❌ Blockchain query failed, fall back to database
@@ -192,10 +238,8 @@ export async function GET(request: NextRequest) {
           const bothConfirmed = user1Confirmed && user2Confirmed;
 
           // Only show if:
-          // 1. Meeting passed
-          // 2. Window is still open  
-          // 3. Current user hasn't confirmed (based on blockchain)
-          // 4. Both users haven't confirmed yet (based on blockchain)
+          // 1. Current user hasn't confirmed (based on blockchain)
+          // 2. Both users haven't confirmed yet (based on blockchain)
           if (!hasUserConfirmed && !bothConfirmed) {
             const deadline = stake.meeting_time + (48 * 60 * 60);
             const timeRemaining = deadline - now;
