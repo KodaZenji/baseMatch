@@ -179,3 +179,45 @@ export async function getConfirmationStatus(
     return null;
   }
 }
+
+
+/**
+ * Trigger database sync after a confirmation transaction
+ * Call this after a user submits a confirmation on the blockchain
+ */
+export async function syncStakeAfterConfirmation(
+  stakeId: string | bigint,
+  userAddress: string
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    console.log(`🔄 Triggering sync for stake ${stakeId} after confirmation by ${userAddress}...`);
+    
+    const response = await fetch('/api/stakes/sync', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userAddress: userAddress
+      })
+    });
+
+    const result = await response.json();
+    
+    if (result.success) {
+      console.log(`✅ Sync completed:`, result);
+      return { success: true, message: result.message };
+    } else {
+      console.error(`❌ Sync failed:`, result);
+      return { success: false, message: result.error };
+    }
+  } catch (error) {
+    console.error('❌ Failed to trigger sync:', error);
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+
