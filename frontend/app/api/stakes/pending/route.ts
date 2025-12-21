@@ -1,8 +1,66 @@
 // frontend/app/api/stakes/pending/route.ts
-// FIXED: Filter out stakes where BOTH users have confirmed
+// FIXED: Query blockchain as source of truth, database as backup
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
+import { createPublicClient, http } from 'viem';
+import { baseSepolia } from 'viem/chains';
+import { STAKING_ABI, CONTRACTS } from '@/lib/contracts';
+
+// Create viem client for reading blockchain
+const publicClient = createPublicClient({
+  chain: baseSepolia,
+  transport: http()
+});
+
+// Helper function to get stake confirmation status from blockchain
+async function getBlockchainConfirmationStatus(stakeId: string) {
+  try {
+    // Read the stake data from blockchain
+    const stakeData = await publicClient.readContract({
+      address: CONTRACTS.STAKING as `0x${string}`,
+      abi: STAKING_ABI,
+      functionName: 'stakes',
+      args: [BigInt(stakeId)]
+    }) as any;
+
+    // The stake struct should have these fields (adjust based on your contract)
+    return {
+      user1Confirmed: stakeData.user1Confirmed || false,
+      user2Confirmed: stakeData.user2Confirmed || false,
+      user1ShowedUp: stakeData.user1ShowedUp || false,
+      user2ShowedUp: stakeData.user2ShowedUp || false,
+      processed: stakeData.processed || false,
+      exists: true
+    };
+  } catch (error) {
+    console.error(`Failed to read stake ${stakeId} from blockchain:`, error);
+    return null;
+  }
+}
+
+// Helper function to sync blockchain state to database
+async function syncStakeToDatabase(stakeId: string, blockchainData: any) {
+  try {
+    const { error } = await supabaseService
+      .from('stakes')
+      .update({
+        user1_confirmed: blockchainData.user1Confirmed,
+        user2_confirmed: blockchainData.user2Confirmed,
+        processed: blockchainData.processed,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', stakeId);
+
+    if (error) {
+      console.error(`Failed to sync stake ${stakeId} to database:`, error);
+    } else {
+      console.log(`✅ Synced stake ${stakeId} from blockchain to database`);
+    }
+  } catch (error) {
+    console.error(`Error syncing stake ${stakeId}:`, error);
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,8 +77,7 @@ export async function GET(request: NextRequest) {
     const address = userAddress.toLowerCase();
     const now = Math.floor(Date.now() / 1000);
 
-    // Get all non-processed stakes involving this user
-    // Exclude cancelled and expired stakes
+    // Get all non-processed stakes involving this user from DATABASE
     const { data: stakes, error } = await supabaseService
       .from('stakes')
       .select('*')
@@ -94,38 +151,67 @@ export async function GET(request: NextRequest) {
       }
 
       // CATEGORY 2: Both staked, need to confirm date outcome
-      // FIXED: Don't show if BOTH users have already confirmed
+      // ✅ QUERY BLOCKCHAIN FIRST for confirmation status
       if (stake.user1_staked && stake.user2_staked) {
         const meetingPassed = stake.meeting_time < now;
         const windowOpen = now < stake.meeting_time + (48 * 60 * 60);
-        const hasUserConfirmed = isUser1 ? stake.user1_confirmed : stake.user2_confirmed;
-        
-        // ✅ NEW: Check if both users confirmed
-        const bothConfirmed = stake.user1_confirmed && stake.user2_confirmed;
 
-        // Only show if:
-        // 1. Meeting passed
-        // 2. Window is still open
-        // 3. Current user hasn't confirmed
-        // 4. ✅ NEW: Both users haven't confirmed yet
-        if (meetingPassed && windowOpen && !hasUserConfirmed && !bothConfirmed) {
-          const deadline = stake.meeting_time + (48 * 60 * 60);
-          const timeRemaining = deadline - now;
+        if (meetingPassed && windowOpen) {
+          // ✅ Query blockchain for the TRUE confirmation status
+          console.log(`🔗 Querying blockchain for stake ${stake.id} confirmation status`);
+          const blockchainData = await getBlockchainConfirmationStatus(stake.id);
 
-          needingConfirmation.push({
-            stakeId: stake.id,
-            matchAddress,
-            matchName,
-            meetingTime: stake.meeting_time,
-            stakeAmount: (isUser1 ? stake.user1_amount : stake.user2_amount).toString(),
-            deadline,
-            timeRemaining
-          });
-        }
-        
-        // ✅ OPTIONAL: Log when both users have confirmed for debugging
-        if (bothConfirmed) {
-          console.log(`✅ Stake ${stake.id}: Both users confirmed, hiding from banner`);
+          let user1Confirmed: boolean;
+          let user2Confirmed: boolean;
+
+          if (blockchainData && blockchainData.exists) {
+            // ✅ USE BLOCKCHAIN DATA (source of truth)
+            user1Confirmed = blockchainData.user1Confirmed;
+            user2Confirmed = blockchainData.user2Confirmed;
+            
+            console.log(`✅ Blockchain data for stake ${stake.id}:`, {
+              user1Confirmed,
+              user2Confirmed,
+              processed: blockchainData.processed
+            });
+
+            // ✅ Sync blockchain state to database in background (don't await)
+            if (user1Confirmed !== stake.user1_confirmed || 
+                user2Confirmed !== stake.user2_confirmed) {
+              console.log(`🔄 Database out of sync, updating stake ${stake.id}`);
+              syncStakeToDatabase(stake.id, blockchainData);
+            }
+          } else {
+            // ❌ Blockchain query failed, fall back to database
+            console.warn(`⚠️ Blockchain query failed for stake ${stake.id}, using database as fallback`);
+            user1Confirmed = stake.user1_confirmed || false;
+            user2Confirmed = stake.user2_confirmed || false;
+          }
+
+          const hasUserConfirmed = isUser1 ? user1Confirmed : user2Confirmed;
+          const bothConfirmed = user1Confirmed && user2Confirmed;
+
+          // Only show if:
+          // 1. Meeting passed
+          // 2. Window is still open  
+          // 3. Current user hasn't confirmed (based on blockchain)
+          // 4. Both users haven't confirmed yet (based on blockchain)
+          if (!hasUserConfirmed && !bothConfirmed) {
+            const deadline = stake.meeting_time + (48 * 60 * 60);
+            const timeRemaining = deadline - now;
+
+            needingConfirmation.push({
+              stakeId: stake.id,
+              matchAddress,
+              matchName,
+              meetingTime: stake.meeting_time,
+              stakeAmount: (isUser1 ? stake.user1_amount : stake.user2_amount).toString(),
+              deadline,
+              timeRemaining
+            });
+          } else {
+            console.log(`✅ Stake ${stake.id}: User confirmed (${hasUserConfirmed}) or both confirmed (${bothConfirmed}), hiding from banner`);
+          }
         }
       }
     }
