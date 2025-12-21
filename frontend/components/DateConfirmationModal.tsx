@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { STAKING_ABI, CONTRACTS } from '@/lib/contracts';
-import { Heart, DollarSign, AlertTriangle, CheckCircle, X, Loader2 } from 'lucide-react';
+import { Heart, DollarSign, AlertTriangle, CheckCircle, X, Loader2, RefreshCw } from 'lucide-react';
 import { supabaseClient } from '@/lib/supabase/client';
 import { createPublicClient, http } from 'viem';
 import { baseSepolia } from 'viem/chains';
@@ -147,26 +147,18 @@ export default function DateConfirmationModal({
             console.log('⏳ Waiting 3 seconds for blockchain state to propagate...');
             await new Promise(resolve => setTimeout(resolve, 3000));
 
-            // STEP 2: Read confirmation data from blockchain
-            console.log('🔗 Reading confirmation data from blockchain...');
-            const blockchainData = await readConfirmationFromBlockchain();
-            
-            if (!blockchainData) {
-                console.error('❌ Failed to read from blockchain, skipping database update');
-            } else {
-                // STEP 3: Update database with blockchain data
-                console.log('💾 Updating database with blockchain data...');
-                await updateDatabaseFromBlockchain(blockchainData);
-            }
+            // STEP 2: 🆕 TRIGGER SYNC API - This will sync ALL stakes from blockchain
+            console.log('🔄 Triggering sync API to sync from blockchain...');
+            await triggerSyncAPI();
 
-            // STEP 4: NOW dispatch the event (database is synced)
+            // STEP 3: Dispatch the event (database is now synced)
             console.log('🔄 Dispatching stakeConfirmed event');
             window.dispatchEvent(new CustomEvent('stakeConfirmed'));
             
-            // STEP 5: Send notification
+            // STEP 4: Send notification
             sendConfirmationNotification();
 
-            // STEP 6: Record date
+            // STEP 5: Record date
             console.log('📝 Recording date...');
             const dateRecordResponse = await recordDateInDatabase();
             
@@ -176,11 +168,11 @@ export default function DateConfirmationModal({
                 console.log('✅ Date recorded');
             }
 
-            // STEP 7: Wait a bit more for blockchain
+            // STEP 6: Wait a bit more for blockchain
             console.log('⏳ Waiting for blockchain state update...');
             await new Promise(resolve => setTimeout(resolve, 5000));
 
-            // STEP 8: Trigger achievement minting
+            // STEP 7: Trigger achievement minting
             console.log('🏆 Checking achievements...');
             await triggerAchievementMinting();
             
@@ -214,90 +206,32 @@ export default function DateConfirmationModal({
         }
     };
 
-    // ✅ NEW: Read confirmation data from blockchain
-    const readConfirmationFromBlockchain = async () => {
+    // 🆕 NEW: Trigger the sync API to sync from blockchain
+    const triggerSyncAPI = async () => {
         try {
-            // Get stake data first to know user addresses
-            const { data: stakeData } = await supabaseClient
-                .from('stakes')
-                .select('user1_address, user2_address')
-                .eq('id', stakeId)
-                .single();
-
-            if (!stakeData) {
-                console.error('❌ Stake not found in database');
-                return null;
-            }
-
-            // Read both users' confirmations from blockchain
-            console.log('🔗 Reading User1 confirmation from blockchain...');
-            const user1Confirmation = await publicClient.readContract({
-                address: CONTRACTS.STAKING as `0x${string}`,
-                abi: STAKING_ABI,
-                functionName: 'getConfirmation',
-                args: [BigInt(stakeId), stakeData.user1_address as `0x${string}`]
-            }) as any;
-
-            console.log('🔗 Reading User2 confirmation from blockchain...');
-            const user2Confirmation = await publicClient.readContract({
-                address: CONTRACTS.STAKING as `0x${string}`,
-                abi: STAKING_ABI,
-                functionName: 'getConfirmation',
-                args: [BigInt(stakeId), stakeData.user2_address as `0x${string}`]
-            }) as any;
-
-            const blockchainData = {
-                user1Confirmed: user1Confirmation[0] || false,
-                user1ShowedUp: user1Confirmation[1] || false,
-                user1TheyShowedUp: user1Confirmation[2] || false,
-                user2Confirmed: user2Confirmation[0] || false,
-                user2ShowedUp: user2Confirmation[1] || false,
-                user2TheyShowedUp: user2Confirmation[2] || false
-            };
-
-            console.log('✅ Blockchain confirmation data:', blockchainData);
-            return blockchainData;
-
-        } catch (error) {
-            console.error('❌ Failed to read confirmation from blockchain:', error);
-            return null;
-        }
-    };
-
-    // ✅ NEW: Update database with ALL confirmation fields from blockchain
-    const updateDatabaseFromBlockchain = async (blockchainData: any) => {
-        try {
-            console.log('💾 Syncing ALL confirmation data to database for stake:', stakeId);
-
-            const { error: updateError } = await supabaseClient
-                .from('stakes')
-                .update({
-                    user1_confirmed: blockchainData.user1Confirmed,
-                    user1_i_showed_up: blockchainData.user1ShowedUp,
-                    user1_they_showed_up: blockchainData.user1TheyShowedUp,
-                    user2_confirmed: blockchainData.user2Confirmed,
-                    user2_i_showed_up: blockchainData.user2ShowedUp,
-                    user2_they_showed_up: blockchainData.user2TheyShowedUp,
-                    updated_at: new Date().toISOString()
+            console.log('🔄 Calling sync API for user:', address);
+            
+            const response = await fetch('/api/stakes/sync', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userAddress: address
                 })
-                .eq('id', stakeId);
-
-            if (updateError) {
-                console.error('❌ Failed to update database:', updateError);
-                throw updateError;
-            }
-
-            console.log('✅ Database successfully updated with ALL confirmation fields:', {
-                user1_confirmed: blockchainData.user1Confirmed,
-                user1_i_showed_up: blockchainData.user1ShowedUp,
-                user1_they_showed_up: blockchainData.user1TheyShowedUp,
-                user2_confirmed: blockchainData.user2Confirmed,
-                user2_i_showed_up: blockchainData.user2ShowedUp,
-                user2_they_showed_up: blockchainData.user2TheyShowedUp
             });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                console.log('✅ Sync API completed:', result.message);
+                console.log(`📊 Synced: ${result.synced} new, ${result.updated} updated, ${result.errors} errors`);
+            } else {
+                console.error('❌ Sync API failed:', result.error);
+            }
         } catch (error) {
-            console.error('❌ Error updating database:', error);
-            throw error;
+            console.error('❌ Failed to call sync API:', error);
+            // Don't throw - continue with other tasks
         }
     };
 
@@ -440,10 +374,12 @@ export default function DateConfirmationModal({
 
                 {isSuccess && isProcessingBlockchain ? (
                     <div className="text-center py-6">
-                        <Loader2 className="animate-spin h-12 w-12 text-green-500 mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Processing...</h3>
+                        <div className="relative">
+                            <RefreshCw className="animate-spin h-12 w-12 text-green-500 mx-auto mb-4" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Syncing from Blockchain...</h3>
                         <p className="text-gray-600 mb-2">
-                            Reading from blockchain and syncing database
+                            Reading confirmation data and updating database
                         </p>
                         <p className="text-sm text-gray-500">
                             This may take 10-15 seconds
@@ -638,7 +574,7 @@ export default function DateConfirmationModal({
                             <p className="text-xs text-gray-600 font-semibold mb-2">What happens next:</p>
                             <ul className="text-xs text-gray-600 space-y-1">
                                 <li>• ✅ Confirmation recorded on blockchain</li>
-                                <li>• 🔗 Database synced from blockchain</li>
+                                <li>• 🔄 Database synced from blockchain via API</li>
                                 <li>• 📧 {matchName} gets notified</li>
                                 <li>• 🏆 Achievements checked automatically</li>
                                 <li>• 💰 Payouts process when both confirm</li>
