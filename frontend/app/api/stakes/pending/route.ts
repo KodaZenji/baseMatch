@@ -1,4 +1,5 @@
-// File: frontend/app/api/stakes/pending/route.ts
+// frontend/app/api/stakes/pending/route.ts
+// FIXED: Filter out stakes where BOTH users have confirmed
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
               matchAddress,
               matchName,
               meetingTime: stake.meeting_time,
-              stakeAmount: stake.user2_amount || stake.user1_amount, // Amount they need to stake
+              stakeAmount: stake.user2_amount || stake.user1_amount,
               timeWaiting,
               timeUntilMeeting,
               hasMeetingPassed: false,
@@ -93,13 +94,21 @@ export async function GET(request: NextRequest) {
       }
 
       // CATEGORY 2: Both staked, need to confirm date outcome
+      // FIXED: Don't show if BOTH users have already confirmed
       if (stake.user1_staked && stake.user2_staked) {
         const meetingPassed = stake.meeting_time < now;
         const windowOpen = now < stake.meeting_time + (48 * 60 * 60);
         const hasUserConfirmed = isUser1 ? stake.user1_confirmed : stake.user2_confirmed;
+        
+        // ✅ NEW: Check if both users confirmed
+        const bothConfirmed = stake.user1_confirmed && stake.user2_confirmed;
 
-        // Only show if meeting passed, window open, and user hasn't confirmed
-        if (meetingPassed && windowOpen && !hasUserConfirmed) {
+        // Only show if:
+        // 1. Meeting passed
+        // 2. Window is still open
+        // 3. Current user hasn't confirmed
+        // 4. ✅ NEW: Both users haven't confirmed yet
+        if (meetingPassed && windowOpen && !hasUserConfirmed && !bothConfirmed) {
           const deadline = stake.meeting_time + (48 * 60 * 60);
           const timeRemaining = deadline - now;
 
@@ -112,6 +121,11 @@ export async function GET(request: NextRequest) {
             deadline,
             timeRemaining
           });
+        }
+        
+        // ✅ OPTIONAL: Log when both users have confirmed for debugging
+        if (bothConfirmed) {
+          console.log(`✅ Stake ${stake.id}: Both users confirmed, hiding from banner`);
         }
       }
     }
