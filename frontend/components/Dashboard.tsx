@@ -94,9 +94,6 @@ export default function Dashboard() {
             // Close the confirmation modal
             setShowDateConfirmation(false);
 
-            // Refresh the stake reminder banner
-            window.dispatchEvent(new Event('stakeConfirmed'));
-
             // ✅ NEW: Show pending state
             setIsPendingBlockchainUpdate(true);
 
