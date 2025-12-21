@@ -1,6 +1,3 @@
-// frontend/components/DateConfirmationModal.tsx
-// UPDATED: Database as backup only, event fires after blockchain confirmation
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,6 +5,14 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagm
 import { STAKING_ABI, CONTRACTS } from '@/lib/contracts';
 import { Heart, DollarSign, AlertTriangle, CheckCircle, X, Loader2 } from 'lucide-react';
 import { supabaseClient } from '@/lib/supabase/client';
+import { createPublicClient, http } from 'viem';
+import { baseSepolia } from 'viem/chains';
+
+// Create viem client for reading blockchain
+const publicClient = createPublicClient({
+  chain: baseSepolia,
+  transport: http()
+});
 
 interface DateConfirmationModalProps {
     stakeId: string;
@@ -132,46 +137,50 @@ export default function DateConfirmationModal({
         if (isSuccess) {
             console.log('✅ Blockchain confirmation successful!');
             setIsProcessingBlockchain(true);
-            
-            // ✅ FIRE EVENT IMMEDIATELY - blockchain is now the source of truth
-            console.log('🔄 Dispatching stakeConfirmed event');
-            window.dispatchEvent(new CustomEvent('stakeConfirmed'));
-            
-            // Then handle post-confirmation tasks (database backup, notifications, etc.)
             processPostConfirmation();
         }
     }, [isSuccess]);
 
     const processPostConfirmation = async () => {
         try {
-            // These are now just for database backup and user experience
-            // They don't affect whether the banner shows/hides
-            
-            // STEP 1: Update database as backup (don't await - do in background)
-            updateStakesTableAsBackup();
-            
-            // STEP 2: Send notification to other user
-            sendConfirmationNotification();
-
-            // STEP 3: Wait a bit for blockchain state to propagate
-            console.log('⏳ Waiting for blockchain state to propagate...');
+            // STEP 1: Wait for blockchain state to be readable
+            console.log('⏳ Waiting 3 seconds for blockchain state to propagate...');
             await new Promise(resolve => setTimeout(resolve, 3000));
 
-            // STEP 4: Record date (this also reads from blockchain)
-            console.log('📝 Recording date on blockchain...');
+            // STEP 2: Read confirmation data from blockchain
+            console.log('🔗 Reading confirmation data from blockchain...');
+            const blockchainData = await readConfirmationFromBlockchain();
+            
+            if (!blockchainData) {
+                console.error('❌ Failed to read from blockchain, skipping database update');
+            } else {
+                // STEP 3: Update database with blockchain data
+                console.log('💾 Updating database with blockchain data...');
+                await updateDatabaseFromBlockchain(blockchainData);
+            }
+
+            // STEP 4: NOW dispatch the event (database is synced)
+            console.log('🔄 Dispatching stakeConfirmed event');
+            window.dispatchEvent(new CustomEvent('stakeConfirmed'));
+            
+            // STEP 5: Send notification
+            sendConfirmationNotification();
+
+            // STEP 6: Record date
+            console.log('📝 Recording date...');
             const dateRecordResponse = await recordDateInDatabase();
             
             if (!dateRecordResponse.success) {
-                console.error('❌ Failed to record date on blockchain');
+                console.error('❌ Failed to record date');
             } else {
-                console.log('✅ Date recorded on blockchain');
+                console.log('✅ Date recorded');
             }
 
-            // STEP 5: Wait for blockchain state to be readable by achievements
+            // STEP 7: Wait a bit more for blockchain
             console.log('⏳ Waiting for blockchain state update...');
             await new Promise(resolve => setTimeout(resolve, 5000));
 
-            // STEP 6: Trigger achievement minting
+            // STEP 8: Trigger achievement minting
             console.log('🏆 Checking achievements...');
             await triggerAchievementMinting();
             
@@ -191,7 +200,9 @@ export default function DateConfirmationModal({
             console.error('❌ Error in post-confirmation tasks:', error);
             setIsProcessingBlockchain(false);
             
-            // Still proceed even if backup tasks fail
+            // Still dispatch event even if something failed
+            window.dispatchEvent(new CustomEvent('stakeConfirmed'));
+            
             if (iShowedUp === true && partnerShowedUp === true) {
                 setShowRatingPrompt(true);
             } else {
@@ -203,42 +214,90 @@ export default function DateConfirmationModal({
         }
     };
 
-    // ✅ UPDATED: This is now just for database backup, not critical path
-    const updateStakesTableAsBackup = async () => {
+    // ✅ NEW: Read confirmation data from blockchain
+    const readConfirmationFromBlockchain = async () => {
         try {
-            console.log('💾 Updating database as backup for stake:', stakeId);
-            
-            const { data: stakeData, error: stakeError } = await supabaseClient
+            // Get stake data first to know user addresses
+            const { data: stakeData } = await supabaseClient
                 .from('stakes')
                 .select('user1_address, user2_address')
                 .eq('id', stakeId)
                 .single();
 
-            if (stakeError) {
-                console.error('⚠️ Failed to fetch stake data for backup:', stakeError);
-                return; // Don't throw - this is just backup
+            if (!stakeData) {
+                console.error('❌ Stake not found in database');
+                return null;
             }
 
-            const isCurrentUserUser1 = address?.toLowerCase() === stakeData.user1_address.toLowerCase();
-            const confirmationField = isCurrentUserUser1 ? 'user1_confirmed' : 'user2_confirmed';
+            // Read both users' confirmations from blockchain
+            console.log('🔗 Reading User1 confirmation from blockchain...');
+            const user1Confirmation = await publicClient.readContract({
+                address: CONTRACTS.STAKING as `0x${string}`,
+                abi: STAKING_ABI,
+                functionName: 'getConfirmation',
+                args: [BigInt(stakeId), stakeData.user1_address as `0x${string}`]
+            }) as any;
+
+            console.log('🔗 Reading User2 confirmation from blockchain...');
+            const user2Confirmation = await publicClient.readContract({
+                address: CONTRACTS.STAKING as `0x${string}`,
+                abi: STAKING_ABI,
+                functionName: 'getConfirmation',
+                args: [BigInt(stakeId), stakeData.user2_address as `0x${string}`]
+            }) as any;
+
+            const blockchainData = {
+                user1Confirmed: user1Confirmation[0] || false,
+                user1ShowedUp: user1Confirmation[1] || false,
+                user1TheyShowedUp: user1Confirmation[2] || false,
+                user2Confirmed: user2Confirmation[0] || false,
+                user2ShowedUp: user2Confirmation[1] || false,
+                user2TheyShowedUp: user2Confirmation[2] || false
+            };
+
+            console.log('✅ Blockchain confirmation data:', blockchainData);
+            return blockchainData;
+
+        } catch (error) {
+            console.error('❌ Failed to read confirmation from blockchain:', error);
+            return null;
+        }
+    };
+
+    // ✅ NEW: Update database with ALL confirmation fields from blockchain
+    const updateDatabaseFromBlockchain = async (blockchainData: any) => {
+        try {
+            console.log('💾 Syncing ALL confirmation data to database for stake:', stakeId);
 
             const { error: updateError } = await supabaseClient
                 .from('stakes')
                 .update({
-                    [confirmationField]: true,
+                    user1_confirmed: blockchainData.user1Confirmed,
+                    user1_i_showed_up: blockchainData.user1ShowedUp,
+                    user1_they_showed_up: blockchainData.user1TheyShowedUp,
+                    user2_confirmed: blockchainData.user2Confirmed,
+                    user2_i_showed_up: blockchainData.user2ShowedUp,
+                    user2_they_showed_up: blockchainData.user2TheyShowedUp,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', stakeId);
 
             if (updateError) {
-                console.error('⚠️ Failed to update database backup:', updateError);
-                return; // Don't throw - this is just backup
+                console.error('❌ Failed to update database:', updateError);
+                throw updateError;
             }
 
-            console.log(`✅ Database backup updated: ${confirmationField} = true`);
+            console.log('✅ Database successfully updated with ALL confirmation fields:', {
+                user1_confirmed: blockchainData.user1Confirmed,
+                user1_i_showed_up: blockchainData.user1ShowedUp,
+                user1_they_showed_up: blockchainData.user1TheyShowedUp,
+                user2_confirmed: blockchainData.user2Confirmed,
+                user2_i_showed_up: blockchainData.user2ShowedUp,
+                user2_they_showed_up: blockchainData.user2TheyShowedUp
+            });
         } catch (error) {
-            console.error('⚠️ Error updating database backup:', error);
-            // Don't throw - database is just backup now
+            console.error('❌ Error updating database:', error);
+            throw error;
         }
     };
 
@@ -384,7 +443,7 @@ export default function DateConfirmationModal({
                         <Loader2 className="animate-spin h-12 w-12 text-green-500 mx-auto mb-4" />
                         <h3 className="text-xl font-bold text-gray-900 mb-2">Processing...</h3>
                         <p className="text-gray-600 mb-2">
-                            Recording your date and checking achievements
+                            Reading from blockchain and syncing database
                         </p>
                         <p className="text-sm text-gray-500">
                             This may take 10-15 seconds
@@ -395,7 +454,7 @@ export default function DateConfirmationModal({
                         <CheckCircle className="text-green-500 mx-auto mb-4" size={64} />
                         <h3 className="text-xl font-bold text-gray-900 mb-2">All Done!</h3>
                         <p className="text-gray-600 mb-6">
-                            Your confirmation has been recorded on the blockchain.
+                            Your confirmation has been recorded and synced.
                         </p>
                     </div>
                 ) : isPending || isConfirming ? (
@@ -407,7 +466,7 @@ export default function DateConfirmationModal({
                     </div>
                 ) : (
                     <>
-                        {/* Compassionate Model Info */}
+                        {/* Rest of the form UI stays the same */}
                         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                             <div className="flex items-start gap-2 mb-2">
                                 <Heart className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
@@ -423,7 +482,6 @@ export default function DateConfirmationModal({
                             </ul>
                         </div>
 
-                        {/* Meeting Details */}
                         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
@@ -443,7 +501,6 @@ export default function DateConfirmationModal({
                             </div>
                         </div>
 
-                        {/* Time Warnings */}
                         {isBeforeMeeting && (
                             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                 <p className="text-sm text-blue-700">
@@ -460,7 +517,6 @@ export default function DateConfirmationModal({
                             </div>
                         )}
 
-                        {/* QUESTION 1 */}
                         <div className="mb-6">
                             <label className="block text-base font-semibold text-gray-900 mb-3">
                                 1. Did YOU personally show up?
@@ -491,7 +547,6 @@ export default function DateConfirmationModal({
                             </div>
                         </div>
 
-                        {/* QUESTION 2 */}
                         <div className="mb-6">
                             <label className="block text-base font-semibold text-gray-900 mb-3">
                                 2. Did {matchName} show up?
@@ -522,7 +577,6 @@ export default function DateConfirmationModal({
                             </div>
                         </div>
 
-                        {/* Conflict Warning */}
                         {isConflict && (
                             <div className="mb-4 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
                                 <div className="flex items-start gap-2">
@@ -539,7 +593,6 @@ export default function DateConfirmationModal({
                             </div>
                         )}
 
-                        {/* Payout Preview */}
                         {payout && (
                             <div className={`mb-4 p-4 rounded-lg border-2 ${payout.color === 'green' ? 'bg-green-50 border-green-200' :
                                 payout.color === 'blue' ? 'bg-blue-50 border-blue-200' :
@@ -573,7 +626,6 @@ export default function DateConfirmationModal({
                             </div>
                         )}
 
-                        {/* Submit Button */}
                         <button
                             onClick={handleConfirm}
                             disabled={!canConfirm || iShowedUp === null || partnerShowedUp === null}
@@ -582,12 +634,11 @@ export default function DateConfirmationModal({
                             Submit Confirmation
                         </button>
 
-                        {/* Info */}
                         <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                             <p className="text-xs text-gray-600 font-semibold mb-2">What happens next:</p>
                             <ul className="text-xs text-gray-600 space-y-1">
-                                <li>• ✅ Confirmation recorded on blockchain (source of truth)</li>
-                                <li>• 💾 Database backup updated</li>
+                                <li>• ✅ Confirmation recorded on blockchain</li>
+                                <li>• 🔗 Database synced from blockchain</li>
                                 <li>• 📧 {matchName} gets notified</li>
                                 <li>• 🏆 Achievements checked automatically</li>
                                 <li>• 💰 Payouts process when both confirm</li>
