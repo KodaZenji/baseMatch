@@ -1,5 +1,5 @@
 // frontend/app/api/achievements/auto-mint/route.ts
-// Checks blockchain as source of truth, syncs to DB, then mints achievements
+// FIXED: Added notification creation after successful achievement minting
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, createWalletClient, http } from 'viem';
@@ -80,6 +80,55 @@ function getSupabaseAdmin() {
       persistSession: false
     }
   });
+}
+
+// ✅ NEW: Helper function to create achievement notification
+async function createAchievementNotification(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  userAddress: string,
+  achievementType: string,
+  tokenId: number,
+  tokenURI: string
+) {
+  try {
+    // Get the achievement emoji based on type
+    const emoji = getAchievementEmoji(achievementType);
+    
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        user_address: userAddress.toLowerCase(),
+        type: 'achievement_unlocked',
+        title: `${emoji} Achievement Unlocked!`,
+        message: `Congratulations! You've earned the "${achievementType}" badge!`,
+        metadata: {
+          achievement_type: achievementType,
+          token_id: tokenId,
+          token_uri: tokenURI
+        }
+      });
+
+    if (error) {
+      console.error('Failed to create notification:', error);
+    } else {
+      console.log(`✅ Created notification for ${achievementType}`);
+    }
+  } catch (error) {
+    console.error('Error creating notification:', error);
+  }
+}
+
+// ✅ NEW: Helper to get emoji for achievement type
+function getAchievementEmoji(type: string): string {
+  const emojiMap: { [key: string]: string } = {
+    'First Date': '🎯',
+    '5 Dates': '🔥',
+    '10 Dates': '💎',
+    '5 Star Rating': '⭐',
+    'Perfect Week': '🏆',
+    'Match Maker': '💘'
+  };
+  return emojiMap[type] || '🏅';
 }
 
 export async function POST(request: NextRequest) {
@@ -341,7 +390,7 @@ export async function POST(request: NextRequest) {
           status: 'success'
         });
 
-        // BONUS: Save to database as backup
+        // Save to database as backup
         try {
           await supabase.from('achievements').insert({
             user_address: userAddress.toLowerCase(),
@@ -354,6 +403,15 @@ export async function POST(request: NextRequest) {
         } catch (dbError) {
           console.log(`⚠️ Failed to save to database (non-critical):`, dbError);
         }
+
+        // ✅ NEW: Create notification for the user
+        await createAchievementNotification(
+          supabase,
+          userAddress,
+          achievement.type,
+          achievement.tokenId,
+          tokenURI as string
+        );
 
         console.log(`✅ Successfully minted ${achievement.type}`);
       } catch (error) {
