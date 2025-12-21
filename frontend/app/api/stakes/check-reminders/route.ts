@@ -3,6 +3,28 @@
 import { NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
 
+// In-memory cache for recently sent reminders to prevent duplicates within the same request
+const recentlySentReminders = new Map<string, number>();
+const REMINDER_CACHE_TIME = 5 * 60 * 1000; // 5 minutes cache
+
+// Clean up old entries periodically
+let cleanupInterval: NodeJS.Timeout;
+if (typeof setInterval !== 'undefined') {
+  cleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [key, timestamp] of recentlySentReminders.entries()) {
+      if (now - timestamp > REMINDER_CACHE_TIME) {
+        recentlySentReminders.delete(key);
+      }
+    }
+  }, 60 * 1000); // Clean up every minute
+
+  // Ensure the interval doesn't prevent the process from exiting
+  if (cleanupInterval.unref) {
+    cleanupInterval.unref();
+  }
+}
+
 /**
  * Public endpoint - no auth required
  * Checks all stakes that need confirmation reminders and sends notifications
@@ -15,7 +37,7 @@ import { supabaseService } from '@/lib/supabase.server';
  */
 export async function POST() {
   try {
-    const now = Math.floor(Date.now() / 1000);
+    const nowSeconds = Math.floor(Date.now() / 1000);
 
     // Find all stakes where:
     // - Meeting time has passed (0-48 hours ago)
@@ -27,8 +49,8 @@ export async function POST() {
       .eq('processed', false)
       .eq('user1_staked', true)
       .eq('user2_staked', true)
-      .lte('meeting_time', now) // Meeting has passed
-      .gte('meeting_time', now - 48 * 60 * 60); // Within 48hr window
+      .lte('meeting_time', nowSeconds) // Meeting has passed
+      .gte('meeting_time', nowSeconds - 48 * 60 * 60); // Within 48hr window
 
     if (stakesError) {
       console.error('Error fetching stakes:', stakesError);
@@ -53,8 +75,11 @@ export async function POST() {
     let failed = 0;
 
     for (const stake of stakes) {
-      // Check User1
+      console.log(`🔍 Checking stake ${stake.id} for reminders`);
+
+      // Check User1 - only if not already confirmed
       if (!stake.user1_confirmed) {
+        console.log(`📧 Checking reminder for User1 (${stake.user1_address}) on stake ${stake.id}`);
         const result = await sendReminderIfNeeded(
           stake.id,
           stake.user1_address,
@@ -65,10 +90,13 @@ export async function POST() {
         if (result === 'sent') remindersSent++;
         else if (result === 'already_sent') alreadySent++;
         else if (result === 'failed') failed++;
+      } else {
+        console.log(`✅ User1 already confirmed stake ${stake.id}`);
       }
 
-      // Check User2
+      // Check User2 - only if not already confirmed
       if (!stake.user2_confirmed) {
+        console.log(`📧 Checking reminder for User2 (${stake.user2_address}) on stake ${stake.id}`);
         const result = await sendReminderIfNeeded(
           stake.id,
           stake.user2_address,
@@ -79,12 +107,14 @@ export async function POST() {
         if (result === 'sent') remindersSent++;
         else if (result === 'already_sent') alreadySent++;
         else if (result === 'failed') failed++;
+      } else {
+        console.log(`✅ User2 already confirmed stake ${stake.id}`);
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: `Checked ${stakes.length} stakes`,
+      message: `Checked ${stakes.length} stakes, sent ${remindersSent} reminders`,
       stakesChecked: stakes.length,
       remindersSent,
       alreadySent,
@@ -117,6 +147,13 @@ async function sendReminderIfNeeded(
   try {
     const userAddressLower = userAddress.toLowerCase();
     const matchAddressLower = matchAddress.toLowerCase();
+    const reminderKey = `${stakeId}-${userAddressLower}`;
+
+    // First check in-memory cache to prevent duplicates within same request
+    if (recentlySentReminders.has(reminderKey)) {
+      console.log(`✓ Reminder already sent (in-memory) for stake ${stakeId} to ${userAddressLower.slice(0, 8)}`);
+      return 'already_sent';
+    }
 
     // STEP 1: Try to insert tracking record FIRST
     // This acts as a distributed lock - only one process can succeed
@@ -132,15 +169,19 @@ async function sendReminderIfNeeded(
       // Check if it's a duplicate key error (code 23505 in PostgreSQL)
       if (insertError.code === '23505' || insertError.message?.includes('duplicate')) {
         console.log(`✓ Reminder already sent for stake ${stakeId} to ${userAddressLower.slice(0, 8)}`);
+        // Add to in-memory cache
+        recentlySentReminders.set(reminderKey, Date.now());
         return 'already_sent';
       }
-      
+
       // Other database error
       console.error(`❌ Database error inserting reminder for stake ${stakeId}:`, insertError);
       return 'failed';
     }
 
     console.log(`🔒 Locked reminder slot for stake ${stakeId} to ${userAddressLower}`);
+    // Add to in-memory cache
+    recentlySentReminders.set(reminderKey, Date.now());
 
     // STEP 2: Now that we've locked this reminder, send the notification
     try {
@@ -156,11 +197,11 @@ async function sendReminderIfNeeded(
       // Calculate time since meeting
       const now = Math.floor(Date.now() / 1000);
       const hoursSince = Math.floor((now - meetingTime) / 3600);
-      
+
       // Create dynamic time description
       const timeDescription = hoursSince === 0 ? 'just now' :
-                            hoursSince < 24 ? `${hoursSince}h ago` :
-                            `${Math.floor(hoursSince / 24)}d ago`;
+        hoursSince < 24 ? `${hoursSince}h ago` :
+          `${Math.floor(hoursSince / 24)}d ago`;
 
       // Send notification
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://basematch.app';
@@ -189,7 +230,7 @@ async function sendReminderIfNeeded(
       if (!notificationResponse.ok) {
         const errorText = await notificationResponse.text();
         console.error(`❌ Failed to send notification for stake ${stakeId}:`, errorText);
-        
+
         // Notification failed but we've already marked it as sent
         // This is acceptable - prevents infinite retry loops
         // The user can still see the reminder in StakeReminderBanner

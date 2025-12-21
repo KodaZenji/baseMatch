@@ -146,6 +146,9 @@ export default function DateConfirmationModal({
             // Update stakes table
             updateStakesTable();
 
+            // Trigger achievement minting for both users
+            triggerAchievementMinting();
+
             if (iShowedUp === true && partnerShowedUp === true) {
                 setShowRatingPrompt(true);
             } else {
@@ -181,17 +184,57 @@ export default function DateConfirmationModal({
 
     const updateStakesTable = async () => {
         try {
-            const isUser1 = address?.toLowerCase() === matchAddress.toLowerCase() ? false : true;
+            // Get the stake data to determine if current user is user1 or user2
+            const { data: stakeData, error: stakeError } = await supabaseClient
+                .from('stakes')
+                .select('user1_address, user2_address')
+                .eq('id', stakeId)
+                .single();
 
-            await supabaseClient
+            if (stakeError) {
+                console.error('Failed to fetch stake data:', stakeError);
+                return;
+            }
+
+            const isCurrentUserUser1 = address?.toLowerCase() === stakeData.user1_address.toLowerCase();
+            const confirmationField = isCurrentUserUser1 ? 'user1_confirmed' : 'user2_confirmed';
+
+            const { error: updateError } = await supabaseClient
                 .from('stakes')
                 .update({
-                    [isUser1 ? 'user1_confirmed' : 'user2_confirmed']: true,
+                    [confirmationField]: true,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', stakeId);
+
+            if (updateError) {
+                console.error('Failed to update stakes table:', updateError);
+                return;
+            }
+
+            console.log(`✅ Updated ${confirmationField} for stake ${stakeId}`);
         } catch (error) {
             console.error('Failed to update stakes table:', error);
+        }
+    };
+
+    const triggerAchievementMinting = async () => {
+        try {
+            // Trigger achievement minting for the current user
+            await fetch('/api/achievements/auto-mint', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userAddress: address })
+            });
+
+            // Also trigger for the match user
+            await fetch('/api/achievements/auto-mint', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userAddress: matchAddress })
+            });
+        } catch (error) {
+            console.error('Failed to trigger achievement minting:', error);
         }
     };
 

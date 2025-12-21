@@ -37,17 +37,36 @@ export default function StakeReminderBanner({ onConfirmClick, onAcceptClick }: S
     hash: txHash
   });
 
+  // Listen for confirmation events and refresh stakes
   useEffect(() => {
-    if (!address) {
-      setLoading(false);
-      return;
+    // This will refresh stakes when the component mounts
+    if (address) {
+      fetchPendingStakes();
     }
 
-    fetchPendingStakes();
+    // Set up an interval to periodically refresh stakes
+    const interval = setInterval(() => {
+      if (address) {
+        fetchPendingStakes();
+      }
+    }, 30000); // Refresh every 30 seconds
 
-    // Refresh every minute
-    const interval = setInterval(fetchPendingStakes, 60000);
-    return () => clearInterval(interval);
+    // Listen for stake confirmation events
+    const handleStakeConfirmed = () => {
+      if (address) {
+        // Small delay to ensure database is updated
+        setTimeout(() => {
+          fetchPendingStakes();
+        }, 2000);
+      }
+    };
+
+    window.addEventListener('stakeConfirmed', handleStakeConfirmed);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('stakeConfirmed', handleStakeConfirmed);
+    };
   }, [address]);
 
   const fetchPendingStakes = async () => {

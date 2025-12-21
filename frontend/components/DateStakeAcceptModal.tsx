@@ -91,8 +91,43 @@ export default function DateStakeAcceptModal({
 
             const result = await response.json();
             console.log('🔄 Stake sync result:', result);
+
+            // Trigger achievement minting for both users after successful sync
+            if (result.success) {
+                triggerAchievementMinting();
+            }
         } catch (error) {
             console.error('❌ Failed to sync stake:', error);
+        }
+    };
+
+    const triggerAchievementMinting = async () => {
+        try {
+            // Get the stake data to determine both users
+            const response = await fetch(`/api/stakes/${stakeId}`);
+            const data = await response.json();
+
+            if (data.success && data.stake) {
+                // Trigger achievement minting for the current user (acceptor)
+                await fetch('/api/achievements/auto-mint', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userAddress: address })
+                });
+
+                // Also trigger for the stake creator
+                const creatorAddress = data.stake.user1_address.toLowerCase() === address?.toLowerCase()
+                    ? data.stake.user2_address
+                    : data.stake.user1_address;
+
+                await fetch('/api/achievements/auto-mint', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userAddress: creatorAddress })
+                });
+            }
+        } catch (error) {
+            console.error('Failed to trigger achievement minting:', error);
         }
     };
 

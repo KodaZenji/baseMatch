@@ -87,6 +87,10 @@ export default function Dashboard() {
             // Close the confirmation modal
             setShowDateConfirmation(false);
 
+            // Refresh the stake reminder banner
+            // This will trigger the StakeReminderBanner to fetch updated stakes
+            window.dispatchEvent(new Event('stakeConfirmed'));
+
             // Start 10-second countdown to rating modal
             setCountdown(10);
 
