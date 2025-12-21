@@ -99,17 +99,17 @@ export default function DateStakeAcceptModal({
     const sendAcceptanceNotification = async () => {
         try {
             console.log('📬 Sending acceptance notification for stake:', stakeId);
-            
+
             const response = await fetch(`/api/stakes/${stakeId}`);
             const data = await response.json();
             console.log('📥 Stake data response:', data);
-            
+
             if (data.success && data.stake) {
                 // Determine the other user (the one who created the stake)
-                const otherUserAddress = data.stake.user1_address.toLowerCase() === address?.toLowerCase() 
-                    ? data.stake.user2_address 
+                const otherUserAddress = data.stake.user1_address.toLowerCase() === address?.toLowerCase()
+                    ? data.stake.user2_address
                     : data.stake.user1_address;
-                    
+
                 console.log('👥 Notifying other user:', otherUserAddress);
 
                 const notificationResponse = await fetch('/api/notifications', {
@@ -128,10 +128,10 @@ export default function DateStakeAcceptModal({
                         }
                     })
                 });
-                
+
                 const notificationResult = await notificationResponse.json();
                 console.log('📬 Notification result:', notificationResult);
-                
+
                 if (!notificationResponse.ok) {
                     console.error('❌ Failed to send notification:', notificationResult.error);
                 }
