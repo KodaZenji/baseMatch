@@ -391,21 +391,18 @@ export default function DateConfirmationModal({
                         <p className="text-gray-600">
                             {isPending ? 'Waiting for wallet confirmation...' : 'Confirming on blockchain...'}
                         </p>
-                        {!isPending && !isConfirming && (
-                            <button
-                                onClick={() => {
-                                    console.log('🔄 Manually checking confirmation status...');
-                                    // Set to success to proceed with post-processing
-                                    setIsProcessingBlockchain(true);
-                                    processPostConfirmation();
-                                }}
-                                className="mt-4 text-sm text-pink-600 hover:text-pink-800 underline"
-                            >
-                                Click here if transaction is already confirmed
-                            </button>
-                        )}
-                    </div>
-                ) : (
+                        <button
+                            onClick={() => {
+                                console.log('🔄 Manually checking confirmation status...');
+                                // Set to success to proceed with post-processing
+                                setIsProcessingBlockchain(true);
+                                processPostConfirmation();
+                            }}
+                            className="mt-4 text-sm text-pink-600 hover:text-pink-800 underline"
+                        >
+                            Click here if transaction is already confirmed
+                        </button>
+                    </div>                ) : (
                     <>
                         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                             <div className="flex items-start gap-2 mb-2">
