@@ -1,5 +1,5 @@
 // frontend/app/api/achievements/auto-mint/route.ts
-// FIXED: Added notification creation after successful achievement minting
+// FIXED: Use date_history table as source of truth for total dates
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, createWalletClient, http } from 'viem';
@@ -82,7 +82,6 @@ function getSupabaseAdmin() {
   });
 }
 
-// ✅ NEW: Helper function to create achievement notification
 async function createAchievementNotification(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   userAddress: string,
@@ -91,7 +90,6 @@ async function createAchievementNotification(
   tokenURI: string
 ) {
   try {
-    // Get the achievement emoji based on type
     const emoji = getAchievementEmoji(achievementType);
     
     const { error } = await supabase
@@ -118,7 +116,6 @@ async function createAchievementNotification(
   }
 }
 
-// ✅ NEW: Helper to get emoji for achievement type
 function getAchievementEmoji(type: string): string {
   const emojiMap: { [key: string]: string } = {
     'First Date': '🎯',
@@ -186,54 +183,21 @@ export async function POST(request: NextRequest) {
 
     console.log('📊 Existing achievements on-chain:', existingAchievements.map(id => Number(id)));
 
-    // 2. Get reputation from blockchain (SOURCE OF TRUTH)
-    const reputation = await publicClient.readContract({
-      address: reputationAddress,
-      abi: REPUTATION_ABI,
-      functionName: 'getReputation',
-      args: [userAddress as `0x${string}`],
-    });
-
-    const totalDatesBlockchain = Number(reputation[0]);
-    const noShows = Number(reputation[1]);
-    console.log(`📅 Total dates from BLOCKCHAIN: ${totalDatesBlockchain}`);
-    console.log(`❌ No-shows: ${noShows}`);
-
-    // 3. Get current database count
+    // 2. ✅ NEW: Get total dates from date_history table (SOURCE OF TRUTH)
     const { data: dbDateHistory, error: dbError } = await supabase
       .from('date_history')
       .select('id')
       .eq('user_address', userAddress.toLowerCase());
 
-    const totalDatesDB = dbDateHistory?.length || 0;
-    console.log(`💾 Total dates in DATABASE: ${totalDatesDB}`);
-
-    // 4. Sync database with blockchain if out of sync
-    if (totalDatesBlockchain > totalDatesDB) {
-      const datesToAdd = totalDatesBlockchain - totalDatesDB;
-      console.log(`⚠️ Database out of sync! Adding ${datesToAdd} date record(s)...`);
-      
-      const newRecords = Array.from({ length: datesToAdd }, (_, i) => ({
-        user_address: userAddress.toLowerCase(),
-        date_occurred_at: new Date().toISOString(),
-      }));
-
-      const { error: insertError } = await supabase
-        .from('date_history')
-        .insert(newRecords);
-
-      if (insertError) {
-        console.error('Failed to sync database:', insertError);
-      } else {
-        console.log(`✅ Added ${datesToAdd} date(s) to database`);
-      }
-    } else if (totalDatesBlockchain === totalDatesDB) {
-      console.log('✅ Database is in sync with blockchain');
-    } else {
-      console.log('⚠️ Database has MORE dates than blockchain (unusual)');
+    if (dbError) {
+      console.error('Failed to get date history:', dbError);
+      return NextResponse.json({ error: 'Failed to get date history' }, { status: 500 });
     }
 
-    // 5. Get average rating
+    const totalDates = dbDateHistory?.length || 0;
+    console.log(`📅 Total dates from date_history: ${totalDates}`);
+
+    // 3. Get average rating from blockchain
     let avgRating = 0;
     try {
       const averageRatingBigInt = await publicClient.readContract({
@@ -248,7 +212,7 @@ export async function POST(request: NextRequest) {
       console.log('ℹ️ No ratings yet');
     }
 
-    // 6. Get matches
+    // 4. Get matches
     let totalMatches = 0;
     try {
       const matches = await publicClient.readContract({
@@ -263,35 +227,35 @@ export async function POST(request: NextRequest) {
       console.log('ℹ️ No matches yet');
     }
 
-    // 7. Determine achievements to mint (using BLOCKCHAIN data)
+    // 5. Determine achievements to mint (using date_history data)
     const achievementsToMint: Array<{ tokenId: number; type: string; reason: string }> = [];
 
     // tokenId 1: First Date
-    if (totalDatesBlockchain >= 1 && !hasAchievement(existingAchievements, 1)) {
+    if (totalDates >= 1 && !hasAchievement(existingAchievements, 1)) {
       achievementsToMint.push({ 
         tokenId: 1, 
         type: 'First Date',
-        reason: `User has ${totalDatesBlockchain} date(s) on blockchain`
+        reason: `User has ${totalDates} date(s) in date_history`
       });
       console.log('✅ Qualifies for First Date achievement');
     }
 
     // tokenId 2: 5 Dates
-    if (totalDatesBlockchain >= 5 && !hasAchievement(existingAchievements, 2)) {
+    if (totalDates >= 5 && !hasAchievement(existingAchievements, 2)) {
       achievementsToMint.push({ 
         tokenId: 2, 
         type: '5 Dates',
-        reason: `User has ${totalDatesBlockchain} dates on blockchain`
+        reason: `User has ${totalDates} dates in date_history`
       });
       console.log('✅ Qualifies for 5 Dates achievement');
     }
 
     // tokenId 3: 10 Dates
-    if (totalDatesBlockchain >= 10 && !hasAchievement(existingAchievements, 3)) {
+    if (totalDates >= 10 && !hasAchievement(existingAchievements, 3)) {
       achievementsToMint.push({ 
         tokenId: 3, 
         type: '10 Dates',
-        reason: `User has ${totalDatesBlockchain} dates on blockchain`
+        reason: `User has ${totalDates} dates in date_history`
       });
       console.log('✅ Qualifies for 10 Dates achievement');
     }
@@ -306,7 +270,7 @@ export async function POST(request: NextRequest) {
       console.log('✅ Qualifies for 5 Star Rating achievement');
     }
 
-    // tokenId 5: Perfect Week (use DB for this since it requires date tracking)
+    // tokenId 5: Perfect Week
     const { data: recentDates } = await supabase
       .from('date_history')
       .select('date_occurred_at')
@@ -339,9 +303,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         stats: {
-          totalDatesBlockchain,
-          totalDatesDB,
-          synced: totalDatesBlockchain === totalDatesDB,
+          totalDates,
           averageRating: avgRating,
           totalMatches,
         },
@@ -353,7 +315,7 @@ export async function POST(request: NextRequest) {
     console.log(`🎯 Attempting to mint ${achievementsToMint.length} achievement(s):`, 
       achievementsToMint.map(a => a.type).join(', '));
 
-    // 8. Mint achievements
+    // 6. Mint achievements
     const mintedAchievements = [];
     for (const achievement of achievementsToMint) {
       try {
@@ -404,7 +366,7 @@ export async function POST(request: NextRequest) {
           console.log(`⚠️ Failed to save to database (non-critical):`, dbError);
         }
 
-        // ✅ NEW: Create notification for the user
+        // Create notification for the user
         await createAchievementNotification(
           supabase,
           userAddress,
@@ -437,9 +399,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       stats: {
-        totalDatesBlockchain,
-        totalDatesDB,
-        synced: totalDatesBlockchain === (totalDatesDB + (totalDatesBlockchain - totalDatesDB)),
+        totalDates,
         averageRating: avgRating,
         totalMatches,
       },
