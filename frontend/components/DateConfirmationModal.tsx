@@ -4,15 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { STAKING_ABI, CONTRACTS } from '@/lib/contracts';
 import { Heart, DollarSign, AlertTriangle, CheckCircle, X, Loader2, RefreshCw } from 'lucide-react';
-import { supabaseClient } from '@/lib/supabase/client';
-import { createPublicClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
-
-// Create viem client for reading blockchain
-const publicClient = createPublicClient({
-  chain: baseSepolia,
-  transport: http()
-});
 
 interface DateConfirmationModalProps {
     stakeId: string;
@@ -147,32 +138,32 @@ export default function DateConfirmationModal({
             console.log('⏳ Waiting 3 seconds for blockchain state to propagate...');
             await new Promise(resolve => setTimeout(resolve, 3000));
 
-            // STEP 2: 🆕 TRIGGER SYNC API - This will sync ALL stakes from blockchain
-            console.log('🔄 Triggering sync API to sync from blockchain...');
+            // STEP 2: Trigger sync API to update database from blockchain
+            console.log('🔄 Triggering sync API...');
             await triggerSyncAPI();
 
-            // STEP 3: Dispatch the event (database is now synced)
+            // STEP 3: Dispatch event
             console.log('🔄 Dispatching stakeConfirmed event');
             window.dispatchEvent(new CustomEvent('stakeConfirmed'));
             
             // STEP 4: Send notification
             sendConfirmationNotification();
 
-            // STEP 5: Record date
+            // STEP 5: Record date (writes to date_history table)
             console.log('📝 Recording date...');
             const dateRecordResponse = await recordDateInDatabase();
             
             if (!dateRecordResponse.success) {
                 console.error('❌ Failed to record date');
             } else {
-                console.log('✅ Date recorded');
+                console.log('✅ Date recorded in date_history table');
             }
 
-            // STEP 6: Wait a bit more for blockchain
-            console.log('⏳ Waiting for blockchain state update...');
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            // STEP 6: Wait a bit for database writes to complete
+            console.log('⏳ Waiting 2 seconds for database writes...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
-            // STEP 7: Trigger achievement minting
+            // STEP 7: Trigger auto-mint (reads from date_history table)
             console.log('🏆 Checking achievements...');
             await triggerAchievementMinting();
             
@@ -206,7 +197,6 @@ export default function DateConfirmationModal({
         }
     };
 
-    // 🆕 NEW: Trigger the sync API to sync from blockchain
     const triggerSyncAPI = async () => {
         try {
             console.log('🔄 Calling sync API for user:', address);
@@ -225,13 +215,11 @@ export default function DateConfirmationModal({
             
             if (result.success) {
                 console.log('✅ Sync API completed:', result.message);
-                console.log(`📊 Synced: ${result.synced} new, ${result.updated} updated, ${result.errors} errors`);
             } else {
                 console.error('❌ Sync API failed:', result.error);
             }
         } catch (error) {
             console.error('❌ Failed to call sync API:', error);
-            // Don't throw - continue with other tasks
         }
     };
 
@@ -294,7 +282,7 @@ export default function DateConfirmationModal({
 
     const triggerAchievementMinting = async () => {
         try {
-            console.log('🏆 Triggering achievement minting for both users');
+            console.log('🏆 Triggering achievement auto-mint for both users');
             
             // Trigger for current user
             const userResponse = await fetch('/api/achievements/auto-mint', {
@@ -306,6 +294,8 @@ export default function DateConfirmationModal({
             const userData = await userResponse.json();
             if (userData.mintedAchievements?.length > 0) {
                 console.log(`🎉 Minted ${userData.mintedAchievements.length} achievement(s) for current user!`);
+            } else {
+                console.log('ℹ️ No new achievements for current user');
             }
 
             // Trigger for match user
@@ -318,6 +308,8 @@ export default function DateConfirmationModal({
             const matchData = await matchResponse.json();
             if (matchData.mintedAchievements?.length > 0) {
                 console.log(`🎉 Minted ${matchData.mintedAchievements.length} achievement(s) for match user!`);
+            } else {
+                console.log('ℹ️ No new achievements for match user');
             }
         } catch (error) {
             console.error('⚠️ Failed to trigger achievement minting:', error);
@@ -377,9 +369,9 @@ export default function DateConfirmationModal({
                         <div className="relative">
                             <RefreshCw className="animate-spin h-12 w-12 text-green-500 mx-auto mb-4" />
                         </div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Syncing from Blockchain...</h3>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Processing...</h3>
                         <p className="text-gray-600 mb-2">
-                            Reading confirmation data and updating database
+                            Syncing database and checking achievements
                         </p>
                         <p className="text-sm text-gray-500">
                             This may take 10-15 seconds
@@ -402,7 +394,6 @@ export default function DateConfirmationModal({
                     </div>
                 ) : (
                     <>
-                        {/* Rest of the form UI stays the same */}
                         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                             <div className="flex items-start gap-2 mb-2">
                                 <Heart className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
@@ -575,8 +566,9 @@ export default function DateConfirmationModal({
                             <ul className="text-xs text-gray-600 space-y-1">
                                 <li>• ✅ Confirmation recorded on blockchain</li>
                                 <li>• 🔄 Database synced from blockchain via API</li>
-                                <li>• 📧 {matchName} gets notified</li>
+                                <li>• 📝 Date recorded securely in date_history table</li>
                                 <li>• 🏆 Achievements checked automatically</li>
+                                <li>• 📧 {matchName} gets notified</li>
                                 <li>• 💰 Payouts process when both confirm</li>
                             </ul>
                         </div>
