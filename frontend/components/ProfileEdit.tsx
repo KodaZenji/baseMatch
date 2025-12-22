@@ -107,7 +107,6 @@ export default function ProfileEdit() {
                 if (response.ok) {
                     const mergedProfile = await response.json();
 
-                    // Only populate if form is empty (first load)
                     if (!formData.name && !formData.age && !formData.gender && !formData.interests) {
                         setFormData({
                             name: mergedProfile.name || '',
@@ -453,9 +452,12 @@ export default function ProfileEdit() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full relative">
-                {/* ✅ Fixed Back Button - Icon only, navigates to dashboard */}
+                {/* Back Button - Goes to Dashboard tab */}
                 <button
-                    onClick={() => router.push('/dashboard')}
+                    onClick={() => {
+                        localStorage.setItem('activeTab', 'profile');
+                        router.push('/');
+                    }}
                     className="absolute top-4 left-4 p-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full hover:shadow-lg transition-all duration-300 hover:scale-110 z-10"
                     aria-label="Back to Dashboard"
                 >
