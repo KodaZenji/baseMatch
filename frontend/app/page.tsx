@@ -17,7 +17,19 @@ export default function Home() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const { profile, isLoading } = useProfile();
-  const [activeTab, setActiveTab] = useState<'browse' | 'matches' | 'profile' | 'notifications'>('browse');
+  
+  // Check localStorage for saved tab on mount
+  const [activeTab, setActiveTab] = useState<'browse' | 'matches' | 'profile' | 'notifications'>(() => {
+    if (typeof window !== 'undefined') {
+      const savedTab = localStorage.getItem('activeTab');
+      if (savedTab === 'profile' || savedTab === 'browse' || savedTab === 'matches' || savedTab === 'notifications') {
+        localStorage.removeItem('activeTab');
+        return savedTab;
+      }
+    }
+    return 'browse';
+  });
+  
   const [loadingTimeout, setLoadingTimeout] = useState(false);
 
   const { unreadCount } = useNotifications({
