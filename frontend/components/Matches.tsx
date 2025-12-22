@@ -39,6 +39,52 @@ export default function Matches() {
         }
     }, [matches, matchesLoading, address]);
 
+    // Check for achievements when matches are loaded or change
+    useEffect(() => {
+        if (address && matches && matches.length > 0 && !matchesLoading) {
+            checkAchievements();
+        }
+    }, [matches, address, matchesLoading]);
+
+    const checkAchievements = async () => {
+        if (!address) return;
+
+        try {
+            console.log('🏆 Checking achievements for user...');
+            const response = await fetch('/api/achievements/auto-mint', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userAddress: address,
+                }),
+            });
+
+            if (!response.ok) {
+                console.error('Failed to check achievements:', response.statusText);
+                return;
+            }
+
+            const data = await response.json();
+            
+            if (data.mintedAchievements && data.mintedAchievements.length > 0) {
+                const successfulMints = data.mintedAchievements.filter(
+                    (a: any) => a.status === 'success'
+                );
+                
+                if (successfulMints.length > 0) {
+                    console.log('🎉 New achievements unlocked:', successfulMints);
+                    // You could show a toast notification here
+                }
+            }
+
+            console.log('Achievement check stats:', data.stats);
+        } catch (error) {
+            console.error('Failed to check achievements:', error);
+        }
+    };
+
     const handleGiftClick = (recipientAddress: string, recipientName: string) => {
         setSelectedRecipient({ address: recipientAddress, name: recipientName });
         setShowGiftingModal(true);
