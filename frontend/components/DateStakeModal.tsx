@@ -26,8 +26,8 @@ export default function DateStakeModal({
     const { address } = useAccount();
     const publicClient = usePublicClient();
 
-    const { writeContract: approveUSDC, data: approvalHash, isPending: isApprovePending } = useWriteContract();
-    const { writeContract: createStakeContract, data: stakeHash, isPending: isStakePending } = useWriteContract();
+    const { writeContract: approveUSDC, data: approvalHash, isPending: isApprovePending, isSuccess: isApproveSuccess } = useWriteContract();
+    const { writeContract: createStakeContract, data: stakeHash, isPending: isStakePending, isSuccess: isCreateStakeSuccess } = useWriteContract();
 
     const { isLoading: isApprovalConfirming, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({
         hash: approvalHash
@@ -35,7 +35,6 @@ export default function DateStakeModal({
     const { isLoading: isStakeConfirming, isSuccess: isStakeSuccess } = useWaitForTransactionReceipt({
         hash: stakeHash
     });
-
     const [stakeAmount, setStakeAmount] = useState('10');
     const [meetingDate, setMeetingDate] = useState('');
     const [meetingTime, setMeetingTime] = useState('');
@@ -70,6 +69,12 @@ export default function DateStakeModal({
         }
     }, [isApprovalSuccess, step]);
 
+    // Handle approval write success (before transaction confirmation)
+    useEffect(() => {
+        if (isApproveSuccess && step === 'approval' && !isApprovalConfirming) {
+            console.log('📝 Approval transaction submitted, waiting for confirmation...');
+        }
+    }, [isApproveSuccess, step, isApprovalConfirming]);
     useEffect(() => {
         if (isStakeSuccess && stakeHash && publicClient) {
             console.log('✅ Stake created, extracting ID from blockchain...');
@@ -214,11 +219,10 @@ export default function DateStakeModal({
             });
         } catch (err) {
             console.error('Approval error:', err);
-            setError('Failed to approve USDC');
+            setError('Failed to approve USDC. Please try again.');
             setStep('form');
         }
     };
-
     const handleCreateStakeAfterApproval = async () => {
         try {
             setStep('staking');
@@ -233,11 +237,10 @@ export default function DateStakeModal({
             });
         } catch (err) {
             console.error('Stake creation error:', err);
-            setError('Failed to create stake');
+            setError('Failed to create stake. Please try again.');
             setStep('form');
         }
     };
-
     const handleCreateStake = async () => {
         setError('');
 
@@ -279,11 +282,10 @@ export default function DateStakeModal({
             });
         } catch (err) {
             console.error('Stake creation error:', err);
-            setError('Failed to create stake');
+            setError('Failed to create stake. Please try again.');
             setStep('form');
         }
     };
-
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
@@ -315,10 +317,23 @@ export default function DateStakeModal({
                             <p className="text-gray-600">
                                 {isApprovePending ? 'Waiting for wallet confirmation...' : 'Confirming approval on blockchain...'}
                             </p>
+                            {!isApprovePending && !isApprovalConfirming && (
+                                <button
+                                    onClick={() => {
+                                        console.log('🔄 Manually checking approval status...');
+                                        setStep('confirming');
+                                        setTimeout(() => {
+                                            handleCreateStakeAfterApproval();
+                                        }, 1000);
+                                    }}
+                                    className="mt-4 text-sm text-pink-600 hover:text-pink-800 underline"
+                                >
+                                    Click here if transaction is already confirmed
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}
-
                 {step === 'confirming' && (
                     <div className="text-center py-6">
                         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -340,10 +355,25 @@ export default function DateStakeModal({
                         <p className="text-gray-600">
                             {isStakePending ? 'Waiting for wallet confirmation...' : 'Processing on blockchain...'}
                         </p>
+                        {!isStakePending && !isStakeConfirming && (
+                            <button
+                                onClick={() => {
+                                    console.log('🔄 Manually checking stake creation status...');
+                                    setStep('success');
+                                    // Try to extract stake ID and sync anyway
+                                    if (stakeHash && publicClient) {
+                                        setTimeout(() => {
+                                            extractStakeIdAndSync();
+                                        }, 500);
+                                    }
+                                }}
+                                className="mt-4 text-sm text-pink-600 hover:text-pink-800 underline"
+                            >
+                                Click here if transaction is already confirmed
+                            </button>
+                        )}
                     </div>
-                )}
-
-                {step === 'success' && (
+                )}                {step === 'success' && (
                     <div className="text-center py-6">
                         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <PartyPopper className="w-8 h-8 text-green-600" />
