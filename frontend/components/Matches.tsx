@@ -11,6 +11,7 @@ import { Trash2, AlertCircle, Heart, Users } from 'lucide-react';
 import { CONTRACTS, MATCHING_ABI } from '@/lib/contracts';
 export default function Matches() {
     const { address } = useAccount();
+    const { profile: currentUserProfile } = useProfile(address);
     const { writeContract } = useWriteContract();
     const { matches, loading: matchesLoading } = useMatches(address);
     const [showGiftingModal, setShowGiftingModal] = useState(false);
