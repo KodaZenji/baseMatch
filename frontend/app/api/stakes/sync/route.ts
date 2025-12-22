@@ -5,7 +5,42 @@ import { supabaseService } from '@/lib/supabase.server';
 import { CONTRACTS, STAKING_ABI } from '@/lib/contracts';
 
 const FIRST_STAKE_BLOCK = 35208690n;
+const MAX_BLOCK_RANGE = 100000n; // Base Sepolia limit
 
+// Helper function to fetch logs in chunks to avoid block range limits
+async function fetchLogsInChunks(address: `0x${string}`, fromBlock: bigint, toBlock: bigint) {
+  console.log(`🔍 Fetching logs from block ${fromBlock} to ${toBlock}`);
+
+  const logs = [];
+  let currentFromBlock = fromBlock;
+
+  while (currentFromBlock <= toBlock) {
+    const currentToBlock = currentFromBlock + MAX_BLOCK_RANGE < toBlock
+      ? currentFromBlock + MAX_BLOCK_RANGE
+      : toBlock;
+
+    console.log(`📡 Fetching chunk: ${currentFromBlock} to ${currentToBlock}`);
+
+    try {
+      const chunkLogs = await publicClient.getLogs({
+        address: address,
+        event: parseAbiItem('event StakeCreated(uint256 indexed stakeId, address indexed user1, address indexed user2, uint256 amount, uint256 meetingTime)'),
+        fromBlock: currentFromBlock,
+        toBlock: currentToBlock
+      });
+
+      logs.push(...chunkLogs);
+      console.log(`✅ Got ${chunkLogs.length} logs from chunk`);
+    } catch (error) {
+      console.error(`❌ Error fetching logs for block range ${currentFromBlock}-${currentToBlock}:`, error);
+      throw error;
+    }
+
+    currentFromBlock = currentToBlock + 1n;
+  }
+
+  return logs;
+}
 const publicClient = createPublicClient({
   chain: baseSepolia,
   transport: http()
@@ -16,13 +51,16 @@ export async function GET() {
   try {
     console.log('🔍 Syncing all stakes from blockchain...');
 
-    // Get all StakeCreated events from the contract
-    const logs = await publicClient.getLogs({
-      address: CONTRACTS.STAKING as `0x${string}`,
-      event: parseAbiItem('event StakeCreated(uint256 indexed stakeId, address indexed user1, address indexed user2, uint256 amount, uint256 meetingTime)'),
-      fromBlock: FIRST_STAKE_BLOCK,
-      toBlock: 'latest'
-    });
+    // Get current block number
+    const currentBlock = await publicClient.getBlockNumber();
+    console.log(`📊 Current block: ${currentBlock}`);
+
+    // Get all StakeCreated events from the contract in chunks
+    const logs = await fetchLogsInChunks(
+      CONTRACTS.STAKING as `0x${string}`,
+      FIRST_STAKE_BLOCK,
+      currentBlock
+    );
 
     console.log(`📊 Found ${logs.length} stake events total`);
 
@@ -54,7 +92,7 @@ export async function GET() {
         }
 
         console.log(`📡 Fetching stake ${stakeId} from contract...`);
-        
+
         // ALWAYS fetch fresh state from contract
         const stakeData = await publicClient.readContract({
           address: CONTRACTS.STAKING as `0x${string}`,
@@ -211,14 +249,18 @@ export async function POST(request: NextRequest) {
 
     console.log('🔍 Syncing stakes for user:', userAddress);
 
-    const logs = await publicClient.getLogs({
-      address: CONTRACTS.STAKING as `0x${string}`,
-      event: parseAbiItem('event StakeCreated(uint256 indexed stakeId, address indexed user1, address indexed user2, uint256 amount, uint256 meetingTime)'),
-      fromBlock: FIRST_STAKE_BLOCK,
-      toBlock: 'latest'
-    });
+    // Get current block number
+    const currentBlock = await publicClient.getBlockNumber();
+    console.log(`📊 Current block: ${currentBlock}`);
 
-    const userLogs = logs.filter(log => 
+    // Get all StakeCreated events from the contract in chunks
+    const logs = await fetchLogsInChunks(
+      CONTRACTS.STAKING as `0x${string}`,
+      FIRST_STAKE_BLOCK,
+      currentBlock
+    );
+
+    const userLogs = logs.filter(log =>
       log.args.user1?.toLowerCase() === userAddress.toLowerCase() ||
       log.args.user2?.toLowerCase() === userAddress.toLowerCase()
     );
@@ -313,7 +355,7 @@ export async function POST(request: NextRequest) {
             .from('stakes')
             .update(stakeRecord)
             .eq('id', stakeId);
-          
+
           if (!updateError) {
             updated++;
           } else {
