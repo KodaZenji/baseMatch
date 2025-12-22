@@ -57,24 +57,24 @@ export default function RatingModal({ matchAddress, matchName, onClose, onSucces
     const processRatingCompletion = async () => {
         try {
             console.log('✅ Rating transaction confirmed');
-            
+
             // Wait for blockchain state to propagate
             await new Promise(resolve => setTimeout(resolve, 8000));
-            
+
             // 1. Check achievements for the person being rated (matchAddress is always a string)
             await checkAndMintAchievements(matchAddress);
-            
+
             // 2. FIXED: Check for the rater only if address is defined
             if (address) {
                 console.log(`🏆 Checking achievements for rater: ${address}`);
                 await checkAndMintAchievements(address);
             }
-            
+
             console.log('✅ Achievement check completed');
             if (onSuccess) onSuccess();
-            
+
             setTimeout(() => onClose(), 2000);
-            
+
         } catch (error) {
             console.error('❌ Error processing rating completion:', error);
             setTimeout(() => onClose(), 2000);
@@ -91,7 +91,7 @@ export default function RatingModal({ matchAddress, matchName, onClose, onSucces
                 body: JSON.stringify({ userAddress }),
             });
             const data = await response.json();
-            
+
             if (data.mintedAchievements?.length > 0) {
                 const successfulMints = data.mintedAchievements.filter((a: any) => a.status === 'success');
                 if (successfulMints.length > 0 && userAddress.toLowerCase() === matchAddress.toLowerCase()) {
@@ -168,6 +168,19 @@ export default function RatingModal({ matchAddress, matchName, onClose, onSucces
                             >
                                 {isPending || isConfirming ? 'Submitting...' : 'Submit Rating'}
                             </button>
+                            {!isPending && !isConfirming && isSuccess && !isProcessingAchievements && (
+                                <button
+                                    onClick={() => {
+                                        console.log('🔄 Manually checking rating status...');
+                                        showNotification('Rating submitted successfully!', 'success');
+                                        setIsProcessingAchievements(true);
+                                        processRatingCompletion();
+                                    }}
+                                    className="mt-2 text-sm text-purple-600 hover:text-purple-800 underline w-full"
+                                >
+                                    Click here if rating was already submitted
+                                </button>
+                            )}
                         </div>
                     </form>
                 )}

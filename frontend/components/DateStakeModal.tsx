@@ -189,7 +189,7 @@ export default function DateStakeModal({
                     userAddress: matchedUserAddress.toLowerCase(),
                     type: 'date_stake_created',
                     title: '💕 New Date Stake!',
-                    message: `${currentUserName || 'Someone'} created a stake for a date`,
+                    message: `${currentUserName || 'Someone'} wants to go on a date with you!`,
                     metadata: {
                         stake_id: stakeId,
                         sender_address: currentUserAddress?.toLowerCase(),
@@ -197,8 +197,7 @@ export default function DateStakeModal({
                         stake_amount: stakeAmount,
                     }
                 })
-            });
-            console.log('📬 Notification sent');
+            }); console.log('📬 Notification sent');
         } catch (error) {
             console.error('Failed to send notification:', error);
         }

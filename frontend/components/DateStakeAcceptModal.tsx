@@ -265,9 +265,25 @@ export default function DateStakeAcceptModal({
                                 </p>
                             </div>
                         )}
+                        {!isApprovePending && !isApprovalConfirming && (
+                            <button
+                                onClick={() => {
+                                    console.log('🔄 Manually checking approval status...');
+                                    // Refetch allowance to ensure it's updated
+                                    refetchAllowance().then(() => {
+                                        // Small delay to ensure blockchain state is updated
+                                        setTimeout(() => {
+                                            handleAcceptStake();
+                                        }, 500);
+                                    });
+                                }}
+                                className="mt-4 text-sm text-blue-600 hover:text-blue-800 underline"
+                            >
+                                Click here if transaction is already confirmed
+                            </button>
+                        )}
                     </div>
                 )}
-
                 {step === 'accepting' && (
                     <div className="text-center py-6">
                         <div className="flex justify-center mb-4">
@@ -277,6 +293,23 @@ export default function DateStakeAcceptModal({
                         <p className="text-gray-600">
                             {isAcceptPending ? 'Waiting for wallet confirmation...' : 'Processing transaction...'}
                         </p>
+                        {!isAcceptPending && !isAcceptConfirming && (
+                            <button
+                                onClick={() => {
+                                    console.log('🔄 Manually checking accept stake status...');
+                                    // Set step to success to proceed with post-processing
+                                    setStep('success');
+
+                                    // Sync to database
+                                    syncStakeToDatabase();
+                                    // Send notification to the stake creator
+                                    sendAcceptanceNotification();
+                                }}
+                                className="mt-4 text-sm text-pink-600 hover:text-pink-800 underline"
+                            >
+                                Click here if transaction is already confirmed
+                            </button>
+                        )}
                     </div>
                 )}
 

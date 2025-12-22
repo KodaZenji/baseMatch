@@ -145,14 +145,14 @@ export default function DateConfirmationModal({
             // STEP 3: Dispatch event
             console.log('🔄 Dispatching stakeConfirmed event');
             window.dispatchEvent(new CustomEvent('stakeConfirmed'));
-            
+
             // STEP 4: Send notification
             sendConfirmationNotification();
 
             // STEP 5: Record date (writes to date_history table)
             console.log('📝 Recording date...');
             const dateRecordResponse = await recordDateInDatabase();
-            
+
             if (!dateRecordResponse.success) {
                 console.error('❌ Failed to record date');
             } else {
@@ -166,10 +166,10 @@ export default function DateConfirmationModal({
             // STEP 7: Trigger auto-mint (reads from date_history table)
             console.log('🏆 Checking achievements...');
             await triggerAchievementMinting();
-            
+
             console.log('✅ All post-confirmation tasks completed');
             setIsProcessingBlockchain(false);
-            
+
             // Show rating prompt or close
             if (iShowedUp === true && partnerShowedUp === true) {
                 setShowRatingPrompt(true);
@@ -182,10 +182,10 @@ export default function DateConfirmationModal({
         } catch (error) {
             console.error('❌ Error in post-confirmation tasks:', error);
             setIsProcessingBlockchain(false);
-            
+
             // Still dispatch event even if something failed
             window.dispatchEvent(new CustomEvent('stakeConfirmed'));
-            
+
             if (iShowedUp === true && partnerShowedUp === true) {
                 setShowRatingPrompt(true);
             } else {
@@ -200,7 +200,7 @@ export default function DateConfirmationModal({
     const triggerSyncAPI = async () => {
         try {
             console.log('🔄 Calling sync API for user:', address);
-            
+
             const response = await fetch('/api/stakes/sync', {
                 method: 'POST',
                 headers: {
@@ -212,7 +212,7 @@ export default function DateConfirmationModal({
             });
 
             const result = await response.json();
-            
+
             if (result.success) {
                 console.log('✅ Sync API completed:', result.message);
             } else {
@@ -250,7 +250,7 @@ export default function DateConfirmationModal({
     const recordDateInDatabase = async () => {
         try {
             console.log('📝 Recording date for both users');
-            
+
             const response = await fetch('/api/date/record', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -266,7 +266,7 @@ export default function DateConfirmationModal({
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 console.log('✅ Date recorded for both users');
                 return data;
@@ -283,14 +283,14 @@ export default function DateConfirmationModal({
     const triggerAchievementMinting = async () => {
         try {
             console.log('🏆 Triggering achievement auto-mint for both users');
-            
+
             // Trigger for current user
             const userResponse = await fetch('/api/achievements/auto-mint', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userAddress: address })
             });
-            
+
             const userData = await userResponse.json();
             if (userData.mintedAchievements?.length > 0) {
                 console.log(`🎉 Minted ${userData.mintedAchievements.length} achievement(s) for current user!`);
@@ -304,7 +304,7 @@ export default function DateConfirmationModal({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userAddress: matchAddress })
             });
-            
+
             const matchData = await matchResponse.json();
             if (matchData.mintedAchievements?.length > 0) {
                 console.log(`🎉 Minted ${matchData.mintedAchievements.length} achievement(s) for match user!`);
@@ -391,6 +391,19 @@ export default function DateConfirmationModal({
                         <p className="text-gray-600">
                             {isPending ? 'Waiting for wallet confirmation...' : 'Confirming on blockchain...'}
                         </p>
+                        {!isPending && !isConfirming && (
+                            <button
+                                onClick={() => {
+                                    console.log('🔄 Manually checking confirmation status...');
+                                    // Set to success to proceed with post-processing
+                                    setIsProcessingBlockchain(true);
+                                    processPostConfirmation();
+                                }}
+                                className="mt-4 text-sm text-pink-600 hover:text-pink-800 underline"
+                            >
+                                Click here if transaction is already confirmed
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <>

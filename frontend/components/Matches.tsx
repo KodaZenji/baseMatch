@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useWriteContract } from 'wagmi';
 import { useMatches } from '@/hooks/useMatches';
+import { useProfile } from '@/hooks/useProfile';
 import ProfileCard from './ProfileCard';
 import GiftingModal from './GiftingModal';
 import ChatWindow from './ChatWindow';
 import { Trash2, AlertCircle, Heart, Users } from 'lucide-react';
 import { CONTRACTS, MATCHING_ABI } from '@/lib/contracts';
-
 export default function Matches() {
     const { address } = useAccount();
     const { writeContract } = useWriteContract();
@@ -67,12 +67,12 @@ export default function Matches() {
             }
 
             const data = await response.json();
-            
+
             if (data.mintedAchievements && data.mintedAchievements.length > 0) {
                 const successfulMints = data.mintedAchievements.filter(
                     (a: any) => a.status === 'success'
                 );
-                
+
                 if (successfulMints.length > 0) {
                     console.log('🎉 New achievements unlocked:', successfulMints);
                     // You could show a toast notification here
@@ -244,7 +244,7 @@ export default function Matches() {
                 <ChatWindow
                     user1Address={address}
                     user2Address={selectedChatMatch.address}
-                    user1Name="You"
+                    user1Name={currentUserProfile?.name || "You"}
                     user2Name={selectedChatMatch.name}
                     currentUserAddress={address}
                     onClose={() => setShowChatWindow(false)}
