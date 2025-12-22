@@ -402,7 +402,7 @@ export default function DateConfirmationModal({
                         >
                             Click here if transaction is already confirmed
                         </button>
-                    </div>                ) : (
+                    </div>) : (
                     <>
                         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                             <div className="flex items-start gap-2 mb-2">
