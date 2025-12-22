@@ -8,8 +8,10 @@ import { handleProfileTextUpdate } from '@/lib/profileMinting';
 import { useProfile } from '@/hooks/useProfile';
 import WalletConnectionSection from './WalletConnectionSection';
 import { User, Edit, Mail, Lock, AlertTriangle, Trash2, Lightbulb, Info, ChevronLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function ProfileEdit() {
+    const router = useRouter();
     const { address, isConnected } = useAccount();
     const { profile, isLoading: profileLoading, refreshProfile } = useProfile(address);
 
@@ -34,7 +36,6 @@ export default function ProfileEdit() {
     const [isDeleting, setIsDeleting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // FIXED: Add ref to track if we've already shown the success notification
     const hasShownSuccessRef = useRef(false);
 
     const { writeContract, data: hash, isPending, isError, error } = useWriteContract();
@@ -114,7 +115,7 @@ export default function ProfileEdit() {
                             gender: mergedProfile.gender || '',
                             interests: mergedProfile.interests || '',
                             photoUrl: mergedProfile.photoUrl || '',
-                            email: mergedProfile.email || '', // From database, not blockchain
+                            email: mergedProfile.email || '',
                         });
                         setNewPhotoUrl(mergedProfile.photoUrl || '');
                         if (mergedProfile.email) {
@@ -208,9 +209,7 @@ export default function ProfileEdit() {
 
             if (response.ok && result.success) {
                 showNotification('Verification code sent! Check your inbox.', 'success');
-                // Store email for verification flow
                 localStorage.setItem('emailForRegistration', formData.email);
-                // Redirect to verification page after a delay
                 setTimeout(() => {
                     window.location.href = '/verify-email';
                 }, 2000);
@@ -225,11 +224,9 @@ export default function ProfileEdit() {
         }
     };
 
-    // UPDATED: Two-step process - Database first, then blockchain for verification
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // FIXED: Reset both refs when starting a new update
         hasShownSuccessRef.current = false;
         hasSyncedRef.current = false;
 
@@ -245,7 +242,6 @@ export default function ProfileEdit() {
             return;
         }
 
-        // For email-first users without wallet
         if (!hasWallet || !isConnected) {
             try {
                 const response = await fetch('/api/profile/update-by-email', {
@@ -281,7 +277,6 @@ export default function ProfileEdit() {
         }
 
         try {
-            // STEP 1: Update database immediately (for mutable fields like email)
             console.log('Step 1: Updating database...');
             const dbResponse = await fetch('/api/profile/edit', {
                 method: 'POST',
@@ -303,7 +298,6 @@ export default function ProfileEdit() {
 
             console.log('✅ Database updated successfully');
 
-            // STEP 2: Update blockchain (source of truth for profile verification)
             console.log('Step 2: Updating blockchain...');
             const imageChanged = newPhotoUrl && newPhotoUrl !== formData.photoUrl;
             let newImageFile: File | undefined;
@@ -363,9 +357,6 @@ export default function ProfileEdit() {
         }
     };
 
-    // CRITICAL: Sync blockchain back to database after successful transaction
-    // This ensures database matches blockchain (anti-catfish verification)
-    // FIXED: Track if sync has been called to prevent duplicates
     const hasSyncedRef = useRef(false);
 
     const syncProfileToDatabase = async (profileData: {
@@ -376,7 +367,6 @@ export default function ProfileEdit() {
         photoUrl: string;
         email: string;
     }) => {
-        // Prevent duplicate sync calls
         if (hasSyncedRef.current) {
             console.log('⚠️ Sync already called, skipping duplicate');
             return;
@@ -417,12 +407,10 @@ export default function ProfileEdit() {
         refreshProfile();
     };
 
-    // FIXED: Handle transaction success - only run once per transaction
     useEffect(() => {
         const handleTransactionSuccess = async () => {
-            // FIXED: Only run if isSuccess is true AND we haven't shown notification yet
             if (isSuccess && !hasShownSuccessRef.current) {
-                hasShownSuccessRef.current = true; // Mark as shown immediately
+                hasShownSuccessRef.current = true;
 
                 if (isDeleting) {
                     showNotification('✅ Profile deleted successfully!', 'success');
@@ -431,7 +419,6 @@ export default function ProfileEdit() {
                         window.location.href = '/';
                     }, 2000);
                 } else {
-                    // STEP 3: After blockchain confirms, sync back to database
                     await syncProfileToDatabase({
                         name: formData.name,
                         age: parseInt(formData.age),
@@ -451,9 +438,8 @@ export default function ProfileEdit() {
         };
 
         handleTransactionSuccess();
-    }, [isSuccess]); // FIXED: Only depend on isSuccess, not formData/newPhotoUrl
+    }, [isSuccess]);
 
-    // Check if profile is fully verified
     const isFullyVerified = profile?.email && formData.email === profile.email && profile?.exists;
 
     if (profileLoading) {
@@ -467,13 +453,13 @@ export default function ProfileEdit() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full relative">
-                {/* Back Button */}
+                {/* ✅ Fixed Back Button - Icon only, navigates to dashboard */}
                 <button
-                    onClick={() => window.location.href = '/'}
-                    className="absolute top-4 left-4 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full hover:shadow-lg transition-all duration-300 hover:scale-105 z-10"
+                    onClick={() => router.push('/dashboard')}
+                    className="absolute top-4 left-4 p-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full hover:shadow-lg transition-all duration-300 hover:scale-110 z-10"
+                    aria-label="Back to Dashboard"
                 >
-                    <ChevronLeft className="w-5 h-5" />
-                    <span className="text-sm font-medium">Dashboard</span>
+                    <ChevronLeft className="w-6 h-6" />
                 </button>
 
                 <h2 className="text-3xl font-bold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
@@ -538,7 +524,7 @@ export default function ProfileEdit() {
                         </div>
                     )}
 
-                    {/* Email Section with Blockchain Verification Badge */}
+                    {/* Email Section */}
                     <div className="bg-blue-50 rounded-xl p-4 border-2 border-blue-200">
                         <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                             <Mail size={16} /> Email Address
@@ -646,7 +632,7 @@ export default function ProfileEdit() {
                         )}
                     </button>
 
-                    {/* Visibility Notice - Moved below Update Profile button */}
+                    {/* Visibility Notice */}
                     {!isFullyVerified && (
                         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
                             <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -727,10 +713,10 @@ export default function ProfileEdit() {
                                                 className="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
                                             >
                                                 {isDeleting ? 'Deleting...' : <span className="flex items-center gap-2"><Trash2 size={16} /> Permanently Delete</span>}
-                            </button>
-                        </div>
-                    </div>
-                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
