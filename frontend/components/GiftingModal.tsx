@@ -5,109 +5,109 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagm
 import { parseUnits, parseEther } from 'viem';
 import { USDC_ABI, CONTRACTS } from '@/lib/contracts';
 
-interface PhysicalGift {
-    id: string;
-    name: string;
-    description: string;
-    price: number;
-    image: string;
-    vendor: string;
-    category: 'flowers' | 'teddy' | 'giftbox' | 'food';
-    emoji: string;
-}
+// interface PhysicalGift {
+//     id: string;
+//     name: string;
+//     description: string;
+//     price: number;
+//     image: string;
+//     vendor: string;
+//     category: 'flowers' | 'teddy' | 'giftbox' | 'food';
+//     emoji: string;
+// }
 
-const PHYSICAL_GIFTS: PhysicalGift[] = [
-    {
-        id: 'roses-bouquet',
-        name: 'Red Roses Bouquet',
-        description: 'Dozen premium red roses',
-        price: 49.99,
-        image: '🌹',
-        vendor: '1-800-Flowers',
-        category: 'flowers',
-        emoji: '🌹'
-    },
-    {
-        id: 'mixed-flowers',
-        name: 'Mixed Flower Arrangement',
-        description: 'Beautiful seasonal mix',
-        price: 39.99,
-        image: '💐',
-        vendor: '1-800-Flowers',
-        category: 'flowers',
-        emoji: '💐'
-    },
-    {
-        id: 'teddy-bear',
-        name: 'Plush Teddy Bear',
-        description: 'Large cuddly teddy bear',
-        price: 29.99,
-        image: '🧸',
-        vendor: 'Build-A-Bear',
-        category: 'teddy',
-        emoji: '🧸'
-    },
-    {
-        id: 'teddy-roses',
-        name: 'Teddy with Roses',
-        description: 'Bear holding rose bouquet',
-        price: 59.99,
-        image: '🧸',
-        vendor: '1-800-Flowers',
-        category: 'teddy',
-        emoji: '🧸🌹'
-    },
-    {
-        id: 'chocolate-box',
-        name: 'Luxury Chocolate Box',
-        description: 'Assorted premium chocolates',
-        price: 34.99,
-        image: '🍫',
-        vendor: 'Godiva',
-        category: 'giftbox',
-        emoji: '🍫'
-    },
-    {
-        id: 'gift-basket',
-        name: 'Gourmet Gift Basket',
-        description: 'Wine, cheese & treats',
-        price: 79.99,
-        image: '🎁',
-        vendor: 'Harry & David',
-        category: 'giftbox',
-        emoji: '🎁'
-    },
-    {
-        id: 'spa-box',
-        name: 'Spa Gift Set',
-        description: 'Relaxation essentials',
-        price: 44.99,
-        image: '🧖',
-        vendor: 'Sephora',
-        category: 'giftbox',
-        emoji: '🧖‍♀️'
-    },
-    {
-        id: 'dinner-delivery',
-        name: 'Restaurant Dinner',
-        description: 'Fine dining delivered',
-        price: 75.00,
-        image: '🍽️',
-        vendor: 'DoorDash',
-        category: 'food',
-        emoji: '🍽️'
-    },
-    {
-        id: 'dessert-box',
-        name: 'Dessert Sampler',
-        description: 'Cupcakes & pastries',
-        price: 32.99,
-        image: '🧁',
-        vendor: 'Uber Eats',
-        category: 'food',
-        emoji: '🧁'
-    }
-];
+// const PHYSICAL_GIFTS: PhysicalGift[] = [
+//     {
+//         id: 'roses-bouquet',
+//         name: 'Red Roses Bouquet',
+//         description: 'Dozen premium red roses',
+//         price: 49.99,
+//         image: '🌹',
+//         vendor: '1-800-Flowers',
+//         category: 'flowers',
+//         emoji: '🌹'
+//     },
+//     {
+//         id: 'mixed-flowers',
+//         name: 'Mixed Flower Arrangement',
+//         description: 'Beautiful seasonal mix',
+//         price: 39.99,
+//         image: '💐',
+//         vendor: '1-800-Flowers',
+//         category: 'flowers',
+//         emoji: '💐'
+//     },
+//     {
+//         id: 'teddy-bear',
+//         name: 'Plush Teddy Bear',
+//         description: 'Large cuddly teddy bear',
+//         price: 29.99,
+//         image: '🧸',
+//         vendor: 'Build-A-Bear',
+//         category: 'teddy',
+//         emoji: '🧸'
+//     },
+//     {
+//         id: 'teddy-roses',
+//         name: 'Teddy with Roses',
+//         description: 'Bear holding rose bouquet',
+//         price: 59.99,
+//         image: '🧸',
+//         vendor: '1-800-Flowers',
+//         category: 'teddy',
+//         emoji: '🧸🌹'
+//     },
+//     {
+//         id: 'chocolate-box',
+//         name: 'Luxury Chocolate Box',
+//         description: 'Assorted premium chocolates',
+//         price: 34.99,
+//         image: '🍫',
+//         vendor: 'Godiva',
+//         category: 'giftbox',
+//         emoji: '🍫'
+//     },
+//     {
+//         id: 'gift-basket',
+//         name: 'Gourmet Gift Basket',
+//         description: 'Wine, cheese & treats',
+//         price: 79.99,
+//         image: '🎁',
+//         vendor: 'Harry & David',
+//         category: 'giftbox',
+//         emoji: '🎁'
+//     },
+//     {
+//         id: 'spa-box',
+//         name: 'Spa Gift Set',
+//         description: 'Relaxation essentials',
+//         price: 44.99,
+//         image: '🧖',
+//         vendor: 'Sephora',
+//         category: 'giftbox',
+//         emoji: '🧖‍♀️'
+//     },
+//     {
+//         id: 'dinner-delivery',
+//         name: 'Restaurant Dinner',
+//         description: 'Fine dining delivered',
+//         price: 75.00,
+//         image: '🍽️',
+//         vendor: 'DoorDash',
+//         category: 'food',
+//         emoji: '🍽️'
+//     },
+//     {
+//         id: 'dessert-box',
+//         name: 'Dessert Sampler',
+//         description: 'Cupcakes & pastries',
+//         price: 32.99,
+//         image: '🧁',
+//         vendor: 'Uber Eats',
+//         category: 'food',
+//         emoji: '🧁'
+//     }
+// ];
 
 export default function GiftingModal({
     isOpen,
@@ -124,7 +124,7 @@ export default function GiftingModal({
     const [giftAmount, setGiftAmount] = useState('');
     const [giftType, setGiftType] = useState<'crypto' | 'physical'>('crypto');
     const [cryptoType, setCryptoType] = useState<'usdc' | 'eth'>('usdc');
-    const [selectedPhysicalGift, setSelectedPhysicalGift] = useState<PhysicalGift | null>(null);
+    const [selectedPhysicalGift, setSelectedPhysicalGift] = useState<any | null>(null);
     const [deliveryInfo, setDeliveryInfo] = useState({
         address: '',
         city: '',
@@ -136,8 +136,7 @@ export default function GiftingModal({
     const [isProcessing, setIsProcessing] = useState(false);
     const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
     const [showDeliveryForm, setShowDeliveryForm] = useState(false);
-    const [filterCategory, setFilterCategory] = useState<'all' | 'flowers' | 'teddy' | 'giftbox' | 'food'>('all');
-
+    const [filterCategory, setFilterCategory] = useState<any>('all'); // Using 'any' to avoid type error since the union type is not available
     const { writeContract: writeUSDC, data: usdcHash } = useWriteContract();
     const { writeContract: sendETH, data: ethHash } = useWriteContract();
     const { isLoading: isUSDCConfirming, isSuccess: isUSDCTransferred } = useWaitForTransactionReceipt({ hash: usdcHash });
@@ -202,70 +201,51 @@ export default function GiftingModal({
         }
     };
 
-    const handlePhysicalGiftSelect = (gift: PhysicalGift) => {
-        setSelectedPhysicalGift(gift);
-        setShowDeliveryForm(true);
-    };
+    // Physical gifting functions are disabled - commented out for future implementation
+    // const handlePhysicalGiftSelect = (gift: PhysicalGift) => {
+    //     setSelectedPhysicalGift(gift);
+    //     setShowDeliveryForm(true);
+    // };
 
-    const handlePhysicalGiftPurchase = async () => {
-        if (!selectedPhysicalGift) return;
+    // const handlePhysicalGiftPurchase = async () => {
+    //     if (!selectedPhysicalGift) return;
 
-        if (!deliveryInfo.address || !deliveryInfo.city || !deliveryInfo.state || !deliveryInfo.zip || !deliveryInfo.phone) {
-            showNotification('Please fill in all delivery details', 'error');
-            return;
-        }
+    //     if (!deliveryInfo.address || !deliveryInfo.city || !deliveryInfo.state || !deliveryInfo.zip || !deliveryInfo.phone) {
+    //         showNotification('Please fill in all delivery details', 'error');
+    //         return;
+    //     }
 
-        setIsProcessing(true);
+    //     setIsProcessing(true);
 
-        try {
-            const amount = parseUnits(selectedPhysicalGift.price.toString(), 6);
-            const platformWallet = CONTRACTS.PLATFORM_WALLET || CONTRACTS.MATCHING;
-            
-            writeUSDC({
-                address: CONTRACTS.USDC as `0x${string}`,
-                abi: USDC_ABI,
-                functionName: 'transfer',
-                args: [platformWallet as `0x${string}`, amount],
-            });
+    //     try {
+    //         const amount = parseUnits(selectedPhysicalGift.price.toString(), 6);
+    //         const platformWallet = CONTRACTS.PLATFORM_WALLET || CONTRACTS.MATCHING;
 
-        } catch (error) {
-            console.error('Error purchasing physical gift:', error);
-            showNotification('Failed to purchase gift', 'error');
-            setIsProcessing(false);
-        }
-    };
+    //         writeUSDC({
+    //             address: CONTRACTS.USDC as `0x${string}`,
+    //             abi: USDC_ABI,
+    //             functionName: 'transfer',
+    //             args: [platformWallet as `0x${string}`, amount],
+    //         });
+
+    //     } catch (error) {
+    //         console.error('Error purchasing physical gift:', error);
+    //         showNotification('Failed to purchase gift', 'error');
+    //         setIsProcessing(false);
+    //     }
+    // };
 
     // Handle successful transfers
     useEffect(() => {
         if (isUSDCTransferred || isETHTransferred) {
             const txHash = (usdcHash || ethHash) as string;
-            
+
             if (giftType === 'crypto') {
                 // Create notification for crypto gift
                 createCryptoGiftNotification(txHash);
                 showNotification(`Successfully sent ${giftAmount} ${cryptoType.toUpperCase()} to ${recipientName}!`, 'success');
-            } else if (giftType === 'physical' && selectedPhysicalGift) {
-                // Physical gift order is created in the API route which also creates notification
-                fetch('/api/gifts/physical-order', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        giftId: selectedPhysicalGift.id,
-                        recipientAddress,
-                        recipientName,
-                        deliveryInfo,
-                        senderAddress: address,
-                        amount: selectedPhysicalGift.price,
-                        txHash,
-                    })
-                }).then(() => {
-                    showNotification(`${selectedPhysicalGift.name} ordered! Delivery in 2-5 days.`, 'success');
-                }).catch((error) => {
-                    console.error('Error creating order:', error);
-                    showNotification('Gift sent but order creation failed', 'error');
-                });
             }
-            
+
             setIsProcessing(false);
             setTimeout(() => {
                 onClose();
@@ -273,9 +253,9 @@ export default function GiftingModal({
         }
     }, [isUSDCTransferred, isETHTransferred]);
 
-    const filteredGifts = filterCategory === 'all' 
-        ? PHYSICAL_GIFTS 
-        : PHYSICAL_GIFTS.filter(g => g.category === filterCategory);
+    // const filteredGifts = filterCategory === 'all' 
+    //     ? PHYSICAL_GIFTS 
+    //     : PHYSICAL_GIFTS.filter(g => g.category === filterCategory);
 
     if (!isOpen) return null;
 
@@ -304,16 +284,15 @@ export default function GiftingModal({
                             <div className="text-xs text-gray-500">Instant transfer</div>
                         </button>
                         <button
-                            onClick={() => { setGiftType('physical'); setShowDeliveryForm(false); }}
-                            className={`py-4 px-6 rounded-xl border-2 transition ${giftType === 'physical' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-300 hover:bg-gray-50'}`}
+                            disabled
+                            className="py-4 px-6 rounded-xl border-2 border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed"
                         >
                             <div className="text-3xl mb-1">📦</div>
-                            <div className="font-semibold">Physical Gift</div>
-                            <div className="text-xs text-gray-500">Delivered to door</div>
+                            <div className="font-semibold">IRL Gifting</div>
+                            <div className="text-xs text-gray-500">Coming Soon</div>
                         </button>
                     </div>
                 </div>
-
                 {giftType === 'crypto' && (
                     <div className="space-y-4">
                         <div>
@@ -349,63 +328,23 @@ export default function GiftingModal({
                     </div>
                 )}
 
-                {giftType === 'physical' && !showDeliveryForm && (
+                {giftType === 'physical' && (
                     <div className="space-y-4">
-                        <div className="flex gap-2 overflow-x-auto pb-2">
-                            {(['all', 'flowers', 'teddy', 'giftbox', 'food'] as const).map((cat) => (
-                                <button key={cat} onClick={() => setFilterCategory(cat)} className={`px-4 py-2 rounded-full whitespace-nowrap transition ${filterCategory === cat ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                                </button>
-                            ))}
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">
-                            {filteredGifts.map((gift) => (
-                                <button key={gift.id} onClick={() => handlePhysicalGiftSelect(gift)} className="border-2 border-gray-200 rounded-xl p-4 hover:border-purple-500 hover:bg-purple-50 transition text-left">
-                                    <div className="text-4xl mb-2">{gift.emoji}</div>
-                                    <div className="font-semibold text-gray-500 text-sm mb-1">{gift.name}</div>
-                                    <div className="text-xs text-gray-500 mb-2">{gift.description}</div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-purple-600 font-bold">${gift.price}</span>
-                                        <span className="text-xs text-gray-400">{gift.vendor}</span>
-                                    </div>
-                                </button>
-                            ))}
+                        <div className="bg-gray-100 border border-gray-300 rounded-xl p-6 text-center">
+                            <div className="text-4xl mb-3">📦</div>
+                            <h3 className="text-lg font-semibold text-gray-700 mb-2">IRL Gifting Coming Soon!</h3>
+                            <p className="text-gray-600">Physical gift delivery is not yet available. Send crypto gifts instantly instead!</p>
                         </div>
                     </div>
                 )}
-
-                {giftType === 'physical' && showDeliveryForm && selectedPhysicalGift && (
-                    <div className="space-y-4">
-                        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 flex items-start gap-3">
-                            <div className="text-3xl">{selectedPhysicalGift.emoji}</div>
-                            <div className="flex-1">
-                                <div className="font-semibold text-gray-400">{selectedPhysicalGift.name}</div>
-                                <div className="text-sm text-gray-600">{selectedPhysicalGift.description}</div>
-                                <div className="text-lg font-bold text-purple-600 mt-1">${selectedPhysicalGift.price}</div>
-                            </div>
-                            <button onClick={() => setShowDeliveryForm(false)} className="text-gray-400 hover:text-gray-600">✕</button>
-                        </div>
-                        <div className="space-y-3">
-                            <input type="text" value={deliveryInfo.address} onChange={(e) => setDeliveryInfo({...deliveryInfo, address: e.target.value})} className="w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-lg" placeholder="Delivery Address" />
-                            <div className="grid grid-cols-3 gap-2">
-                                <input type="text" value={deliveryInfo.city} onChange={(e) => setDeliveryInfo({...deliveryInfo, city: e.target.value})} className="px-3 py-2 border border-gray-300 text-gray-500 rounded-lg" placeholder="City" />
-                                <input type="text" value={deliveryInfo.state} onChange={(e) => setDeliveryInfo({...deliveryInfo, state: e.target.value})} className="px-3 py-2 border border-gray-300 text-gray-500 rounded-lg" placeholder="State" />
-                                <input type="text" value={deliveryInfo.zip} onChange={(e) => setDeliveryInfo({...deliveryInfo, zip: e.target.value})} className="px-3 py-2 border border-gray-300 text-gray-500 rounded-lg" placeholder="ZIP" />
-                            </div>
-                            <input type="tel" value={deliveryInfo.phone} onChange={(e) => setDeliveryInfo({...deliveryInfo, phone: e.target.value})} className="w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-lg" placeholder="Phone Number" />
-                            <textarea value={deliveryInfo.notes} onChange={(e) => setDeliveryInfo({...deliveryInfo, notes: e.target.value})} className="w-full px-3 py-2 border border-gray-300 text-gray-500 rounded-lg" rows={2} placeholder="Special Instructions (Optional)" />
-                        </div>
-                    </div>
-                )}
-
                 <div className="flex space-x-3 pt-6 border-t mt-6">
                     <button onClick={onClose} className="flex-1 py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50">Cancel</button>
                     <button
-                        onClick={giftType === 'crypto' ? handleCryptoGiftSend : handlePhysicalGiftPurchase}
-                        disabled={isProcessing || isUSDCConfirming || isETHConfirming || (giftType === 'crypto' && (!giftAmount || parseFloat(giftAmount) <= 0)) || (giftType === 'physical' && !showDeliveryForm)}
+                        onClick={giftType === 'crypto' ? handleCryptoGiftSend : undefined}
+                        disabled={isProcessing || isUSDCConfirming || isETHConfirming || (giftType === 'crypto' && (!giftAmount || parseFloat(giftAmount) <= 0))}
                         className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:opacity-90 disabled:opacity-50"
                     >
-                        {isProcessing || isUSDCConfirming || isETHConfirming ? 'Processing...' : giftType === 'crypto' ? 'Send Gift' : showDeliveryForm ? `Pay $${selectedPhysicalGift?.price} & Order` : 'Select a Gift'}
+                        {isProcessing || isUSDCConfirming || isETHConfirming ? 'Processing...' : giftType === 'crypto' ? 'Send Gift' : 'Coming Soon'}
                     </button>
                 </div>
             </div>

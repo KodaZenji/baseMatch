@@ -289,7 +289,7 @@ export default function ChatWindow({
                     onClose={() => setShowDateModal(false)}
                     onSuccess={() => {
                         setShowDateModal(false);
-                        setSuccessMessage('✅ Date staked! Waiting for your match to confirm.');
+                        setSuccessMessage('✅ Date staked! Waiting for your match to accept and lock in the meeting!');
                         setTimeout(() => setSuccessMessage(''), 4000);
                     }}
                 />

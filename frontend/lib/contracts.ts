@@ -523,17 +523,30 @@ export const ACHIEVEMENT_ABI = [
     }
 ] as const;
 
-// Contract addresses - Base Sepolia Testnet (Chain ID: 84532)
+// Contract addresses - Network-aware configuration
+const isMainnet = process.env.NEXT_PUBLIC_ENABLE_MAINNET === 'true';
+
 export const CONTRACTS = {
-    PROFILE_NFT: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS || '',
-    MATCHING: process.env.NEXT_PUBLIC_MATCHING_ADDRESS || '',
-    STAKING: process.env.NEXT_PUBLIC_STAKING_ADDRESS || '',
-    REPUTATION: process.env.NEXT_PUBLIC_REPUTATION_ADDRESS || '',
-    ACHIEVEMENT: process.env.NEXT_PUBLIC_ACHIEVEMENT_ADDRESS || '',
-    USDC: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // Base Sepolia USDC
+    PROFILE_NFT: isMainnet
+        ? process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS_MAINNET || ''
+        : process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS || '',
+    MATCHING: isMainnet
+        ? process.env.NEXT_PUBLIC_MATCHING_ADDRESS_MAINNET || ''
+        : process.env.NEXT_PUBLIC_MATCHING_ADDRESS || '',
+    STAKING: isMainnet
+        ? process.env.NEXT_PUBLIC_STAKING_ADDRESS_MAINNET || ''
+        : process.env.NEXT_PUBLIC_STAKING_ADDRESS || '',
+    REPUTATION: isMainnet
+        ? process.env.NEXT_PUBLIC_REPUTATION_ADDRESS_MAINNET || ''
+        : process.env.NEXT_PUBLIC_REPUTATION_ADDRESS || '',
+    ACHIEVEMENT: isMainnet
+        ? process.env.NEXT_PUBLIC_ACHIEVEMENT_ADDRESS_MAINNET || ''
+        : process.env.NEXT_PUBLIC_ACHIEVEMENT_ADDRESS || '',
+    USDC: isMainnet
+        ? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' // Base mainnet USDC
+        : '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // Base Sepolia USDC
     PLATFORM_WALLET: process.env.NEXT_PUBLIC_PLATFORM_WALLET || '0x72389703895D9DF273830dBaE7d19AC399161797',
 } as const;
-
 
 // USDC Token ABI (ERC-20)
 export const USDC_ABI = [

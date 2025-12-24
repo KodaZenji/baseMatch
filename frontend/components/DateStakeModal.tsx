@@ -194,6 +194,8 @@ export default function DateStakeModal({
                         stake_id: stakeId,
                         sender_address: currentUserAddress?.toLowerCase(),
                         sender_name: currentUserName || 'User',
+                        match_address: matchedUserAddress?.toLowerCase(),
+                        match_name: matchedUserName || 'Match',
                         stake_amount: stakeAmount,
                     }
                 })

@@ -91,8 +91,31 @@ Edit interests, profile picture, etc.
 
 > You’re not using real money — only testnet ETH and USDC for Base Sepolia.
 
+---
 
+How to Deploy to Mainnet
 
+1️⃣ Configure your environment variables for mainnet:
+- Set `NEXT_PUBLIC_ENABLE_MAINNET=true`
+- Set mainnet contract addresses as environment variables
+- Ensure your private key has Base mainnet ETH for gas
+
+2️⃣ Update your deployment script with mainnet USDC address:
+- Base mainnet USDC: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
+
+3️⃣ Run the mainnet deployment:
+```bash
+npx hardhat run scripts/deployMainnet.js --network base-mainnet
+```
+
+4️⃣ Verify contracts on Basescan:
+```bash
+npx hardhat verify --network base-mainnet <CONTRACT_ADDRESS> <CONSTRUCTOR_ARGS>
+```
+
+5️⃣ Update your frontend environment variables with the deployed contract addresses
+
+> ⚠️ IMPORTANT: All contracts use UUPS proxy pattern for upgradability. Test thoroughly before mainnet deployment!
 
 ---
 
