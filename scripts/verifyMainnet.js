@@ -7,7 +7,7 @@ async function main() {
     // Load deployed addresses
     const fs = require("fs");
     let deployedAddresses;
-    
+
     try {
         deployedAddresses = JSON.parse(fs.readFileSync("deployed_addresses_mainnet.json", "utf8"));
         console.log("✅ Loaded deployed addresses from deployed_addresses_mainnet.json");
@@ -42,12 +42,12 @@ async function main() {
     for (const contract of contracts) {
         try {
             console.log(`\n🔍 Verifying ${contract.name} at ${contract.address}...`);
-            
+
             await hre.run("verify:verify", {
                 address: contract.address,
                 constructorArguments: contract.args,
             });
-            
+
             console.log(`✅ ${contract.name} verified successfully!`);
         } catch (error) {
             if (error.message.includes("Contract source code already verified")) {
