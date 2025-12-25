@@ -78,7 +78,7 @@
 - [ ] Ensure file is accessible at `/.well-known/farcaster.json`
 
 ### Generate Account Association
-- [ ] Visit https://base.build
+- [ ] Visit https://base.dev
 - [ ] Use Account Association tool
 - [ ] Enter your domain (e.g., basematch.vercel.app)
 - [ ] Click "Submit" then "Verify"
@@ -87,7 +87,7 @@
 - [ ] Deploy updated farcaster.json
 
 ### Test Mini App
-- [ ] Visit https://base.build/preview
+- [ ] Visit https://base.dev/preview
 - [ ] Enter your app URL
 - [ ] Verify embeds display correctly
 - [ ] Test launch button works

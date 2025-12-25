@@ -158,7 +158,7 @@ export async function sendVerificationEmail(email: string, token: string): Promi
 <body>
     <div class="container">
         <div class="header">
-            <h1>💖 BaseMatch</h1>
+            <img src="https://ipfs.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw" alt="BaseMatch" width="60" height="60" style="display: block; margin: 0 auto 10px;">
             <h2>Email Verification</h2>
         </div>
         

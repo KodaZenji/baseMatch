@@ -96,7 +96,7 @@ async function main() {
     console.log("📋 Deployed Addresses:");
     console.log(JSON.stringify(deployedAddresses, null, 2));
 
-    console.log("\n⚠️  IMPORTANT: Remember to verify your contracts on Basescan after deployment!");
+    
     console.log("Run: npx hardhat verify --network base-mainnet <CONTRACT_ADDRESS> <CONSTRUCTOR_ARGS>");
 }
 

@@ -524,23 +524,23 @@ export const ACHIEVEMENT_ABI = [
 ] as const;
 
 // Contract addresses - Network-aware configuration
-const isMainnet = process.env.NEXT_PUBLIC_ENABLE_MAINNET === 'true';
+const isMainnet = process.env.NEXT_PUBLIC_ENABLE_TESTNETS === 'false';
 
 export const CONTRACTS = {
     PROFILE_NFT: isMainnet
-        ? process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS_MAINNET || ''
+        ? process.env.NEXT_PUBLIC_PROFILE_NFT_MAINNET || ''
         : process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS || '',
     MATCHING: isMainnet
-        ? process.env.NEXT_PUBLIC_MATCHING_ADDRESS_MAINNET || ''
+        ? process.env.NEXT_PUBLIC_MATCHING_ADDRESS || ''
         : process.env.NEXT_PUBLIC_MATCHING_ADDRESS || '',
     STAKING: isMainnet
-        ? process.env.NEXT_PUBLIC_STAKING_ADDRESS_MAINNET || ''
+        ? process.env.NEXT_PUBLIC_STAKING_ADDRESS || ''
         : process.env.NEXT_PUBLIC_STAKING_ADDRESS || '',
     REPUTATION: isMainnet
-        ? process.env.NEXT_PUBLIC_REPUTATION_ADDRESS_MAINNET || ''
+        ? process.env.NEXT_PUBLIC_REPUTATION_ADDRESS || ''
         : process.env.NEXT_PUBLIC_REPUTATION_ADDRESS || '',
     ACHIEVEMENT: isMainnet
-        ? process.env.NEXT_PUBLIC_ACHIEVEMENT_ADDRESS_MAINNET || ''
+        ? process.env.NEXT_PUBLIC_ACHIEVEMENT_ADDRESS || ''
         : process.env.NEXT_PUBLIC_ACHIEVEMENT_ADDRESS || '',
     USDC: isMainnet
         ? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' // Base mainnet USDC

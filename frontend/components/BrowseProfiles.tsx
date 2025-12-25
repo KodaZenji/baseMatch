@@ -130,6 +130,9 @@ export default function BrowseProfiles() {
         );
     }
 
+    // Filter out the current user's profile from the discovery page
+    const filteredProfiles = profiles.filter(profile => profile.wallet_address.toLowerCase() !== address?.toLowerCase());
+
     return (
         <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Discover People</h2>
@@ -143,19 +146,18 @@ export default function BrowseProfiles() {
 
             {/* Success/error message */}
             {showSuccess && (
-                <div className={`mb-4 p-3 rounded-lg ${
-                    successMessage.includes('Failed') || successMessage.includes('error') 
-                        ? 'bg-red-100 text-red-700' 
-                        : successMessage.includes('match') 
-                        ? 'bg-green-100 text-green-700 font-semibold text-lg' 
-                        : 'bg-blue-100 text-blue-700'
-                }`}>
+                <div className={`mb-4 p-3 rounded-lg ${successMessage.includes('Failed') || successMessage.includes('error')
+                        ? 'bg-red-100 text-red-700'
+                        : successMessage.includes('match')
+                            ? 'bg-green-100 text-green-700 font-semibold text-lg'
+                            : 'bg-blue-100 text-blue-700'
+                    }`}>
                     {successMessage}
                 </div>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {profiles.map((profile) => (
+                {filteredProfiles.map((profile) => (
                     <ProfileCard
                         key={profile.wallet_address}
                         profile={profile}
@@ -166,7 +168,7 @@ export default function BrowseProfiles() {
                 ))}
             </div>
 
-            {profiles.length === 0 && (
+            {filteredProfiles.length === 0 && (
                 <div className="text-center py-12">
                     <p className="text-gray-500 text-lg">No profiles to show yet</p>
                     <p className="text-gray-400">Check back later or invite your friends!</p>

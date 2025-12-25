@@ -108,14 +108,14 @@ Features:
 - Staking mechanism for serious daters
 - Achievement NFTs for milestones
 - In-app messaging for matches
-- Location-based matching * location doxxing not yet implemeneted **
+- Location-based matching * location based-matching not yet implemeneted **
 - Profile editing functionality
-- Email verification with send verification link 
+- Email verification with send verification codes 
 - Profile picture upload
-- Premium gifting features (USDC/Base ETH) onchain and flowers or other irl gifts through third party vendor
+- Premium gifting features (USDC/Base ETH) onchain and flowers or other irl gifts through third party vendor {irl gifting soon}
 
 Technical Implementation:
-- Next.js 14 with App Router
+- Next.js 19+ with App Router
 - Wagmi v2 for Ethereum wallet integration
 - Viem for blockchain interactions
 - Tailwind CSS for styling
@@ -123,7 +123,7 @@ Technical Implementation:
 - Blockies for avatar generation
 - brevo stack for email sending
 - Real email verification with token-based system
-- Secure token expiration (24 hours)
+- Secure token expiration (10 minutes )
 - Periodic cleanup of expired tokens
 
 ## 🤝 Contributing
@@ -132,7 +132,6 @@ Open source and ready for contributions! Feel free to:
 - Report bugs
 - Suggest features
 - Submit PRs
-- Fork and build your own
 
 ## 📄 License
 

@@ -25,21 +25,21 @@ export async function POST(request: Request) {
         const normalizedWallet = walletAddress ? walletAddress.toLowerCase().trim() : null;
 
         let existingProfile = null;
-        
+
         // Look up by wallet address if provided
         if (normalizedWallet) {
             const { data } = await supabaseService
-                .from('profiles') 
+                .from('profiles')
                 .select('id, name, email')
                 .eq('wallet_address', normalizedWallet)
                 .single();
             existingProfile = data;
         }
-        
+
         // Look up by email
         if (!existingProfile) {
             const { data } = await supabaseService
-                .from('profiles') 
+                .from('profiles')
                 .select('id, name, email')
                 .eq('email', normalizedEmail)
                 .single();
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
         }
 
         let profileId = existingProfile?.id;
-        
+
         if (!profileId) {
             // New profile - create it
             const { data: profile, error: insertError } = await supabaseService
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
             };
             sendSmtpEmail.to = [{ email: normalizedEmail, name }];
             sendSmtpEmail.subject = 'Your BaseMatch Verification Code';
-            
+
             sendSmtpEmail.htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
         .container { max-width: 600px; margin: 40px auto; background: linear-gradient(135deg, #3b82f6 0%, #9333ea 100%); border-radius: 16px; overflow: hidden; }
         .header { text-align: center; padding: 40px 20px 20px; }
-        .logo { background: white; width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .logo { display: none; }
         .title { color: white; font-size: 32px; font-weight: bold; margin: 0; }
         .subtitle { color: rgba(255,255,255,0.9); font-size: 18px; margin: 10px 0 0; }
         .content { background: white; margin: 20px; border-radius: 12px; padding: 40px; }
@@ -154,17 +154,7 @@ export async function POST(request: Request) {
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">
-                <svg width="50" height="50" viewBox="0 0 24 24" fill="none">
-                    <defs>
-                        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#3b82f6" />
-                            <stop offset="100%" style="stop-color:#9333ea" />
-                        </linearGradient>
-                    </defs>
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="url(#grad)"/>
-                </svg>
-            </div>
+            <img src="https://ipfs.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw" alt="BaseMatch" width="80" height="80" style="display: block; margin: 0 auto 10px;">
             <div class="title">BaseMatch</div>
             <div class="subtitle">Email Verification</div>
         </div>

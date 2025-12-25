@@ -1,10 +1,16 @@
 
-BaseMatch – What is this?
-
 BaseMatch is a dating mini-app designed to reduce ghosting through accountability and commitment.
 
-You sign up with your email and connect a crypto wallet.
-When two people agree on a date, both stake a small amount to show intent and seriousness.
+You sign up with your email and connect a crypto wallet/ OR with your wallet and then you verify email later 
+
+Important: Only accounts with email and wallet verified show in discovery page 
+
+The Flow: 
+
+When two people Match , a mutual chat window is dedidcated to them. 
+All chats are encyted using almost military grade encryption so only you and your match can read your messages
+
+Agree on a date, both stake an optipnal small amount to show intent and seriousness.
 
 
 ---
@@ -26,9 +32,10 @@ Scenarios
 (Neutral + sweet: fair and predictable)
 
 B. One confirmed, other ghosted	
-> Attendee gets 150% of stake minus platform fee, ghost gets 0	
+> Attendee gets 150% of stake minus platform fee, ghost gets 20% 
+yeah we know! LIFE happens 	
 
-(Sweet + bitter: attendee rewarded, ghost loses stake) 
+(Sweet + bitter: attendee rewarded, ghost gets compasionate refund) 
 
 C. Both missed confirmation	
 > Both refunded 90% of stake; 5% platform fee + 5% missed-confirmation fee
@@ -41,7 +48,7 @@ C. Both missed confirmation
 
 Show up → stake returned + bonus reward (150% minus platform fee)
 
-Ghost → stake forfeited
+Ghost → 20% REFUND
 
 Missed confirmation → 90% refund, small fee deducted
 
@@ -49,32 +56,20 @@ Missed confirmation → 90% refund, small fee deducted
 Ratings are only available for staked dates and highlight serious participants.”
 
 
-
 Built on Base for fast, low-cost transactions.
-No real money is used during testing.
 
 
 ---
 
-How to Test BaseMatch (Base Sepolia)
+How to CREATE an account
 
 Go here 👉🏾 https://basematch.app
 
-1️⃣ Create an account with email and connect a wallet (MetaMask or any EVM wallet)
+1️⃣ Create an account with email or connect a wallet (MetaMask or any EVM wallet)
 
-2️⃣ Switch your wallet network to Base Sepolia
+2️⃣ Switch your wallet network to Base Mainnet
 
-3️⃣ Get Base Sepolia ETH for gas (from any Sepolia faucet)
-
-4️⃣ Get testnet USDC
-
-> Need test USDC for Base Sepolia?
-Use Circle’s official faucet 👉 https://faucet.circle.com/
-Select Base Sepolia
-
-
-
-5️⃣ Create a profile, match, and test the app to its limits:
+3️⃣ Create a profile, match, and test the app to its limits:
 
 Match with others
 
@@ -82,41 +77,54 @@ Chat with your match
 
 Delete messages
 
-Send crypto gifts (min 1 USDC in testnet)
+Send crypto gifts (min 1 USDC )
 
-IRL gifting
+IRL gifting coming soon
 
 Edit interests, profile picture, etc.
 
+> ⚠️ IMPORTANT: All contracts use UUPS proxy pattern for upgradability. 
+ Before an upgrade , contract creator call upgrade function and this is visible on the blockchain for all to verify 
 
-> You’re not using real money — only testnet ETH and USDC for Base Sepolia.
+### How It Works
 
----
+1. **Propose Upgrade** (Immediate)
+   ```
+   Owner calls: proposeUpgrade(targetContract, newImplementation)
+   Returns: proposalId
+   ```
 
-How to Deploy to Mainnet
+2. **Wait Period** (48 Hours)
+   - Users and community can monitor the proposal
+   - Anyone can check: `getTimeUntilReady(proposalId)`
+   - Owner can cancel at any time: `cancelUpgrade(proposalId)`
 
-1️⃣ Configure your environment variables for mainnet:
-- Set `NEXT_PUBLIC_ENABLE_MAINNET=true`
-- Set mainnet contract addresses as environment variables
-- Ensure your private key has Base mainnet ETH for gas
+3. **Execute Upgrade** (After 48 Hours)
+   - Only owner can execute
+   - Must be called via the proxy's `upgradeToAndCall()` or similar
 
-2️⃣ Update your deployment script with mainnet USDC address:
-- Base mainnet USDC: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
+### Contract Location
+- **File**: `contracts/TimelockUpgradeController.sol`
 
-3️⃣ Run the mainnet deployment:
-```bash
-npx hardhat run scripts/deployMainnet.js --network base-mainnet
+### Key Functions
+
+```solidity
+// Propose an upgrade (48-hour delay starts)
+bytes32 proposalId = timelock.proposeUpgrade(proxyAddress, newImplementation);
+
+// Check if ready to execute
+bool ready = timelock.isUpgradeReady(proposalId);
+
+// Check time remaining
+uint256 secondsLeft = timelock.getTimeUntilReady(proposalId);
+
+// Cancel if needed
+timelock.cancelUpgrade(proposalId);
+
+// View proposal details
+(target, impl, eta, executed, cancelled) = timelock.getProposal(proposalId);
 ```
 
-4️⃣ Verify contracts on Basescan:
-```bash
-npx hardhat verify --network base-mainnet <CONTRACT_ADDRESS> <CONSTRUCTOR_ARGS>
-```
-
-5️⃣ Update your frontend environment variables with the deployed contract addresses
-
-> ⚠️ IMPORTANT: All contracts use UUPS proxy pattern for upgradability. Test thoroughly before mainnet deployment!
-
----
+ Safe and protected from spontaneous or off the bat upgrades
 
 BaseMatch helps serious people date seriously — ghosting has a cost, and commitment is rewarded.
