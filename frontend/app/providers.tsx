@@ -1,6 +1,4 @@
-// app/providers.tsx
-
-'use client';
+use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider } from 'wagmi';
@@ -8,7 +6,7 @@ import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { config } from '@/lib/wagmi';
 import { validateEnvironment } from '@/lib/validateEnv';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { baseSepolia } from 'wagmi/chains';
+import { base } from 'wagmi/chains'; // ← Changed from baseSepolia
 import '@rainbow-me/rainbowkit/styles.css';
 import { useState, useEffect } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
@@ -32,7 +30,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             try {
                 await sdk.actions.ready();
                 console.log('Farcaster Mini App SDK initialized');
-                console.log('Expected network: Base Sepolia (Chain ID: 84532)');
+                console.log('Expected network: Base Mainnet (Chain ID: 8453)'); // ← Updated
             } catch (error) {
                 console.error('Failed to initialize Mini App SDK:', error);
             }
@@ -50,7 +48,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <WagmiProvider config={config}>
                 <QueryClientProvider client={queryClient}>
                     <RainbowKitProvider
-                        initialChain={baseSepolia}
+                        initialChain={base} // ← Changed to mainnet
                         theme={darkTheme({
                             accentColor: '#FF1493',
                             accentColorForeground: 'white',
@@ -63,4 +61,3 @@ export function Providers({ children }: { children: React.ReactNode }) {
             </WagmiProvider>
         </ErrorBoundary>
     );
-}
