@@ -1,28 +1,30 @@
-import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { baseSepolia, base } from 'wagmi/chains';
+import { http, createConfig } from "wagmi";
+import { base } from "wagmi/chains";
+import { coinbaseWallet } from "wagmi/connectors";
 
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
-
-if (!projectId) {
-    console.warn('NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID environment variable is not set. WalletConnect will not work.');
-}
-
-// Check if we're in mainnet mode
-const isMainnet = process.env.NEXT_PUBLIC_ENABLE_MAINNET === 'true';
-
-// Use singleton pattern to prevent re-initialization in development mode
-let wagmiConfig: ReturnType<typeof getDefaultConfig> | null = null;
-
-export const getConfig = () => {
-    if (!wagmiConfig) {
-        wagmiConfig = getDefaultConfig({
-            appName: 'BaseMatch',
-            projectId: projectId || '',
-            chains: isMainnet ? [base] : [baseSepolia],
-            ssr: true,
-        });
-    }
-    return wagmiConfig;
-};
-
-export const config = getConfig();
+export const config = createConfig({
+  chains: [base],
+  connectors: [
+    coinbaseWallet({
+      appName: "BaseMatch",
+      preference: "smartWalletOnly",
+    }),
+  ],
+  transports: {
+    [base.id]: http('https://base-mainnet.g.alchemy.com/v2/eij573azum6O085qLp7TD', {
+      batch: true, // Batches multiple requests together
+      fetchOptions: {
+        cache: 'no-store', // Always get fresh data
+      },
+      retryCount: 3, // Retry failed requests
+      timeout: 10_000, // 10 second timeout
+    }),
+  },
+  // Enable these for max performance
+  batch: {
+    multicall: {
+      wait: 16, // Batch calls every 16ms (1 frame at 60fps)
+    },
+  },
+  pollingInterval: 4_000, // Check for updates every 4 seconds
+});
