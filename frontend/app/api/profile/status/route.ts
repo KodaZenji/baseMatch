@@ -64,7 +64,10 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error('❌ Error in profile status API:', error);
         return NextResponse.json(
-            { error: 'Failed to check profile status', details: error.message },
+            { 
+                error: 'Failed to check profile status', 
+                details: error instanceof Error ? error.message : 'Unknown error' 
+            },
             { status: 500 }
         );
     }
