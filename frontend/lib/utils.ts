@@ -57,7 +57,7 @@ export function buildRegistrationTypedData(params: {
   return {
     domain: SIGNING_DOMAIN,
     types: SIGNING_TYPES,
-    primaryType: 'Registration',
+    primaryType: 'Registration', as const;
     message: {
       address: params.address as Address,
       nonce: params.nonce,
