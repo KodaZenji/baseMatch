@@ -15,13 +15,21 @@ const NETWORKS = {
 } as const;
 
 // Get current network from environment or default to base-mainnet
-const CURRENT_NETWORK = (process.env.NEXT_PUBLIC_NETWORK as keyof typeof NETWORKS) || 'base-mainnet';
+// Support both 'mainnet' and 'base-mainnet' for backwards compatibility
+let envNetwork = process.env.NEXT_PUBLIC_NETWORK || 'base-mainnet';
+if (envNetwork === 'mainnet') {
+    envNetwork = 'base-mainnet';
+} else if (envNetwork === 'sepolia') {
+    envNetwork = 'base-sepolia';
+}
+
+const CURRENT_NETWORK = envNetwork as keyof typeof NETWORKS;
 const NETWORK_CONFIG = NETWORKS[CURRENT_NETWORK];
 
 // Add safety check to prevent undefined access
 if (!NETWORK_CONFIG) {
     console.error(`❌ Invalid network configuration: ${CURRENT_NETWORK}`);
-    throw new Error(`Invalid NEXT_PUBLIC_NETWORK value: ${CURRENT_NETWORK}. Must be 'base-sepolia' or 'base-mainnet'`);
+    throw new Error(`Invalid NEXT_PUBLIC_NETWORK value: ${CURRENT_NETWORK}. Must be 'base-sepolia', 'sepolia', 'base-mainnet', or 'mainnet'`);
 }
 
 const RPC_ENDPOINT = NETWORK_CONFIG.rpcUrl;
