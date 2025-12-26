@@ -1,13 +1,16 @@
 // ============================================
-// FILE: lib/utils.ts (UPDATED VERSION)
+// FILE: lib/utils.ts
 // ============================================
 import { randomBytes } from 'crypto';
-import { verifyMessage } from 'viem';
-import * as brevo from '@getbrevo/brevo';
+import { ethers } from 'ethers';
 import { createPublicClient, http, Address } from 'viem';
-import { baseSepolia, base } from 'viem/chains';
+import { base } from 'viem/chains';
 
 const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS as Address;
+const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY;
+
+if (!PROFILE_NFT_ADDRESS) throw new Error('NEXT_PUBLIC_PROFILE_NFT_ADDRESS is not set');
+if (!ALCHEMY_API_KEY) throw new Error('ALCHEMY_API_KEY is not set');
 
 const PROFILE_NFT_ABI = [
   {
@@ -19,21 +22,17 @@ const PROFILE_NFT_ABI = [
   },
 ] as const;
 
-// ✅ FIX: Use Base mainnet by default, only use testnet in development
-const isTestnet = process.env.NEXT_PUBLIC_NETWORK === 'testnet' ||
-                  process.env.NODE_ENV === 'development';
-
-console.log('🌐 Network Configuration:', {
-  network: isTestnet ? 'Base Sepolia (Testnet)' : 'Base Mainnet',
-  contractAddress: PROFILE_NFT_ADDRESS,
-  env: process.env.NODE_ENV
-});
-
+// -----------------------------
+// Base Mainnet client (using Alchemy)
+// -----------------------------
 const publicClient = createPublicClient({
-  chain: isTestnet ? baseSepolia : base,
-  transport: http(),
+  chain: base,
+  transport: http(`https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`),
 });
 
+// ============================================
+// Check if a wallet owns at least one NFT
+// ============================================
 export async function checkNftOwnership(address: string): Promise<boolean> {
   if (!PROFILE_NFT_ADDRESS) {
     console.error("❌ NFT Contract address is not set in environment variables");
@@ -43,7 +42,7 @@ export async function checkNftOwnership(address: string): Promise<boolean> {
   try {
     console.log('🔍 Checking NFT ownership for:', address);
     console.log('📍 Contract:', PROFILE_NFT_ADDRESS);
-    console.log('🌐 Network:', isTestnet ? 'Base Sepolia' : 'Base Mainnet');
+    console.log('🌐 Network: Base Mainnet (via Alchemy)');
 
     const balance = await publicClient.readContract({
       address: PROFILE_NFT_ADDRESS,
@@ -62,31 +61,26 @@ export async function checkNftOwnership(address: string): Promise<boolean> {
   }
 }
 
+// ============================================
+// Hash photo URL for on-chain reference
+// ============================================
 export function calculatePhotoHash(photoUrl: string): string {
   const crypto = require('crypto');
   const hash = crypto.createHash('sha256').update(photoUrl).digest('hex');
   return '0x' + hash;
 }
 
-/**
- * ✅ FIXED: Verify wallet signature without corrupting it
- * Supports Base App signature lengths up to 450 chars
- */
+// ============================================
+// Verify wallet signature (supports 450-character signatures for Base App)
+// ============================================
 export async function verifyWalletSignature(
   message: string,
   signature: string,
   address: string
 ): Promise<boolean> {
   try {
-    // Normalize address
-    const normalizedAddress = address.toLowerCase().startsWith('0x')
-      ? address.toLowerCase()
-      : `0x${address}`.toLowerCase();
-
-    // Normalize signature - ensure it has 0x prefix
-    const normalizedSignature = signature.startsWith('0x')
-      ? signature
-      : `0x${signature}`;
+    const normalizedAddress = address.toLowerCase();
+    const normalizedSignature = signature.startsWith('0x') ? signature : `0x${signature}`;
 
     console.log('🔐 Verifying signature:', {
       addressLength: normalizedAddress.length,
@@ -96,42 +90,21 @@ export async function verifyWalletSignature(
       signaturePreview: normalizedSignature.substring(0, 10) + '...',
     });
 
-    // ✅ FIX: Allow signature lengths between 132–450 characters
-    if (normalizedSignature.length < 132 || normalizedSignature.length > 450) {
-      console.error('❌ Invalid signature length:', normalizedSignature.length, 'expected 132–450');
-      return false;
-    }
-
-    // Validate address format (should be 42 chars with 0x prefix)
-    if (normalizedAddress.length !== 42) {
-      console.error('❌ Invalid address length:', normalizedAddress.length, 'expected 42');
-      return false;
-    }
-
-    // Verify the signature using viem
-    const isValid = await verifyMessage({
-      address: normalizedAddress as `0x${string}`,
-      message: message,
-      signature: normalizedSignature as `0x${string}`,
-    });
+    // Recover signer using ethers (supports long 450-char signatures from Base App)
+    const recoveredAddress = ethers.verifyMessage(message, normalizedSignature);
+    const isValid = recoveredAddress.toLowerCase() === normalizedAddress;
 
     console.log('✅ Signature verification result:', isValid);
     return isValid;
-
   } catch (error) {
     console.error('❌ Signature verification error:', error);
-
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        message: error.message,
-        name: error.name,
-      });
-    }
-
     return false;
   }
 }
 
+// ============================================
+// Generate a random token
+// ============================================
 export function generateToken(): string {
   return randomBytes(32).toString('hex');
 }
