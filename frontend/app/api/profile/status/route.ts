@@ -1,3 +1,7 @@
+// ============================================
+// FILE: app/api/profile/status/route.ts
+// UPDATED: Check blockchain FIRST, then database
+// ============================================
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
 import { checkNftOwnership } from '@/lib/utils';
@@ -19,45 +23,71 @@ export async function POST(request: NextRequest) {
         const normalizedAddress = address.toLowerCase();
         console.log('🔍 Checking profile status for:', normalizedAddress);
 
-        // ✅ FIX: Use .maybeSingle() instead of .single() to avoid errors
+        // ✅ STEP 1: Check blockchain FIRST (source of truth)
+        console.log('⛓️ Checking blockchain first...');
+        const hasMintedNFT = await checkNftOwnership(normalizedAddress);
+
+        if (hasMintedNFT) {
+            console.log('✅ NFT found on-chain for:', normalizedAddress);
+            
+            // Check if database has matching profile
+            const { data: profile } = await supabaseService
+                .from('profiles')
+                .select('id, email_verified, wallet_address')
+                .eq('wallet_address', normalizedAddress)
+                .maybeSingle();
+
+            if (profile) {
+                console.log('✅ Profile synced in database:', profile.id);
+                return NextResponse.json({
+                    profileExists: true,
+                    source: 'blockchain',
+                    databaseSynced: true,
+                    emailVerified: profile.email_verified,
+                    message: 'Profile NFT exists on-chain and synced in database'
+                });
+            } else {
+                console.log('⚠️ NFT exists but not synced in database');
+                return NextResponse.json({
+                    profileExists: true,
+                    source: 'blockchain',
+                    databaseSynced: false,
+                    message: 'Profile NFT exists on-chain but not synced in database'
+                });
+            }
+        }
+
+        // ✅ STEP 2: No NFT found, check database as fallback
+        console.log('📋 No NFT on-chain, checking database...');
         const { data: profile, error: dbError } = await supabaseService
             .from('profiles')
             .select('id, email_verified, wallet_address')
             .eq('wallet_address', normalizedAddress)
             .maybeSingle();
 
-        // Log any actual database errors (not "no rows found")
         if (dbError) {
             console.error('⚠️ Database error:', dbError);
         }
 
         if (profile) {
-            console.log('✅ Profile found in Supabase:', profile.id);
+            console.log('✅ Profile found in database (no NFT yet):', profile.id);
             return NextResponse.json({
                 profileExists: true,
                 source: 'database',
+                databaseSynced: true,
                 emailVerified: profile.email_verified,
-                message: 'Profile data found in database'
+                hasNFT: false,
+                message: 'Profile registered in database but NFT not minted yet'
             });
         }
 
-        console.log('📋 No profile in database, checking blockchain...');
-
-        // Check On-Chain NFT Ownership
-        const hasMintedNFT = await checkNftOwnership(normalizedAddress);
-
-        if (hasMintedNFT) {
-            console.log('✅ NFT found on-chain for:', normalizedAddress);
-            return NextResponse.json({
-                profileExists: true,
-                source: 'blockchain',
-                message: 'Profile NFT already owned'
-            });
-        }
-
-        console.log('ℹ️ No profile found - user can register/mint');
+        // ✅ STEP 3: No profile anywhere - new user
+        console.log('ℹ️ No profile found anywhere - user can register/mint');
         return NextResponse.json({
             profileExists: false,
+            source: 'none',
+            hasNFT: false,
+            databaseSynced: false,
             message: 'New user - needs to register and mint'
         });
 
