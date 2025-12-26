@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
-import { verifyWalletSignature, generateToken, sendVerificationEmail } from '@/lib/utils';
+import { verifyWalletSignature } from '@/lib/utils';
 
 export const runtime = 'nodejs';
 
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
         // 5. Profile Lookup: Find existing profile by email OR wallet
         const { data: existingProfileByEmail } = await supabaseService
-            .from('profiles') 
+            .from('profiles')
             .select('*')
             .eq('email', normalizedEmail)
             .single();
@@ -157,27 +157,33 @@ export async function POST(request: NextRequest) {
             needsEmailVerification = true;
         }
 
-        // 7. Verification Trigger: Send email verification if needed
+        // 7. Verification Trigger: Send 6-digit code if needed
         if (needsEmailVerification) {
             try {
-                const token = generateToken();
-                const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); 
-
-                const { error: tokenError } = await supabaseService
-                    .from('email_verifications')
-                    .insert([{
-                        user_id: profileId,
+                // Call the register-email endpoint to send 6-digit code
+                // This will handle creating the verification code and sending the email
+                const registerEmailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/register-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
                         email: normalizedEmail,
-                        token,
-                        expires_at: expiresAt.toISOString(),
-                        created_at: new Date().toISOString()
-                    }]);
+                        walletAddress: normalizedAddress,
+                        name,
+                        age,
+                        gender,
+                        interests,
+                        skipPhotoUpload: true // Since photo is already handled in this flow
+                    })
+                });
 
-                if (!tokenError) {
-                    await sendVerificationEmail(normalizedEmail, token);
+                if (!registerEmailResponse.ok) {
+                    const errorData = await registerEmailResponse.json();
+                    console.error('Error sending verification code:', errorData);
                 }
             } catch (emailError) {
-                console.error('Error sending verification email:', emailError);
+                console.error('Error triggering verification code:', emailError);
             }
         }
 

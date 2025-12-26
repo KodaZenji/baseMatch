@@ -2,7 +2,7 @@ import { randomBytes } from 'crypto';
 import { verifyMessage } from 'viem';
 import * as brevo from '@getbrevo/brevo';
 import { createPublicClient, http, Address } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { baseSepolia, base } from 'viem/chains';
 
 // --- VIEM/WAGMI CONFIGURATION ---
 
@@ -21,7 +21,9 @@ const PROFILE_NFT_ABI = [
 
 // Setup a Viem Public Client for server-side contract reads
 const publicClient = createPublicClient({
-    chain: baseSepolia,
+    chain: process.env.NEXT_PUBLIC_BASE_URL?.includes('localhost') || process.env.NODE_ENV === 'development'
+        ? baseSepolia
+        : base, // Use base mainnet for production
     transport: http(),
 });
 
@@ -72,25 +74,60 @@ export async function verifyWalletSignature(
     address: string
 ): Promise<boolean> {
     try {
-        // Ensure signature has 0x prefix
-        const sig = signature.startsWith('0x') ? signature : `0x${signature}`;
         // Ensure address has 0x prefix and is lowercase
         const addr = address.startsWith('0x') ? address.toLowerCase() : `0x${address}`.toLowerCase();
 
         console.log('Verifying signature:', {
             messageLength: message.length,
-            signatureLength: sig.length,
+            signatureLength: signature.length,
             addressFormat: addr.substring(0, 4) + '...'
+        });
+
+        // Handle different signature formats
+        let sig: `0x${string}`;
+
+        if (signature.startsWith('0x')) {
+            // Standard hex signature
+            sig = signature as `0x${string}`;
+        } else {
+            // Try to parse as base64 or other format if needed
+            try {
+                // Check if it's a valid hex after removing potential prefixes
+                const cleanSig = signature.replace(/[^a-fA-F0-9]/g, '');
+                if (cleanSig.length === 130 || cleanSig.length === 132) { // 65 bytes (r + s + v) in hex
+                    sig = `0x${cleanSig}` as `0x${string}`;
+                } else {
+                    // Assume it's a hex string without 0x prefix
+                    sig = `0x${signature}` as `0x${string}`;
+                }
+            } catch {
+                // If all else fails, try the original signature as hex
+                sig = `0x${signature}` as `0x${string}`;
+            }
+        }
+
+        console.log('Processing signature format:', {
+            originalLength: signature.length,
+            processedSignature: sig.substring(0, 10) + '...',
+            processedLength: sig.length
         });
 
         const isValid = await verifyMessage({
             address: addr as `0x${string}`,
             message,
-            signature: sig as `0x${string}`
+            signature: sig
         });
+
         return isValid;
     } catch (error) {
         console.error('Signature verification error:', error);
+        // Log additional info for debugging
+        console.error('Signature details:', {
+            messageLength: message.length,
+            signatureLength: signature.length,
+            signaturePrefix: signature.substring(0, 4),
+            address: address
+        });
         return false;
     }
 }
@@ -102,87 +139,4 @@ export function generateToken(): string {
     return randomBytes(32).toString('hex');
 }
 
-/**
- * Send email verification via Brevo
- */
-export async function sendVerificationEmail(email: string, token: string): Promise<void> {
-    if (!process.env.BREVO_API_KEY) {
-        throw new Error('BREVO_API_KEY not configured');
-    }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-        (process.env.NODE_ENV === 'production' ? 'https://basematch.app' : 'http://localhost:3000');
-    const verificationUrl = `${baseUrl}/api/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
-
-    const apiInstance = new brevo.TransactionalEmailsApi();
-    apiInstance.setApiKey(
-        brevo.TransactionalEmailsApiApiKeys.apiKey,
-        process.env.BREVO_API_KEY
-    );
-
-    const sendSmtpEmail = new brevo.SendSmtpEmail();
-    sendSmtpEmail.sender = {
-        name: process.env.BREVO_SENDER_NAME || 'BaseMatch',
-        email: process.env.BREVO_SENDER_EMAIL || 'noreply@basematch.app'
-    };
-    sendSmtpEmail.to = [{ email }];
-    sendSmtpEmail.subject = 'Verify your email address - BaseMatch';
-    sendSmtpEmail.htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Verify your email - BaseMatch</title>
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .button { 
-            display: inline-block; 
-            padding: 12px 24px; 
-            background-color: #4f46e5; 
-            color: white; 
-            text-decoration: none; 
-            border-radius: 6px; 
-            font-weight: bold;
-        }
-        .footer { 
-            margin-top: 30px; 
-            padding-top: 20px; 
-            border-top: 1px solid #eee; 
-            font-size: 12px; 
-            color: #666; 
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <img src="https://ipfs.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw" alt="BaseMatch" width="60" height="60" style="display: block; margin: 0 auto 10px;">
-            <h2>Email Verification</h2>
-        </div>
-        
-        <p>Hello,</p>
-        
-        <p>Thank you for registering with BaseMatch! Please verify your email address by clicking the button below:</p>
-        
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="${verificationUrl}" class="button">Verify Email Address</a>
-        </div>
-        
-        <p>If the button doesn't work, you can also copy and paste this link into your browser:</p>
-        <p style="word-break: break-all; color: #4f46e5;">${verificationUrl}</p>
-        
-        <p>This link will expire in 24 hours.</p>
-        
-        <div class="footer">
-            <p>If you didn't register for BaseMatch, please ignore this email.</p>
-            <p>&copy; 2025 BaseMatch. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>
-    `;
-
-    await apiInstance.sendTransacEmail(sendSmtpEmail);
-}
