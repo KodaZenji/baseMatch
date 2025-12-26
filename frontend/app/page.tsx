@@ -43,18 +43,30 @@ export default function Home() {
 
   // Helper function to check database with retry
   const checkDatabaseWithRetry = async (retries = 5): Promise<boolean> => {
+    if (!address) return false;
+
     for (let i = 0; i < retries; i++) {
       try {
         console.log(`🔍 Checking database (attempt ${i + 1}/${retries})...`);
 
-        const response = await fetch('/api/profile/status');
-        const data = await response.json();
+        const response = await fetch('/api/profile/status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ address }),
+        });
 
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
         console.log('📋 Database check result:', data);
 
-        if (data.hasProfile && data.profile) {
-          console.log('✅ Profile found in database!');
-          setDbProfile(data.profile);
+        if (data.profileExists) {
+          console.log(`✅ Profile found in ${data.source}!`);
+          setDbProfile(data);
           return true;
         }
 
@@ -86,11 +98,8 @@ export default function Home() {
         const dbProfileExists = await checkDatabaseWithRetry();
         
         if (dbProfileExists) {
-          console.log('✅ Profile found in database, redirecting...');
-          // Small delay to ensure state is set
-          setTimeout(() => {
-            router.push('/');
-          }, 500);
+          console.log('✅ Profile found, ready to use app!');
+          // Profile exists, component will re-render and show main app
         }
         
         setIsCheckingDb(false);
@@ -98,7 +107,7 @@ export default function Home() {
     };
 
     checkDatabaseFallback();
-  }, [isLoading, profile?.exists, isConnected, address, router]);
+  }, [isLoading, profile?.exists, isConnected, address]);
 
   useEffect(() => {
     if (isLoading) {
@@ -113,7 +122,7 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center">
         <div className="text-white text-2xl">
-          {isCheckingDb ? 'Checking database...' : 'Loading...'}
+          {isCheckingDb ? 'Checking profile status...' : 'Loading...'}
         </div>
       </div>
     );
@@ -162,7 +171,7 @@ export default function Home() {
   }
 
   // Landing Page - Not Connected OR (Connected but No Profile in blockchain AND no dbProfile)
-  if (!isConnected || (!profile?.exists && !dbProfile)) {
+  if (!isConnected || (!profile?.exists && !dbProfile?.profileExists)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center animate-fadeIn">
@@ -207,7 +216,7 @@ export default function Home() {
             <p className="text-gray-700 mb-4 text-base">
               {isConnected 
                 ? "You're connected! Create your profile"
-                : "Your wallet is your dating profile "
+                : "Your wallet is your dating profile"
               }
             </p>
             <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl p-4 text-sm text-gray-700 space-y-2">
