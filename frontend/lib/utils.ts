@@ -87,23 +87,44 @@ export async function verifyWalletSignature(
         let sig: `0x${string}`;
 
         if (signature.startsWith('0x')) {
-            // Standard hex signature
-            sig = signature as `0x${string}`;
-        } else {
-            // Try to parse as base64 or other format if needed
-            try {
-                // Check if it's a valid hex after removing potential prefixes
-                const cleanSig = signature.replace(/[^a-fA-F0-9]/g, '');
-                if (cleanSig.length === 130 || cleanSig.length === 132) { // 65 bytes (r + s + v) in hex
-                    sig = `0x${cleanSig}` as `0x${string}`;
-                } else {
-                    // Assume it's a hex string without 0x prefix
-                    sig = `0x${signature}` as `0x${string}`;
+            const cleanSig = signature.substring(2); // Remove '0x' prefix
+
+            // Check if this looks like a standard signature (65 bytes = 130 hex chars)
+            if (cleanSig.length === 130) {
+                // Standard 65-byte signature (r + s + v)
+                sig = signature as `0x${string}`;
+            } else if (cleanSig.length > 130) {
+                // This might be a serialized signature from Base App browser
+                // Try to extract the actual signature from the serialized format
+                try {
+                    // For Base App browser, signatures might be in a serialized format
+                    // Often the actual signature is embedded in the data
+                    if (cleanSig.length === 448) { // 450 chars minus '0x' = 448
+                        // Try extracting from the end (last 130 chars for r+s+v)
+                        const actualSig = cleanSig.slice(-130);
+                        sig = `0x${actualSig}` as `0x${string}`;
+                        console.log('Extracted signature from Base App format');
+                    } else {
+                        // For other longer signatures, try to extract the last 130 chars
+                        if (cleanSig.length > 130) {
+                            const actualSig = cleanSig.slice(-130);
+                            sig = `0x${actualSig}` as `0x${string}`;
+                            console.log('Extracted signature from longer format');
+                        } else {
+                            sig = signature as `0x${string}`;
+                        }
+                    }
+                } catch (extractError) {
+                    console.error('Failed to extract signature:', extractError);
+                    sig = signature as `0x${string}`;
                 }
-            } catch {
-                // If all else fails, try the original signature as hex
-                sig = `0x${signature}` as `0x${string}`;
+            } else {
+                // Some other format, try to use as-is
+                sig = signature as `0x${string}`;
             }
+        } else {
+            // No 0x prefix, try to add it
+            sig = `0x${signature}` as `0x${string}`;
         }
 
         console.log('Processing signature format:', {
@@ -111,6 +132,23 @@ export async function verifyWalletSignature(
             processedSignature: sig.substring(0, 10) + '...',
             processedLength: sig.length
         });
+
+        // Additional validation - ensure signature is the right length for verifyMessage
+        if (sig.length !== 132) { // 0x + 130 hex chars = 132
+            console.warn('Signature length is not standard, attempting to normalize:', {
+                expected: 132,
+                actual: sig.length,
+                signature: sig
+            });
+
+            // If it's too long, try to extract the actual signature part
+            if (sig.length > 132) {
+                // Extract the last 130 hex characters (standard signature part)
+                const sigPart = sig.substring(sig.length - 130);
+                sig = `0x${sigPart}` as `0x${string}`;
+                console.log('Normalized signature length');
+            }
+        }
 
         const isValid = await verifyMessage({
             address: addr as `0x${string}`,
