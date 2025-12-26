@@ -9,9 +9,7 @@ const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS as Addre
 const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY;
 
 if (!PROFILE_NFT_ADDRESS) throw new Error('NEXT_PUBLIC_PROFILE_NFT_ADDRESS is not set');
-if (!ALCHEMY_API_KEY) throw new Error('ALCHEMY_API_KEY is not set');
-
-const PROFILE_NFT_ABI = [
+rEr PROFILE_NFT = [
   {
     name: 'balanceOf',
     type: 'function',
