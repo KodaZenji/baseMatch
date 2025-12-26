@@ -57,13 +57,13 @@ export function buildRegistrationTypedData(params: {
   return {
     domain: SIGNING_DOMAIN,
     types: SIGNING_TYPES,
-    primaryType: 'Registration', as const;
+    primaryType: 'Registration', 
     message: {
       address: params.address as Address,
       nonce: params.nonce,
       issuedAt: BigInt(params.issuedAt),
     },
-  };
+  } const;
 }
 
 // ============================================
