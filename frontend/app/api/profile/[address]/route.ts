@@ -1,12 +1,12 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { CONTRACTS, PROFILE_NFT_ABI } from '@/lib/contracts';
 import { createPublicClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { base } from 'viem/chains';
 
 // Create a public client to interact with the blockchain
 const publicClient = createPublicClient({
-    chain: baseSepolia,
-    transport: http(),
+    chain: base,
+    transport: http(`https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`),
 });
 
 export async function GET(
@@ -24,9 +24,19 @@ export async function GET(
             );
         }
 
+        // Check if contract address is configured
+        const contractAddress = CONTRACTS.PROFILE_NFT;
+        if (!contractAddress) {
+            console.error('Contract address not configured');
+            return NextResponse.json(
+                { error: 'Contract address not configured' },
+                { status: 500 }
+            );
+        }
+
         // Fetch profile data from the contract
         const profileData = await publicClient.readContract({
-            address: CONTRACTS.PROFILE_NFT as `0x${string}`,
+            address: contractAddress as `0x${string}`,
             abi: PROFILE_NFT_ABI,
             functionName: 'getProfile',
             args: [address as `0x${string}`],
