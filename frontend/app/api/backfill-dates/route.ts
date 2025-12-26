@@ -1,57 +1,62 @@
-// frontend/app/api/backfill-dates/route.ts
-// API endpoint to backfill missing dates to Reputation contract
-
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, createWalletClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { createClient } from '@supabase/supabase-js';
 
+/* =======================
+   ABIs
+======================= */
+
 const STAKING_ABI = [
   {
-    type: "function",
-    name: "getConfirmation",
-    stateMutability: "view",
+    type: 'function',
+    name: 'getConfirmation',
+    stateMutability: 'view',
     inputs: [
-      { name: "stakeId", type: "uint256" },
-      { name: "user", type: "address" }
+      { name: 'stakeId', type: 'uint256' },
+      { name: 'user', type: 'address' }
     ],
     outputs: [
-      { name: "hasConfirmed", type: "bool" },
-      { name: "iShowedUp", type: "bool" },
-      { name: "theyShowedUp", type: "bool" }
+      { name: 'hasConfirmed', type: 'bool' },
+      { name: 'iShowedUp', type: 'bool' },
+      { name: 'theyShowedUp', type: 'bool' }
     ]
   }
 ] as const;
 
 const REPUTATION_ABI = [
   {
-    type: "function",
-    name: "recordDate",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "user", type: "address" }],
+    type: 'function',
+    name: 'recordDate',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'user', type: 'address' }],
     outputs: []
   },
   {
-    type: "function",
-    name: "recordNoShow",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "user", type: "address" }],
+    type: 'function',
+    name: 'recordNoShow',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'user', type: 'address' }],
     outputs: []
   },
   {
-    type: "function",
-    name: "getReputation",
-    stateMutability: "view",
-    inputs: [{ name: "user", type: "address" }],
+    type: 'function',
+    name: 'getReputation',
+    stateMutability: 'view',
+    inputs: [{ name: 'user', type: 'address' }],
     outputs: [
-      { name: "totalDates", type: "uint256" },
-      { name: "noShows", type: "uint256" },
-      { name: "totalRating", type: "uint256" },
-      { name: "ratingCount", type: "uint256" }
+      { name: 'totalDates', type: 'uint256' },
+      { name: 'noShows', type: 'uint256' },
+      { name: 'totalRating', type: 'uint256' },
+      { name: 'ratingCount', type: 'uint256' }
     ]
   }
 ] as const;
+
+/* =======================
+   Supabase (admin)
+======================= */
 
 function getSupabaseAdmin() {
   return createClient(
@@ -60,122 +65,148 @@ function getSupabaseAdmin() {
   );
 }
 
+/* =======================
+   Blockchain clients
+   (Base mainnet + Alchemy)
+======================= */
+
 function getBlockchainClients() {
+  const rpcUrl = `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`;
+
   const publicClient = createPublicClient({
-    chain: baseSepolia,
-    transport: http(process.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org')
+    chain: base,
+    transport: http(rpcUrl)
   });
 
-  const privateKeyStr = process.env.ADMIN_PRIVATE_KEY!;
-  const privateKeyWithPrefix = privateKeyStr.startsWith('0x') ? privateKeyStr : `0x${privateKeyStr}`;
-  const adminAccount = privateKeyToAccount(privateKeyWithPrefix as `0x${string}`);
-  
+  const pk = process.env.ADMIN_PRIVATE_KEY!;
+  const adminAccount = privateKeyToAccount(
+    pk.startsWith('0x') ? pk as `0x${string}` : `0x${pk}`
+  );
+
   const walletClient = createWalletClient({
     account: adminAccount,
-    chain: baseSepolia,
-    transport: http(process.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org')
+    chain: base,
+    transport: http(rpcUrl)
   });
 
   return { publicClient, walletClient };
 }
 
+/* =======================
+   POST — Manual backfill
+======================= */
+
 export async function POST(request: NextRequest) {
   try {
     const { userAddress } = await request.json();
 
-    console.log('🔄 Starting backfill...');
-    
+    console.log('🔄 Starting reputation backfill (manual)');
+
     const supabase = getSupabaseAdmin();
     const { publicClient, walletClient } = getBlockchainClients();
 
-    const stakingAddress = process.env.NEXT_PUBLIC_STAKING_ADDRESS as `0x${string}`;
-    const reputationAddress = process.env.NEXT_PUBLIC_REPUTATION_ADDRESS as `0x${string}`;
+    const stakingAddress =
+      process.env.NEXT_PUBLIC_STAKING_ADDRESS as `0x${string}`;
+    const reputationAddress =
+      process.env.NEXT_PUBLIC_REPUTATION_ADDRESS as `0x${string}`;
 
-    // If userAddress provided, only backfill for that user
+    /**
+     * Fetch confirmed stakes
+     */
     let query = supabase
       .from('stakes')
       .select('*')
       .or('user1_confirmed.eq.true,user2_confirmed.eq.true');
 
     if (userAddress) {
-      console.log(`🎯 Backfilling for user: ${userAddress}`);
-      query = query.or(`user1_address.eq.${userAddress},user2_address.eq.${userAddress}`);
-    } else {
-      console.log('🎯 Backfilling for ALL users');
+      console.log(`🎯 Backfilling only for ${userAddress}`);
+      query = query.or(
+        `user1_address.eq.${userAddress},user2_address.eq.${userAddress}`
+      );
     }
 
     const { data: stakes, error } = await query;
 
     if (error || !stakes) {
-      return NextResponse.json({ error: 'Failed to fetch stakes' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Failed to fetch stakes' },
+        { status: 500 }
+      );
     }
 
-    console.log(`📊 Found ${stakes.length} stakes`);
+    console.log(`📊 ${stakes.length} stakes found`);
 
-    const usersToUpdate = new Map<string, { dates: number; noShows: number }>();
+    const usersToUpdate = new Map<
+      string,
+      { dates: number; noShows: number }
+    >();
 
-    // Collect all the updates needed
+    /**
+     * Read confirmations from blockchain
+     */
     for (const stake of stakes) {
       try {
-        const user1Confirmation = await publicClient.readContract({
-          address: stakingAddress,
-          abi: STAKING_ABI,
-          functionName: 'getConfirmation',
-          args: [BigInt(stake.id), stake.user1_address as `0x${string}`]
-        });
-
-        const user2Confirmation = await publicClient.readContract({
-          address: stakingAddress,
-          abi: STAKING_ABI,
-          functionName: 'getConfirmation',
-          args: [BigInt(stake.id), stake.user2_address as `0x${string}`]
-        });
+        const [u1, u2] = await Promise.all([
+          publicClient.readContract({
+            address: stakingAddress,
+            abi: STAKING_ABI,
+            functionName: 'getConfirmation',
+            args: [BigInt(stake.id), stake.user1_address]
+          }),
+          publicClient.readContract({
+            address: stakingAddress,
+            abi: STAKING_ABI,
+            functionName: 'getConfirmation',
+            args: [BigInt(stake.id), stake.user2_address]
+          })
+        ]) as any[];
 
         // User1
-        if (user1Confirmation[0]) {
-          const stats = usersToUpdate.get(stake.user1_address.toLowerCase()) || { dates: 0, noShows: 0 };
-          if (user1Confirmation[1]) {
-            stats.dates++;
-          } else {
-            stats.noShows++;
-          }
-          usersToUpdate.set(stake.user1_address.toLowerCase(), stats);
+        if (u1[0]) {
+          const stats =
+            usersToUpdate.get(stake.user1_address) || {
+              dates: 0,
+              noShows: 0
+            };
+          u1[1] ? stats.dates++ : stats.noShows++;
+          usersToUpdate.set(stake.user1_address, stats);
         }
 
         // User2
-        if (user2Confirmation[0]) {
-          const stats = usersToUpdate.get(stake.user2_address.toLowerCase()) || { dates: 0, noShows: 0 };
-          if (user2Confirmation[1]) {
-            stats.dates++;
-          } else {
-            stats.noShows++;
-          }
-          usersToUpdate.set(stake.user2_address.toLowerCase(), stats);
+        if (u2[0]) {
+          const stats =
+            usersToUpdate.get(stake.user2_address) || {
+              dates: 0,
+              noShows: 0
+            };
+          u2[1] ? stats.dates++ : stats.noShows++;
+          usersToUpdate.set(stake.user2_address, stats);
         }
-      } catch (error) {
-        console.error(`Failed to read stake ${stake.id}:`, error);
+      } catch (err) {
+        console.error(`Failed reading stake ${stake.id}`, err);
       }
     }
 
-    console.log(`📝 ${usersToUpdate.size} users need updates`);
+    console.log(`🧮 ${usersToUpdate.size} users to update`);
 
-    // Update reputation for each user
+    /**
+     * Write reputation updates
+     */
     const results = [];
+
     for (const [address, stats] of usersToUpdate) {
       try {
-        console.log(`\n👤 Updating ${address}...`);
-        
-        // Get current reputation
+        console.log(`👤 Updating ${address}`);
+
         const repBefore = await publicClient.readContract({
           address: reputationAddress,
           abi: REPUTATION_ABI,
           functionName: 'getReputation',
           args: [address as `0x${string}`]
-        });
+        }) as any;
 
-        const txHashes = [];
+        const txHashes: string[] = [];
 
-        // Record dates
         for (let i = 0; i < stats.dates; i++) {
           const hash = await walletClient.writeContract({
             address: reputationAddress,
@@ -185,10 +216,8 @@ export async function POST(request: NextRequest) {
           });
           await publicClient.waitForTransactionReceipt({ hash });
           txHashes.push(hash);
-          console.log(`  ✅ Date recorded: ${hash}`);
         }
 
-        // Record no-shows
         for (let i = 0; i < stats.noShows; i++) {
           const hash = await walletClient.writeContract({
             address: reputationAddress,
@@ -198,7 +227,6 @@ export async function POST(request: NextRequest) {
           });
           await publicClient.waitForTransactionReceipt({ hash });
           txHashes.push(hash);
-          console.log(`  ✅ No-show recorded: ${hash}`);
         }
 
         const repAfter = await publicClient.readContract({
@@ -206,7 +234,7 @@ export async function POST(request: NextRequest) {
           abi: REPUTATION_ABI,
           functionName: 'getReputation',
           args: [address as `0x${string}`]
-        });
+        }) as any;
 
         results.push({
           address,
@@ -218,35 +246,36 @@ export async function POST(request: NextRequest) {
             totalDates: Number(repAfter[0]),
             noShows: Number(repAfter[1])
           },
-          added: {
-            dates: stats.dates,
-            noShows: stats.noShows
-          },
+          added: stats,
           txHashes
         });
 
-      } catch (error) {
-        console.error(`Failed to update ${address}:`, error);
+      } catch (err) {
+        console.error(`Failed updating ${address}`, err);
         results.push({
           address,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: err instanceof Error ? err.message : 'Unknown error'
         });
       }
     }
 
-    console.log('✅ Backfill complete!');
+    console.log('✅ Backfill complete');
 
     return NextResponse.json({
       success: true,
-      message: `Backfilled ${usersToUpdate.size} users`,
+      updatedUsers: usersToUpdate.size,
       results
     });
 
   } catch (error) {
-    console.error('Backfill error:', error);
-    return NextResponse.json({
-      error: 'Backfill failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error('❌ Backfill error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Backfill failed'
+      },
+      { status: 500 }
+    );
   }
 }
