@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "BaseMatch Smart Contracts",
   "private": true,
-  "workspaces": ["frontend"],
+  
   "scripts": {
     "deploy:sepolia": "npx hardhat run scripts/deploy.js --network base-sepolia",
-    "build": "cd frontend && npm run build"
+    
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
