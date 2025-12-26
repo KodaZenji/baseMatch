@@ -14,7 +14,17 @@ const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { address, name, age, gender, interests, email, photoUrl, signature, message } = body;
+    const {
+      address,
+      name,
+      age,
+      gender,
+      interests,
+      email,
+      photoUrl,
+      signature,
+      message,
+    } = body;
 
     console.log('📥 Registration request:', {
       hasAddress: !!address,
@@ -40,7 +50,19 @@ export async function POST(request: NextRequest) {
     // Verify wallet signature (if signature + message provided)
     if (signature && message) {
       console.log('🔐 Verifying wallet signature...');
-      const isValidSignature = await verifyWalletSignature(message, signature, normalizedAddress);
+
+      // If message is sent as JSON string, parse it
+      const parsedMessage =
+        typeof message === 'string' ? JSON.parse(message) : message;
+
+      // Construct params object for verifyWalletSignature
+      const params = {
+        address: normalizedAddress,
+        nonce: parsedMessage.nonce,
+        issuedAt: parsedMessage.issuedAt,
+      };
+
+      const isValidSignature = await verifyWalletSignature(params, signature);
 
       if (!isValidSignature) {
         return NextResponse.json(
@@ -48,6 +70,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+
       console.log('✅ Signature verified');
     }
 
@@ -84,7 +107,11 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       // Email conflict check
-      if (existingProfileByEmail && existingProfileByWallet && existingProfileByEmail.id !== existingProfileByWallet.id) {
+      if (
+        existingProfileByEmail &&
+        existingProfileByWallet &&
+        existingProfileByEmail.id !== existingProfileByWallet.id
+      ) {
         return NextResponse.json(
           { error: 'Email is already associated with a different wallet address' },
           { status: 409 }
