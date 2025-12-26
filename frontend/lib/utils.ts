@@ -2,8 +2,7 @@
 // FILE: lib/utils.ts
 // ============================================
 import { randomBytes } from 'crypto';
-import { ethers } from 'ethers';
-import { createPublicClient, http, Address } from 'viem';
+import { verifyMessage, createPublicClient, http, Address } from 'viem';
 import { base } from 'viem/chains';
 
 const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS as Address;
@@ -34,11 +33,6 @@ const publicClient = createPublicClient({
 // Check if a wallet owns at least one NFT
 // ============================================
 export async function checkNftOwnership(address: string): Promise<boolean> {
-  if (!PROFILE_NFT_ADDRESS) {
-    console.error("❌ NFT Contract address is not set in environment variables");
-    return false;
-  }
-
   try {
     console.log('🔍 Checking NFT ownership for:', address);
     console.log('📍 Contract:', PROFILE_NFT_ADDRESS);
@@ -53,7 +47,6 @@ export async function checkNftOwnership(address: string): Promise<boolean> {
 
     const hasNFT = balance > BigInt(0);
     console.log(`✅ NFT Balance for ${address}:`, balance.toString(), hasNFT ? '(Has NFT)' : '(No NFT)');
-
     return hasNFT;
   } catch (error) {
     console.error('❌ Error checking NFT balance:', error);
@@ -71,7 +64,7 @@ export function calculatePhotoHash(photoUrl: string): string {
 }
 
 // ============================================
-// Verify wallet signature (supports 450-character signatures for Base App)
+// Verify wallet signature (viem - works with Base App)
 // ============================================
 export async function verifyWalletSignature(
   message: string,
@@ -86,13 +79,16 @@ export async function verifyWalletSignature(
       addressLength: normalizedAddress.length,
       signatureLength: normalizedSignature.length,
       messageLength: message.length,
-      addressPreview: normalizedAddress.substring(0, 10) + '...',
-      signaturePreview: normalizedSignature.substring(0, 10) + '...',
+      addressPreview: normalizedAddress.slice(0, 10) + '...',
+      signaturePreview: normalizedSignature.slice(0, 10) + '...',
     });
 
-    // Recover signer using ethers (supports long 450-char signatures from Base App)
-    const recoveredAddress = ethers.verifyMessage(message, normalizedSignature);
-    const isValid = recoveredAddress.toLowerCase() === normalizedAddress;
+    // ✅ viem expects a raw hex signature from signMessage
+    const isValid = await verifyMessage({
+      address: normalizedAddress as `0x${string}`,
+      message,
+      signature: normalizedSignature as `0x${string}`,
+    });
 
     console.log('✅ Signature verification result:', isValid);
     return isValid;
