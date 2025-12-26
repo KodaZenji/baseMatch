@@ -5,7 +5,7 @@
   "private": true,
   
   "scripts": {
-    "deploy:sepolia": "npx hardhat run scripts/deploy.js --network base-sepolia",
+    "deploy:sepolia": "npx hardhat run scripts/deploy.js --network base-sepolia"
     
   },
   "devDependencies": {
