@@ -6,7 +6,7 @@ import { base } from 'viem/chains';
 // Create a public client to interact with the blockchain
 const publicClient = createPublicClient({
     chain: base,
-    transport: http(`https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`),
+    transport: http(`https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`),
 });
 
 export async function GET(
