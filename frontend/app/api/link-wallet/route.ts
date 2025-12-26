@@ -5,27 +5,41 @@ import { NextResponse } from "next/server";
 import { supabaseService } from '@/lib/supabase.server';
 import { verifyWalletSignature } from '@/lib/utils';
 
+export const runtime = 'nodejs';
+
 export async function POST(req: Request) {
   try {
-    // Expect 'id' (UUID), wallet address, profile details, and typed signature payload from client
-    const { id, wallet_address, name, age, gender, interests, signature, nonce, issuedAt } = await req.json();
+    // Expect 'id' (UUID), wallet info, and typed signature payload from client
+    const {
+      id,
+      wallet_address,
+      signature,
+      nonce,
+      issuedAt,
+      name,
+      age,
+      gender,
+      interests
+    } = await req.json();
 
     // Validate required input
     if (!id || !wallet_address || !signature || !nonce || !issuedAt) {
       return NextResponse.json(
-        { error: "Missing required fields: id, wallet_address, signature, nonce, issuedAt" },
+        { error: "Missing required fields: id, wallet_address, signature, nonce, or issuedAt" },
         { status: 400 }
       );
     }
 
-    // Normalize wallet address to lowercase
+    // Normalize wallet address
     const normalizedWallet = wallet_address.toLowerCase();
 
-    // 1️⃣ Verify typed-data wallet signature
+    // -----------------------------
+    // 1. Verify wallet signature
+    // -----------------------------
     const isValidSignature = await verifyWalletSignature(signature, {
       address: normalizedWallet,
       nonce,
-      issuedAt,
+      issuedAt: Number(issuedAt)
     });
 
     if (!isValidSignature) {
@@ -35,7 +49,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2️⃣ Update profile with wallet info + optional fields
+    // -----------------------------
+    // 2. Update profile in Supabase
+    // -----------------------------
     const { data: profile, error } = await supabaseService
       .from("profiles")
       .update({
@@ -44,8 +60,7 @@ export async function POST(req: Request) {
         ...(name && { name }),
         ...(age && { age: parseInt(age) }),
         ...(gender && { gender }),
-        ...(interests && { interests }),
-        updated_at: new Date().toISOString()
+        ...(interests && { interests })
       })
       .eq("id", id)
       .select()
@@ -66,7 +81,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Success response
+    // -----------------------------
+    // 3. Success response
+    // -----------------------------
     return NextResponse.json({ success: true, profile });
 
   } catch (err: any) {
