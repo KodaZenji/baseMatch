@@ -62,8 +62,8 @@ export async function POST(request: NextRequest) {
         issuedAt: parsedMessage.issuedAt,
       };
 
-      const isValidSignature = await verifyWalletSignature(params, signature);
-
+      const isValidSignature = await verifyWalletSignature(signature, params);
+      
       if (!isValidSignature) {
         return NextResponse.json(
           { error: 'Invalid wallet signature' },
