@@ -63,7 +63,7 @@ export function buildRegistrationTypedData(params: {
       nonce: params.nonce,
       issuedAt: BigInt(params.issuedAt),
     },
-  } const;
+  } as const;
 }
 
 // ============================================
