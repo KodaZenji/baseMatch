@@ -1,16 +1,17 @@
+
 // File: frontend/app/api/stakes/check-reminders/route.ts
 // FIXED: Query blockchain for confirmation status before sending reminders
 
 import { NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
 import { createPublicClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { base } from 'viem/chains';
 import { STAKING_ABI, CONTRACTS } from '@/lib/contracts';
 
 // Create viem client for reading blockchain
 const publicClient = createPublicClient({
-  chain: baseSepolia,
-  transport: http()
+  chain: base,
+  transport: http(`https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`)
 });
 
 // Helper function to get confirmation status from blockchain
