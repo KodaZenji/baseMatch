@@ -1,4 +1,8 @@
-export const runtime = 'nodejs';
+import { NextRequest } from 'next/server';
+
+/* -------------------------------------------------------------------------- */
+/*                               Network Config                                */
+/* -------------------------------------------------------------------------- */
 
 const NETWORKS = {
   'base-sepolia': {
@@ -19,22 +23,30 @@ const NETWORKS = {
   }
 } as const;
 
+type NetworkKey = keyof typeof NETWORKS;
+
+function getNetworkConfig() {
+  const key =
+    (process.env.NEXT_PUBLIC_NETWORK as NetworkKey) || 'base-mainnet';
+
+  return NETWORKS[key] ?? NETWORKS['base-mainnet'];
+}
+
+/* -------------------------------------------------------------------------- */
+/*                             Static Constants                                 */
+/* -------------------------------------------------------------------------- */
+
 const SUPABASE_IMAGE_BASE_URL =
   'https://xvynefwulsgbyzkvqmuo.supabase.co/storage/v1/object/public/nft-images';
 
-/* ---------------- helpers ---------------- */
+/* -------------------------------------------------------------------------- */
+/*                         Low-level RPC Utilities                              */
+/* -------------------------------------------------------------------------- */
 
-function getNetworkConfig() {
-  const key = process.env.NEXT_PUBLIC_NETWORK;
-
-  if (key && key in NETWORKS) {
-    return NETWORKS[key as keyof typeof NETWORKS];
-  }
-
-  // HARD SAFE DEFAULT
-  return NETWORKS['base-mainnet'];
-}
-
+/**
+ * Encode getProfileByTokenId(uint256)
+ * selector = 0x6c7e6b64
+ */
 function encodeGetProfileByTokenId(tokenId: string): string {
   return `0x6c7e6b64${tokenId.padStart(64, '0')}`;
 }
@@ -49,9 +61,9 @@ async function callContract(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       jsonrpc: '2.0',
+      id: 1,
       method: 'eth_call',
-      params: [{ to: contract, data }, 'latest'],
-      id: 1
+      params: [{ to: contract, data }, 'latest']
     })
   });
 
@@ -60,18 +72,27 @@ async function callContract(
   return json.result ?? '0x';
 }
 
-function decodeProfileResponse(_: string) {
+/* -------------------------------------------------------------------------- */
+/*                          Decode (Safe Fallback)                              */
+/* -------------------------------------------------------------------------- */
+
+function decodeProfileResponse(_data: string) {
+  // NOTE: intentionally defensive — prevents build/runtime crashes
   return {
     tokenId: '0',
     name: 'BaseMatch Profile',
     age: 0,
-    gender: 'Not Specified',
+    gender: 'Not specified',
     interests: '',
     photoUrl: '',
     email: '',
     exists: true
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/*                         On-chain Profile Fetch                               */
+/* -------------------------------------------------------------------------- */
 
 async function fetchOnChainProfileData(
   rpcUrl: string,
@@ -80,13 +101,17 @@ async function fetchOnChainProfileData(
 ) {
   try {
     const encoded = encodeGetProfileByTokenId(tokenId);
-    const raw = await callContract(rpcUrl, contract, encoded);
+    const response = await callContract(rpcUrl, contract, encoded);
 
-    if (raw !== '0x') {
-      const decoded = decodeProfileResponse(raw);
-      if (decoded?.exists) return decoded;
+    if (response !== '0x') {
+      const decoded = decodeProfileResponse(response);
+      if (decoded?.exists) {
+        return { ...decoded, tokenId };
+      }
     }
-  } catch {}
+  } catch (err) {
+    console.error('RPC fetch failed:', err);
+  }
 
   return {
     tokenId,
@@ -100,7 +125,11 @@ async function fetchOnChainProfileData(
   };
 }
 
-function constructImageUrl(tokenId: string, photoUrl: string) {
+/* -------------------------------------------------------------------------- */
+/*                           Metadata Helpers                                   */
+/* -------------------------------------------------------------------------- */
+
+function constructImageUrl(tokenId: string, photoUrl?: string) {
   if (photoUrl?.startsWith('data:')) return photoUrl;
   return `${SUPABASE_IMAGE_BASE_URL}/profile-${tokenId}.jpg`;
 }
@@ -113,6 +142,7 @@ function generateMetadata(profile: any, networkName: string) {
     attributes: [
       { trait_type: 'Age', value: profile.age },
       { trait_type: 'Gender', value: profile.gender },
+      { trait_type: 'Interests', value: profile.interests || 'Not specified' },
       { trait_type: 'Network', value: networkName },
       { trait_type: 'Transferable', value: false }
     ],
@@ -120,19 +150,30 @@ function generateMetadata(profile: any, networkName: string) {
   };
 }
 
-/* ---------------- API ---------------- */
+/* -------------------------------------------------------------------------- */
+/*                               API HANDLERS                                   */
+/* -------------------------------------------------------------------------- */
 
 export async function GET(
-  _: Request,
-  { params }: { params: { tokenId: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ tokenId: string }> }
 ) {
-  const { tokenId } = params;
+  const { tokenId } = await params;
 
   if (!tokenId || isNaN(Number(tokenId))) {
-    return Response.json({ error: 'Invalid tokenId' }, { status: 400 });
+    return Response.json(
+      { error: 'Invalid tokenId' },
+      { status: 400 }
+    );
   }
 
   const network = getNetworkConfig();
+
+  console.log('🌐 Network Configuration:', {
+    network: network.name,
+    contractAddress: network.contractAddress,
+    env: process.env.NODE_ENV
+  });
 
   const profile = await fetchOnChainProfileData(
     network.rpcUrl,
@@ -143,6 +184,7 @@ export async function GET(
   const metadata = generateMetadata(profile, network.name);
 
   return new Response(JSON.stringify(metadata), {
+    status: 200,
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'public, max-age=300',
@@ -151,8 +193,13 @@ export async function GET(
   });
 }
 
-export async function HEAD() {
+export async function HEAD(
+  request: NextRequest,
+  { params }: { params: Promise<{ tokenId: string }> }
+) {
   return new Response(null, {
-    headers: { 'Cache-Control': 'public, max-age=300' }
+    headers: {
+      'Cache-Control': 'public, max-age=300'
+    }
   });
 }
