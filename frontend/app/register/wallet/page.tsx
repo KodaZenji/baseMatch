@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -17,20 +17,19 @@ export default function WalletRegisterPage() {
         gender: '',
         interests: '',
         email: '',
-        photoUrl: '', // This will be set to Dicebear URL
+        photoUrl: '',
     });
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
 
-    // Generate avatar based on wallet and SET IT IN FORM DATA
+    // Generate avatar based on wallet address
     useEffect(() => {
         if (address) {
             const seed = address.substring(2, 10);
             const generatedAvatarUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
             setAvatarUrl(generatedAvatarUrl);
-            // IMPORTANT: Set the photoUrl in formData so it gets sent to the API
             setFormData(prev => ({ ...prev, photoUrl: generatedAvatarUrl }));
         }
     }, [address]);
@@ -40,7 +39,6 @@ export default function WalletRegisterPage() {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
                 <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-                    {/* Logo */}
                     <div className="flex justify-center mb-6">
                         <div className="relative">
                             <div className="bg-white rounded-full p-3 shadow-lg">
@@ -86,40 +84,59 @@ export default function WalletRegisterPage() {
         setIsLoading(true);
 
         try {
-            if (!address) throw new Error('Wallet not connected');
+            if (!address) {
+                throw new Error('Wallet not connected');
+            }
 
             // Validate form
             if (!formData.name || !formData.age || !formData.gender || !formData.interests || !formData.email) {
                 throw new Error('Please fill in all required fields');
             }
 
-            if (parseInt(formData.age) < 18 || parseInt(formData.age) > 120) {
+            const ageNum = parseInt(formData.age);
+            if (isNaN(ageNum) || ageNum < 18 || ageNum > 120) {
                 throw new Error('Age must be between 18 and 120');
             }
 
-            // Sign message
-            const message = `Register with wallet ${address}\n\nTimestamp: ${Date.now()}`;
-            const signature = await signMessageAsync({ message });
+            // Email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(formData.email)) {
+                throw new Error('Please enter a valid email address');
+            }
 
-            // Call register API with photoUrl included
+            // Sign message
+            const timestamp = Date.now();
+            const message = `Register with wallet ${address}\n\nTimestamp: ${timestamp}`;
+            
+            console.log('📝 Signing message...');
+            const signature = await signMessageAsync({ message });
+            console.log('✅ Message signed');
+
+            // Call register API
+            console.log('📤 Sending registration request...');
             const response = await fetch('/api/profile/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     address,
                     name: formData.name,
-                    age: parseInt(formData.age),
+                    age: ageNum,
                     gender: formData.gender,
                     interests: formData.interests,
                     email: formData.email,
-                    photoUrl: formData.photoUrl, // Now includes the Dicebear URL
+                    photoUrl: formData.photoUrl,
                     signature,
                     message,
                 }),
             });
 
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error);
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Registration failed');
+            }
+
+            console.log('✅ Registration successful');
 
             // Store registration data
             localStorage.setItem('walletRegistration', JSON.stringify({
@@ -133,6 +150,7 @@ export default function WalletRegisterPage() {
             // Redirect to minting page
             router.push('/mint');
         } catch (err) {
+            console.error('❌ Registration error:', err);
             setError(err instanceof Error ? err.message : 'Registration failed');
         } finally {
             setIsLoading(false);
@@ -197,6 +215,7 @@ export default function WalletRegisterPage() {
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             required
+                            maxLength={50}
                             className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="Your name"
                         />
@@ -241,9 +260,13 @@ export default function WalletRegisterPage() {
                             onChange={(e) => setFormData({ ...formData, interests: e.target.value })}
                             required
                             rows={3}
+                            maxLength={500}
                             className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="Hiking, Photography, Crypto..."
                         />
+                        <p className="text-xs text-gray-500 mt-1">
+                            {formData.interests.length}/500 characters
+                        </p>
                     </div>
 
                     {/* Email */}
@@ -265,7 +288,7 @@ export default function WalletRegisterPage() {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isLoading ? 'Processing...' : 'Create Profile & Mint NFT'}
                     </button>
