@@ -528,7 +528,7 @@ const isMainnet = process.env.NEXT_PUBLIC_ENABLE_TESTNETS === 'false';
 
 export const CONTRACTS = {
     PROFILE_NFT: isMainnet
-        ? process.env.NEXT_PUBLIC_PROFILE_NFT_MAINNET || ''
+        ? process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS || ''
         : process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS || '',
     MATCHING: isMainnet
         ? process.env.NEXT_PUBLIC_MATCHING_ADDRESS || ''
