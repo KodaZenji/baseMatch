@@ -1,8 +1,9 @@
+
 // ============================================
 // FILE: lib/utils.ts
 // ============================================
 import { randomBytes } from 'crypto';
-import { verifyMessage, createPublicClient, http, Address } from 'viem';
+import { verifyMessage, verifyTypedData, createPublicClient, http, Address } from 'viem';
 import { base } from 'viem/chains';
 
 const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS as Address;
@@ -29,6 +30,41 @@ const publicClient = createPublicClient({
   transport: http(`https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`),
 });
 
+// ============================================
+// EIP-712 Domain (used for wallet signatures)
+// ============================================
+export const SIGNING_DOMAIN = {
+  name: 'BaseMatch',
+  version: '1',
+  chainId: 8453, // Base Mainnet
+} as const;
+
+// ============================================
+// Build typed message payload
+// ============================================
+export function buildRegistrationTypedData(params: {
+  address: string;
+  nonce: string;
+  issuedAt: number;
+}) {
+  return {
+    domain: SIGNING_DOMAIN,
+    types: SIGNING_TYPES,
+    primaryType: 'Registration',
+    message: {
+      address: params.address as Address,
+      nonce: params.nonce,
+      issuedAt: BigInt(params.issuedAt),
+    },
+  };
+}
+export const SIGNING_TYPES = {
+  Registration: [
+    { name: 'address', type: 'address' },
+    { name: 'nonce', type: 'string' },
+    { name: 'issuedAt', type: 'uint256' },
+  ],
+} as const;
 // ============================================
 // Check if a wallet owns at least one NFT
 // ============================================
@@ -64,36 +100,43 @@ export function calculatePhotoHash(photoUrl: string): string {
 }
 
 // ============================================
-// Verify wallet signature (viem - works with Base App)
+// Verify wallet signature (EIP-712, Base App compatible)
 // ============================================
 export async function verifyWalletSignature(
-  message: string,
   signature: string,
-  address: string
+  params: {
+    address: string;
+    nonce: string;
+    issuedAt: number;
+  }
 ): Promise<boolean> {
   try {
-    const normalizedAddress = address.toLowerCase();
-    const normalizedSignature = signature.startsWith('0x') ? signature : `0x${signature}`;
-
-    console.log('🔐 Verifying signature:', {
-      addressLength: normalizedAddress.length,
-      signatureLength: normalizedSignature.length,
-      messageLength: message.length,
-      addressPreview: normalizedAddress.slice(0, 10) + '...',
-      signaturePreview: normalizedSignature.slice(0, 10) + '...',
+    console.log('🔐 Verifying typed wallet signature:', {
+      address: params.address,
+      nonce: params.nonce,
+      issuedAt: params.issuedAt,
+      signatureLength: signature.length,
     });
 
-    // ✅ viem expects a raw hex signature from signMessage
-    const isValid = await verifyMessage({
-      address: normalizedAddress as `0x${string}`,
-      message,
-      signature: normalizedSignature as `0x${string}`,
+    const typedData = buildRegistrationTypedData({
+      address: params.address,
+      nonce: params.nonce,
+      issuedAt: params.issuedAt,
     });
 
-    console.log('✅ Signature verification result:', isValid);
+    const isValid = verifyTypedData({
+      address: params.address as Address,
+      domain: typedData.domain,
+      types: typedData.types,
+      primaryType: typedData.primaryType,
+      message: typedData.message,
+      signature: signature as `0x${string}`,
+    });
+
+    console.log('✅ Typed signature verification result:', isValid);
     return isValid;
   } catch (error) {
-    console.error('❌ Signature verification error:', error);
+    console.error('❌ Typed signature verification failed:', error);
     return false;
   }
 }
