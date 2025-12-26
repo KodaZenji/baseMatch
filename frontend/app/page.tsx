@@ -18,6 +18,10 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const { profile, isLoading } = useProfile();
   
+  // Add database fallback check state
+  const [dbProfile, setDbProfile] = useState<any>(null);
+  const [isCheckingDb, setIsCheckingDb] = useState(false);
+  
   // Check localStorage for saved tab on mount
   const [activeTab, setActiveTab] = useState<'browse' | 'matches' | 'profile' | 'notifications'>(() => {
     if (typeof window !== 'undefined') {
@@ -37,6 +41,65 @@ export default function Home() {
     autoRefresh: true
   });
 
+  // Helper function to check database with retry
+  const checkDatabaseWithRetry = async (retries = 5): Promise<boolean> => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        console.log(`🔍 Checking database (attempt ${i + 1}/${retries})...`);
+
+        const response = await fetch('/api/profile/status');
+        const data = await response.json();
+
+        console.log('📋 Database check result:', data);
+
+        if (data.hasProfile && data.profile) {
+          console.log('✅ Profile found in database!');
+          setDbProfile(data.profile);
+          return true;
+        }
+
+        // Wait before retrying (exponential backoff)
+        if (i < retries - 1) {
+          const waitTime = 2000 * (i + 1);
+          console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+        }
+      } catch (err) {
+        console.error(`❌ Database check attempt ${i + 1} failed:`, err);
+      }
+    }
+
+    console.log('ℹ️ No profile found in database after all retries');
+    return false;
+  };
+
+  // New effect: If blockchain check fails/takes too long, check database
+  useEffect(() => {
+    const checkDatabaseFallback = async () => {
+      if (!isConnected || !address) return;
+      
+      // If blockchain profile doesn't exist after loading completes
+      if (!isLoading && !profile?.exists) {
+        console.log('🔄 Blockchain profile not found, checking database...');
+        setIsCheckingDb(true);
+        
+        const dbProfileExists = await checkDatabaseWithRetry();
+        
+        if (dbProfileExists) {
+          console.log('✅ Profile found in database, redirecting...');
+          // Small delay to ensure state is set
+          setTimeout(() => {
+            router.push('/');
+          }, 500);
+        }
+        
+        setIsCheckingDb(false);
+      }
+    };
+
+    checkDatabaseFallback();
+  }, [isLoading, profile?.exists, isConnected, address, router]);
+
   useEffect(() => {
     if (isLoading) {
       const timer = setTimeout(() => {
@@ -46,10 +109,12 @@ export default function Home() {
     }
   }, [isLoading]);
 
-  if (isLoading && !loadingTimeout) {
+  if (isLoading || isCheckingDb) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center">
-        <div className="text-white text-2xl">Loading...</div>
+        <div className="text-white text-2xl">
+          {isCheckingDb ? 'Checking database...' : 'Loading...'}
+        </div>
       </div>
     );
   }
@@ -96,8 +161,8 @@ export default function Home() {
     );
   }
 
-  // Landing Page - Not Connected OR Connected but No Profile
-  if (!isConnected || !profile?.exists) {
+  // Landing Page - Not Connected OR (Connected but No Profile in blockchain AND no dbProfile)
+  if (!isConnected || (!profile?.exists && !dbProfile)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center animate-fadeIn">
@@ -235,7 +300,7 @@ export default function Home() {
     );
   }
 
-  // Main App - Connected with Profile
+  // Main App - Connected with Profile (either blockchain or database)
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-blue-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
