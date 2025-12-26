@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CONTRACTS, PROFILE_NFT_ABI } from '@/lib/contracts';
 import { createPublicClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { base } from 'viem/chains';
 import { supabaseService } from '@/lib/supabase.server';
 
 const publicClient = createPublicClient({
-    chain: baseSepolia,
-    transport: http(),
+    chain: base,
+    transport: http('https://base-mainnet.g.alchemy.com/v2/eij573azum6O085qLp7TD'),
 });
 
 /**
