@@ -8,32 +8,40 @@ const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS;
 
 /**
  * POST /api/profile/register
- * Wallet-First Flow: Register profile with wallet signature, trigger email verification if needed
- * 
- * IMPORTANT: photoUrl must be a SHORT URL (max 500 chars for on-chain storage)
- * - Use Dicebear avatars: https://api.dicebear.com/7.x/pixel-art/svg?seed=xyz
- * - Or upload to IPFS/Supabase Storage and pass the URL
- * - DO NOT pass base64 images directly - they're too long for on-chain storage
+ * Supports TWO flows:
+ * 1. Wallet-only registration (no email)
+ * 2. Wallet + Email registration
  */
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         const { address, name, age, gender, interests, email, photoUrl, signature, message } = body;
 
-        // --- 1. Basic Validation ---
-        if (!address || !email || !name || !age || !gender || !interests) {
+        console.log('📥 Registration request:', {
+            hasAddress: !!address,
+            hasName: !!name,
+            hasAge: !!age,
+            hasGender: !!gender,
+            hasInterests: !!interests,
+            hasEmail: !!email,
+            hasSignature: !!signature,
+        });
+
+        // --- 1. Basic Validation (email is now OPTIONAL) ---
+        if (!address || !name || !age || !gender || !interests) {
             return NextResponse.json(
-                { error: 'Missing required fields for registration' },
+                { error: 'Missing required fields: address, name, age, gender, interests' },
                 { status: 400 }
             );
         }
 
         // Normalize inputs
-        const normalizedEmail = email.toLowerCase().trim();
+        const normalizedEmail = email ? email.toLowerCase().trim() : null;
         const normalizedAddress = address.toLowerCase();
 
         // 2. Verify wallet signature (Only runs if signature/message are provided)
         if (signature && message) {
+            console.log('🔐 Verifying wallet signature...');
             const isValidSignature = await verifyWalletSignature(message, signature, normalizedAddress);
             if (!isValidSignature) {
                 return NextResponse.json(
@@ -41,6 +49,7 @@ export async function POST(request: NextRequest) {
                     { status: 400 }
                 );
             }
+            console.log('✅ Signature verified');
         }
 
         // 3. Data Validation
@@ -54,44 +63,53 @@ export async function POST(request: NextRequest) {
         // 4. Validate photoUrl length for on-chain storage
         if (photoUrl && photoUrl.length > 500) {
             return NextResponse.json(
-                { error: 'Photo URL too long. Maximum 500 characters. Please upload to IPFS or use a short URL.' },
+                { error: 'Photo URL too long. Maximum 500 characters.' },
                 { status: 400 }
             );
         }
 
-        // 5. Profile Lookup: Find existing profile by email OR wallet
-        const { data: existingProfileByEmail } = await supabaseService
-            .from('profiles')
-            .select('*')
-            .eq('email', normalizedEmail)
-            .single();
+        // 5. Profile Lookup
+        let existingProfile = null;
 
+        // Check by wallet first (always required)
         const { data: existingProfileByWallet } = await supabaseService
             .from('profiles')
             .select('*')
             .eq('wallet_address', normalizedAddress)
-            .single();
+            .maybeSingle();
 
-        // Check for conflicts (Email linked to a different wallet)
-        if (existingProfileByEmail && existingProfileByWallet && existingProfileByEmail.id !== existingProfileByWallet.id) {
-            return NextResponse.json(
-                { error: 'Email is already associated with a different wallet address (Conflict)' },
-                { status: 409 }
-            );
+        // If email provided, check for conflicts
+        if (normalizedEmail) {
+            const { data: existingProfileByEmail } = await supabaseService
+                .from('profiles')
+                .select('*')
+                .eq('email', normalizedEmail)
+                .maybeSingle();
+
+            // Check for conflicts (Email linked to a different wallet)
+            if (existingProfileByEmail && existingProfileByWallet && existingProfileByEmail.id !== existingProfileByWallet.id) {
+                return NextResponse.json(
+                    { error: 'Email is already associated with a different wallet address' },
+                    { status: 409 }
+                );
+            }
+
+            existingProfile = existingProfileByEmail || existingProfileByWallet;
+        } else {
+            existingProfile = existingProfileByWallet;
         }
-
-        const existingProfile = existingProfileByEmail || existingProfileByWallet;
 
         let profileId: string;
         let needsEmailVerification = false;
 
-        // 6. Upsert Logic - Store photoUrl in database
+        // 6. Upsert Logic
         if (existingProfile) {
-            // Profile exists - attempt to UPDATE
+            console.log('📝 Updating existing profile:', existingProfile.id);
+            
+            // Profile exists - UPDATE
             const updateData: any = {
                 wallet_address: normalizedAddress,
                 wallet_verified: true,
-                email: normalizedEmail,
                 name,
                 age,
                 gender,
@@ -99,7 +117,12 @@ export async function POST(request: NextRequest) {
                 updated_at: new Date().toISOString()
             };
 
-            // Only include photoUrl if provided (and it's short enough)
+            // Only update email if provided
+            if (normalizedEmail) {
+                updateData.email = normalizedEmail;
+            }
+
+            // Only include photoUrl if provided
             if (photoUrl) {
                 updateData.photoUrl = photoUrl;
             }
@@ -110,19 +133,20 @@ export async function POST(request: NextRequest) {
                 .eq('id', existingProfile.id);
 
             if (updateError) {
-                console.error('Error updating existing profile:', updateError);
+                console.error('❌ Error updating profile:', updateError);
                 return NextResponse.json(
-                    { error: `Registration failed (Update): ${updateError.message}` },
+                    { error: `Registration failed: ${updateError.message}` },
                     { status: 500 }
                 );
             }
 
             profileId = existingProfile.id;
-            needsEmailVerification = !existingProfile.email_verified;
+            needsEmailVerification = normalizedEmail && !existingProfile.email_verified;
         } else {
-            // New profile - attempt to CREATE
+            console.log('✨ Creating new profile');
+            
+            // New profile - CREATE
             const insertData: any = {
-                email: normalizedEmail,
                 wallet_address: normalizedAddress,
                 wallet_verified: true,
                 email_verified: false,
@@ -134,7 +158,12 @@ export async function POST(request: NextRequest) {
                 updated_at: new Date().toISOString()
             };
 
-            // Only include photoUrl if provided (and it's short enough)
+            // Only include email if provided
+            if (normalizedEmail) {
+                insertData.email = normalizedEmail;
+            }
+
+            // Only include photoUrl if provided
             if (photoUrl) {
                 insertData.photoUrl = photoUrl;
             }
@@ -146,27 +175,24 @@ export async function POST(request: NextRequest) {
                 .single();
 
             if (createError || !newProfile) {
-                console.error('Error creating new profile:', createError);
+                console.error('❌ Error creating profile:', createError);
                 return NextResponse.json(
-                    { error: `Registration failed (Creation): ${createError?.message || 'Unknown DB error'}` },
+                    { error: `Registration failed: ${createError?.message || 'Unknown error'}` },
                     { status: 500 }
                 );
             }
 
             profileId = newProfile.id;
-            needsEmailVerification = true;
+            needsEmailVerification = !!normalizedEmail; // Only needs verification if email was provided
         }
 
-        // 7. Verification Trigger: Send 6-digit code if needed
-        if (needsEmailVerification) {
+        // 7. Send verification email if needed
+        if (needsEmailVerification && normalizedEmail) {
+            console.log('📧 Sending verification email...');
             try {
-                // Call the register-email endpoint to send 6-digit code
-                // This will handle creating the verification code and sending the email
-                const registerEmailResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/register-email`, {
+                await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/register-email`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         email: normalizedEmail,
                         walletAddress: normalizedAddress,
@@ -174,21 +200,18 @@ export async function POST(request: NextRequest) {
                         age,
                         gender,
                         interests,
-                        skipPhotoUpload: true // Since photo is already handled in this flow
+                        skipPhotoUpload: true
                     })
                 });
-
-                if (!registerEmailResponse.ok) {
-                    const errorData = await registerEmailResponse.json();
-                    console.error('Error sending verification code:', errorData);
-                }
             } catch (emailError) {
-                console.error('Error triggering verification code:', emailError);
+                console.error('⚠️ Error sending verification email:', emailError);
+                // Don't fail the registration if email sending fails
             }
         }
 
-        // 8. Return createProfile payload for on-chain minting
-        // The contract expects photoUrl to be max 500 characters
+        console.log('✅ Registration successful:', { profileId, needsEmailVerification });
+
+        // 8. Return success response
         return NextResponse.json({
             success: true,
             message: needsEmailVerification
@@ -201,8 +224,8 @@ export async function POST(request: NextRequest) {
                 age,
                 gender,
                 interests,
-                photoUrl: photoUrl || '', // This will be sent to the smart contract
-                email: normalizedEmail
+                photoUrl: photoUrl || '',
+                email: normalizedEmail || ''
             },
             userInfo: {
                 profileId,
@@ -213,9 +236,9 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('Error registering profile:', error);
+        console.error('❌ Registration error:', error);
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : 'An unknown error occurred during registration' },
+            { error: error instanceof Error ? error.message : 'Registration failed' },
             { status: 500 }
         );
     }
