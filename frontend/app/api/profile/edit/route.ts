@@ -6,7 +6,7 @@ import { supabaseService } from '@/lib/supabase.server';
 
 const publicClient = createPublicClient({
     chain: base,
-    transport: http('https://base-mainnet.g.alchemy.com/v2/eij573azum6O085qLp7TD'),
+    transport: http(`https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`),
 });
 
 /**
@@ -27,9 +27,19 @@ export async function GET(request: Request) {
 
         const normalizedAddress = address.toLowerCase();
 
+        // Check if contract address is configured
+        const contractAddress = CONTRACTS.PROFILE_NFT;
+        if (!contractAddress) {
+            console.error('Contract address not configured');
+            return NextResponse.json(
+                { error: 'Contract address not configured' },
+                { status: 500 }
+            );
+        }
+
         // Fetch blockchain data
         const profileData = await publicClient.readContract({
-            address: CONTRACTS.PROFILE_NFT as `0x${string}`,
+            address: contractAddress as `0x${string}`,
             abi: PROFILE_NFT_ABI,
             functionName: 'getProfile',
             args: [address as `0x${string}`],
