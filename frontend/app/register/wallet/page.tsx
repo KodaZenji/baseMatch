@@ -133,13 +133,14 @@ export default function WalletRegisterPage() {
 
             console.log('📝 Signing typed data...');
             const signature = await signTypedDataAsync({
-                domain: typedData.domain,
-                types: typedData.types,
-                primaryType: typedData.primaryType,
-                message: typedData.message,
-            });
-            console.log('✅ Typed data signed');
-
+    domain: {
+        ...typedData.domain,
+        verifyingContract: (typedData.domain.verifyingContract as unknown as `0x${string}`),
+    },
+    types: typedData.types,
+    primaryType: typedData.primaryType,
+    message: typedData.message,
+});
             // ------------------------
             // Call register API
             // ------------------------
