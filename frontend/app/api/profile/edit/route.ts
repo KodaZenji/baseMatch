@@ -6,10 +6,10 @@ import { supabaseService } from '@/lib/supabase.server';
 
 // Ensure env variables are present
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS;
-const ALCHEMY_KEY = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
+const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY;
 
 if (!CONTRACT_ADDRESS) throw new Error('NEXT_PUBLIC_PROFILE_NFT_ADDRESS is not set');
-if (!ALCHEMY_KEY) throw new Error('NEXT_PUBLIC_ALCHEMY_API_KEY is not set');
+if (!ALCHEMY_KEY) throw new Error('ALCHEMY_API_KEY is not set');
 
 // Initialize Base Mainnet client using Alchemy
 const publicClient = createPublicClient({
@@ -20,7 +20,7 @@ const publicClient = createPublicClient({
 /**
  * GET - Fetch profile from blockchain and database
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const address = searchParams.get('address');
@@ -70,7 +70,10 @@ export async function GET(request: Request) {
     return NextResponse.json(mergedProfile);
   } catch (error) {
     console.error('Error fetching profile:', error);
-    return NextResponse.json({ error: 'Failed to fetch profile data' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch profile data', details: (error as any).message },
+      { status: 500 }
+    );
   }
 }
 
@@ -120,10 +123,17 @@ export async function POST(request: NextRequest) {
 
     if (upsertError) {
       console.error('Supabase upsert error:', upsertError);
-      return NextResponse.json({ error: 'Failed to update profile', details: upsertError.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Failed to update profile', details: upsertError.message },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ success: true, profile: updatedProfile, message: 'Profile updated successfully' });
+    return NextResponse.json({
+      success: true,
+      profile: updatedProfile,
+      message: 'Profile updated successfully',
+    });
   } catch (error) {
     console.error('Profile update error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
