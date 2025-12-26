@@ -1,62 +1,28 @@
-// ============================================
-// FILE: app/api/profile/link-wallet/route.ts
-// ============================================
 import { NextResponse } from "next/server";
 import { supabaseService } from '@/lib/supabase.server';
-import { verifyWalletSignature } from '@/lib/utils';
-
-export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
-    // Expect 'id' (UUID), wallet info, and typed signature payload from client
-    const {
-      id,
-      wallet_address,
-      signature,
-      nonce,
-      issuedAt,
-      name,
-      age,
-      gender,
-      interests
-    } = await req.json();
 
-    // Validate required input
-    if (!id || !wallet_address || !signature || !nonce || !issuedAt) {
+    // Expect 'id' (UUID), wallet address, and profile details from the client
+    const { id, wallet_address, name, age, gender, interests } = await req.json();
+
+    // Validate input
+    if (!id || !wallet_address) {
       return NextResponse.json(
-        { error: "Missing required fields: id, wallet_address, signature, nonce, or issuedAt" },
+        { error: "Missing profile ID (id) or wallet address" },
         { status: 400 }
       );
     }
 
-    // Normalize wallet address
+    // Normalize wallet address to lowercase
     const normalizedWallet = wallet_address.toLowerCase();
 
-    // -----------------------------
-    // 1. Verify wallet signature
-    // -----------------------------
-    const isValidSignature = await verifyWalletSignature(signature, {
-      address: normalizedWallet,
-      nonce,
-      issuedAt: Number(issuedAt)
-    });
-
-    if (!isValidSignature) {
-      return NextResponse.json(
-        { error: "Invalid wallet signature" },
-        { status: 400 }
-      );
-    }
-
-    // -----------------------------
-    // 2. Update profile in Supabase
-    // -----------------------------
     const { data: profile, error } = await supabaseService
       .from("profiles")
       .update({
         wallet_address: normalizedWallet,
-        wallet_verified: true,
+        wallet_verified: true, // Setting the verified flag as requested
         ...(name && { name }),
         ...(age && { age: parseInt(age) }),
         ...(gender && { gender }),
@@ -81,9 +47,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // -----------------------------
-    // 3. Success response
-    // -----------------------------
+    // Success response
     return NextResponse.json({ success: true, profile });
 
   } catch (err: any) {
