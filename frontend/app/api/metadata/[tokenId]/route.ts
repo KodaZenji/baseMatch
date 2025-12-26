@@ -1,11 +1,5 @@
 // Network configuration for dynamic RPC selection
 const NETWORKS = {
-    'base-sepolia': {
-        rpcUrl: 'https://sepolia.base.org',
-        chainId: 84532,
-        contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS || '',
-        name: 'Base Sepolia'
-    },
     'base-mainnet': {
         rpcUrl: 'https://mainnet.base.org',
         chainId: 8453,
