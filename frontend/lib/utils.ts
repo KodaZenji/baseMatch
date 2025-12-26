@@ -1,9 +1,8 @@
-
 // ============================================
 // FILE: lib/utils.ts
 // ============================================
 import { randomBytes } from 'crypto';
-import { verifyMessage, verifyTypedData, createPublicClient, http, Address } from 'viem';
+import { verifyTypedData, createPublicClient, http, Address } from 'viem';
 import { base } from 'viem/chains';
 
 const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS as Address;
@@ -40,8 +39,16 @@ export const SIGNING_DOMAIN = {
 } as const;
 
 // ============================================
-// Build typed message payload
+// Typed signature structure
 // ============================================
+export const SIGNING_TYPES = {
+  Registration: [
+    { name: 'address', type: 'address' },
+    { name: 'nonce', type: 'string' },
+    { name: 'issuedAt', type: 'uint256' },
+  ],
+} as const;
+
 export function buildRegistrationTypedData(params: {
   address: string;
   nonce: string;
@@ -58,22 +65,13 @@ export function buildRegistrationTypedData(params: {
     },
   };
 }
-export const SIGNING_TYPES = {
-  Registration: [
-    { name: 'address', type: 'address' },
-    { name: 'nonce', type: 'string' },
-    { name: 'issuedAt', type: 'uint256' },
-  ],
-} as const;
+
 // ============================================
 // Check if a wallet owns at least one NFT
 // ============================================
 export async function checkNftOwnership(address: string): Promise<boolean> {
   try {
     console.log('🔍 Checking NFT ownership for:', address);
-    console.log('📍 Contract:', PROFILE_NFT_ADDRESS);
-    console.log('🌐 Network: Base Mainnet (via Alchemy)');
-
     const balance = await publicClient.readContract({
       address: PROFILE_NFT_ADDRESS,
       abi: PROFILE_NFT_ABI,
@@ -130,7 +128,7 @@ export async function verifyWalletSignature(
       types: typedData.types,
       primaryType: typedData.primaryType,
       message: typedData.message,
-      signature: signature as `0x${string}`,
+      signature: signature.startsWith('0x') ? (signature as `0x${string}`) : (`0x${signature}` as `0x${string}`),
     });
 
     console.log('✅ Typed signature verification result:', isValid);
