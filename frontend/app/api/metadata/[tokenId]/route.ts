@@ -3,22 +3,35 @@ const NETWORKS = {
     'base-sepolia': {
         rpcUrl: 'https://sepolia.base.org',
         chainId: 84532,
-        contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS || '0x2722CB9D5543759242F81507081866f082C1480d',
+        contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS || '',
         name: 'Base Sepolia'
     },
     'base-mainnet': {
         rpcUrl: 'https://mainnet.base.org',
         chainId: 8453,
-        contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_MAINNET || '0x2722CB9D5543759242F81507081866f082C1480d',
+        contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_MAINNET || '0x62FCf1F4217fc2Bc039648A2c5cFfb73212B0d47',
         name: 'Base Mainnet'
     }
 } as const;
 
-// Get current network from environment or default to Sepolia
-const CURRENT_NETWORK = (process.env.NEXT_PUBLIC_NETWORK as keyof typeof NETWORKS) || 'base-sepolia';
+// Get current network from environment or default to base-mainnet
+const CURRENT_NETWORK = (process.env.NEXT_PUBLIC_NETWORK as keyof typeof NETWORKS) || 'base-mainnet';
 const NETWORK_CONFIG = NETWORKS[CURRENT_NETWORK];
+
+// Add safety check to prevent undefined access
+if (!NETWORK_CONFIG) {
+    console.error(`❌ Invalid network configuration: ${CURRENT_NETWORK}`);
+    throw new Error(`Invalid NEXT_PUBLIC_NETWORK value: ${CURRENT_NETWORK}. Must be 'base-sepolia' or 'base-mainnet'`);
+}
+
 const RPC_ENDPOINT = NETWORK_CONFIG.rpcUrl;
 const PROFILE_NFT_ADDRESS = NETWORK_CONFIG.contractAddress;
+
+console.log('🌐 Network Configuration:', {
+    network: NETWORK_CONFIG.name,
+    contractAddress: PROFILE_NFT_ADDRESS,
+    env: process.env.NODE_ENV
+});
 
 // Supabase image base URL for storing NFT images
 const SUPABASE_IMAGE_BASE_URL = 'https://xvynefwulsgbyzkvqmuo.supabase.co/storage/v1/object/public/nft-images';
