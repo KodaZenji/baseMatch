@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -24,7 +22,7 @@ export default function CompleteWalletProfilePage() {
     const [error, setError] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
 
-    // ✅ Generate avatar based on wallet address
+    // Generate avatar based on wallet address
     useEffect(() => {
         if (address) {
             const seed = address.substring(2, 10);
@@ -67,7 +65,7 @@ export default function CompleteWalletProfilePage() {
                         onClick={() => router.push('/')}
                         className="text-gray-600 hover:text-gray-800 text-sm"
                     >
-                        Back to home
+                        ← Back to home
                     </button>
                 </div>
             </div>
@@ -97,7 +95,7 @@ export default function CompleteWalletProfilePage() {
                 throw new Error('Please enter a valid email address');
             }
 
-            // ✅ Register the profile WITH the generated avatar URL
+            // Register the profile WITH the generated avatar URL
             console.log('📤 Registering profile...');
             const response = await fetch('/api/profile/register', {
                 method: 'POST',
@@ -109,7 +107,7 @@ export default function CompleteWalletProfilePage() {
                     gender: formData.gender,
                     interests: formData.interests,
                     email: formData.email,
-                    photoUrl: avatarUrl, // ✅ Send the DiceBear avatar URL
+                    photoUrl: avatarUrl,
                 }),
             });
 
@@ -138,6 +136,7 @@ export default function CompleteWalletProfilePage() {
                 contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS,
             }));
 
+            // Redirect to mint page
             router.push('/mint');
         } catch (err) {
             console.error('❌ Error:', err);
@@ -145,6 +144,11 @@ export default function CompleteWalletProfilePage() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleBack = () => {
+        // Go back to homepage - this will show "Wallet Connected" state
+        router.push('/');
     };
 
     return (
@@ -184,7 +188,7 @@ export default function CompleteWalletProfilePage() {
                         </div>
                     )}
 
-                    {/* ✅ Avatar Display */}
+                    {/* Avatar Display */}
                     <div className="flex justify-center">
                         {avatarUrl && (
                             <div className="text-center">
@@ -233,7 +237,7 @@ export default function CompleteWalletProfilePage() {
                             value={formData.gender}
                             onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                             required
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-600"
                         >
                             <option value="">Select gender</option>
                             <option value="Female">Female</option>
@@ -242,7 +246,7 @@ export default function CompleteWalletProfilePage() {
                         </select>
                     </div>
 
-                    {/* Photo Note - Updated for wallet users */}
+                    {/* Photo Note */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Photo</label>
                         <p className="text-xs text-gray-500 mb-2">
@@ -279,22 +283,22 @@ export default function CompleteWalletProfilePage() {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold 
+                          hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isLoading ? 'Processing...' : 'Mint Profile NFT'}
+                        {isLoading ? 'Processing...' : 'Mint Profile NFT →'}
                     </button>
                 </form>
 
                 <div className="mt-6 text-center">
                     <button
-                        onClick={() => router.push('/')}
-                        className="text-gray-600 hover:text-gray-800 text-sm"
+                        onClick={handleBack}
+                        className="text-gray-600 hover:text-gray-800 text-sm transition-colors"
                     >
-                        Back to home
+                        ← Back to home
                     </button>
                 </div>
             </div>
         </div>
     );
 }
-
