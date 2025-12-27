@@ -12,6 +12,8 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { BaseAppAutoConnect } from '@/components/BaseAppAutoConnect';
+
 
 export default function Home() {
   const router = useRouter();
