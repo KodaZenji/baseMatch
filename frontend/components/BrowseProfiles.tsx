@@ -6,16 +6,18 @@ import ProfileCard from './ProfileCard';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useState, useEffect } from 'react';
 import GiftingModal from './GiftingModal';
+import { RefreshCw } from 'lucide-react'; // Add this import
 
 export default function BrowseProfiles() {
     const { address } = useAccount();
-    const { profiles, loading } = useProfiles();
+    const { profiles, loading, refresh } = useProfiles(); // ✅ Get refresh function
     const [showSuccess, setShowSuccess] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [isTestMode, setIsTestMode] = useState(true);
     const [showGiftingModal, setShowGiftingModal] = useState(false);
     const [selectedRecipient, setSelectedRecipient] = useState({ address: '', name: '' });
     const [isExpressingInterest, setIsExpressingInterest] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false); // ✅ Track manual refresh state
 
     const { writeContract, isPending, isError, error } = useWriteContract();
 
@@ -26,6 +28,13 @@ export default function BrowseProfiles() {
             CONTRACTS.MATCHING.length === 42;
         setIsTestMode(!hasValidContracts);
     }, []);
+
+    // ✅ Manual refresh handler
+    const handleManualRefresh = async () => {
+        setIsRefreshing(true);
+        await refresh();
+        setTimeout(() => setIsRefreshing(false), 1000);
+    };
 
     const handleExpressInterest = async (targetAddress: string) => {
         if (!address) {
@@ -122,7 +131,7 @@ export default function BrowseProfiles() {
         }
     }, [isError, error]);
 
-    if (loading) {
+    if (loading && profiles.length === 0) {
         return (
             <div className="flex justify-center items-center h-64">
                 <div className="text-gray-500">Loading profiles...</div>
@@ -135,7 +144,21 @@ export default function BrowseProfiles() {
 
     return (
         <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Discover People</h2>
+            {/* Header with title and refresh button */}
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Discover People</h2>
+                
+                {/* ✅ Manual Refresh Button */}
+                <button
+                    onClick={handleManualRefresh}
+                    disabled={isRefreshing}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50"
+                    title="Refresh profiles"
+                >
+                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    <span className="hidden sm:inline">Refresh</span>
+                </button>
+            </div>
 
             {/* Test mode indicator */}
             {isTestMode && (
@@ -156,16 +179,25 @@ export default function BrowseProfiles() {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProfiles.map((profile) => (
-                    <ProfileCard
-                        key={profile.wallet_address}
-                        profile={profile}
-                        onExpressInterest={handleExpressInterest}
-                        onGift={() => handleGift(profile.wallet_address, profile.name)}
-                        isPending={isPending || isExpressingInterest}
-                    />
-                ))}
+            {/* ✅ Loading overlay during refresh */}
+            <div className="relative">
+                {loading && profiles.length > 0 && (
+                    <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center z-10 rounded-lg">
+                        <div className="text-blue-600 font-semibold">Refreshing...</div>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredProfiles.map((profile) => (
+                        <ProfileCard
+                            key={profile.wallet_address}
+                            profile={profile}
+                            onExpressInterest={handleExpressInterest}
+                            onGift={() => handleGift(profile.wallet_address, profile.name)}
+                            isPending={isPending || isExpressingInterest}
+                        />
+                    ))}
+                </div>
             </div>
 
             {filteredProfiles.length === 0 && (
