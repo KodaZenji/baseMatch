@@ -119,19 +119,20 @@ export default function CompleteWalletProfilePage() {
 
             console.log('✅ Profile registered:', data);
 
-            // Store for minting
+            // Store for minting - MATCH THE EMAIL FLOW STRUCTURE
             localStorage.setItem('walletFirstMint', JSON.stringify({
-                profile_id: data.userInfo?.profileId,
-                id: data.userInfo?.profileId,
+                profile_id: data.userInfo?.profileId, // Use snake_case like email flow
+                id: data.userInfo?.profileId, // Also store as id for compatibility
                 address: address,
                 email: formData.email,
-                useRegisterWithWallet: true,
+                useRegisterWithWallet: true, // This flag tells mint page to use wallet flow
                 registerWithWalletPayload: {
                     name: formData.name,
                     age: ageNum,
                     gender: formData.gender,
                     interests: formData.interests,
                     email: formData.email,
+                    photoUrl: avatarUrl, // Include photoUrl in payload
                 },
                 contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS,
             }));
@@ -147,7 +148,6 @@ export default function CompleteWalletProfilePage() {
     };
 
     const handleBack = () => {
-        // Go back to homepage - this will show "Wallet Connected" state
         router.push('/');
     };
 
@@ -246,14 +246,6 @@ export default function CompleteWalletProfilePage() {
                         </select>
                     </div>
 
-                    {/* Photo Note */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Photo</label>
-                        <p className="text-xs text-gray-500 mb-2">
-                            We've generated a cute avatar for you! You can upload a custom photo later when editing your profile.
-                        </p>
-                    </div>
-
                     {/* Interests */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Interests *</label>
@@ -278,6 +270,9 @@ export default function CompleteWalletProfilePage() {
                             className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="your@email.com"
                         />
+                        <p className="text-xs text-gray-500 mt-1">
+                            We'll send a verification code to confirm your email
+                        </p>
                     </div>
 
                     <button
@@ -286,7 +281,7 @@ export default function CompleteWalletProfilePage() {
                         className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold 
                           hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isLoading ? 'Processing...' : 'Mint Profile NFT →'}
+                        {isLoading ? 'Processing...' : 'Continue to Mint →'}
                     </button>
                 </form>
 
