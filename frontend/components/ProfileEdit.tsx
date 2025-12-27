@@ -332,7 +332,7 @@ export default function ProfileEdit() {
         }
     };
 
-    const handleDeleteProfile = async () => {
+const handleDeleteProfile = async () => {
         if (!profile?.exists) {
             showNotification('Profile does not exist', 'error');
             return;
@@ -359,88 +359,95 @@ export default function ProfileEdit() {
     const hasSyncedRef = useRef(false);
 
     const syncProfileToDatabase = async (profileData: {
-    name: string;
-    age: number;
-    gender: string;
-    interests: string;
-    photoUrl: string;
-    email: string;
-}) => {
-    if (hasSyncedRef.current) {
-        console.log('⚠️ Sync already called, skipping duplicate');
-        return;
-    }
-
-    hasSyncedRef.current = true;
-
-    try {
-        console.log('Step 3: Syncing blockchain confirmation back to database...');
-        console.log('📸 Photo URL being synced:', profileData.photoUrl); // Debug log
-        
-        const response = await fetch('/api/profile/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                walletAddress: address,
-                name: profileData.name,
-                age: profileData.age,
-                gender: profileData.gender,
-                interests: profileData.interests,
-                photoUrl: profileData.photoUrl, // ✅ This ensures photo URL is synced
-                email: profileData.email,
-            }),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Failed to sync profile to database:', errorData);
-        } else {
-            const syncResult = await response.json();
-            console.log('✅ Profile synced to database successfully:', syncResult);
-            console.log('✅ Photo URL in DB:', syncResult.profile?.photoUrl); // Verify photo was saved
+        name: string;
+        age: number;
+        gender: string;
+        interests: string;
+        photoUrl: string;
+        email: string;
+    }) => {
+        if (hasSyncedRef.current) {
+            console.log('⚠️ Sync already called, skipping duplicate');
+            return;
         }
-    } catch (error) {
-        console.error('Error syncing profile to database:', error);
-    }
-};
 
-// Also update the useEffect that calls syncProfileToDatabase (around line 485)
-useEffect(() => {
-    const handleTransactionSuccess = async () => {
-        if (isSuccess && !hasShownSuccessRef.current) {
-            hasShownSuccessRef.current = true;
+        hasSyncedRef.current = true;
 
-            if (isDeleting) {
-                showNotification('✅ Profile deleted successfully!', 'success');
-                localStorage.clear();
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 2000);
+        try {
+            console.log('Step 3: Syncing blockchain confirmation back to database...');
+            console.log('📸 Photo URL being synced:', profileData.photoUrl); // ✅ Debug log
+            
+            const response = await fetch('/api/profile/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    walletAddress: address,
+                    name: profileData.name,
+                    age: profileData.age,
+                    gender: profileData.gender,
+                    interests: profileData.interests,
+                    photoUrl: profileData.photoUrl, // ✅ This ensures photo URL is synced
+                    email: profileData.email,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Failed to sync profile to database:', errorData);
             } else {
-                // ✅ Make sure we're passing the correct photoUrl
-                const photoToSync = newPhotoUrl || formData.photoUrl;
-                console.log('🎯 Syncing photo URL:', photoToSync);
-                
-                await syncProfileToDatabase({
-                    name: formData.name,
-                    age: parseInt(formData.age),
-                    gender: formData.gender,
-                    interests: formData.interests,
-                    photoUrl: photoToSync, // ✅ Use the most recent photo
-                    email: formData.email,
-                });
-
-                showNotification('✅ Profile updated and verified on blockchain!', 'success');
-                refreshProfile();
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
+                const syncResult = await response.json();
+                console.log('✅ Profile synced to database successfully:', syncResult);
+                console.log('✅ Photo URL in DB:', syncResult.profile?.photoUrl); // ✅ Verify photo was saved
             }
+        } catch (error) {
+            console.error('Error syncing profile to database:', error);
         }
     };
 
-    handleTransactionSuccess();
-}, [isSuccess, isDeleting, formData, newPhotoUrl]);
+    // ✅ ADD THIS MISSING FUNCTION
+    const handleWalletLinked = () => {
+        setHasWallet(true);
+        showNotification('Wallet linked! You can now mint your profile NFT.', 'success');
+        refreshProfile();
+    };
+
+    // ✅ UPDATED: Added newPhotoUrl to dependencies and proper photoUrl handling
+    useEffect(() => {
+        const handleTransactionSuccess = async () => {
+            if (isSuccess && !hasShownSuccessRef.current) {
+                hasShownSuccessRef.current = true;
+
+                if (isDeleting) {
+                    showNotification('✅ Profile deleted successfully!', 'success');
+                    localStorage.clear();
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    // ✅ Make sure we're passing the correct photoUrl
+                    const photoToSync = newPhotoUrl || formData.photoUrl;
+                    console.log('🎯 Syncing photo URL:', photoToSync); // ✅ Debug log
+                    
+                    await syncProfileToDatabase({
+                        name: formData.name,
+                        age: parseInt(formData.age),
+                        gender: formData.gender,
+                        interests: formData.interests,
+                        photoUrl: photoToSync, // ✅ Use the most recent photo
+                        email: formData.email,
+                    });
+
+                    showNotification('✅ Profile updated and verified on blockchain!', 'success');
+                    refreshProfile();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+            }
+        };
+
+        handleTransactionSuccess();
+    }, [isSuccess, isDeleting, formData, newPhotoUrl]); // ✅ Added newPhotoUrl to dependencies
 
     const isFullyVerified = profile?.email && formData.email === profile.email && profile?.exists;
 
