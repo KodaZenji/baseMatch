@@ -16,11 +16,7 @@ import { useRouter } from 'next/navigation';
 export default function Home() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
-  const { profile, isLoading } = useProfile();
-  
-  // Add database fallback check state
-  const [dbProfile, setDbProfile] = useState<any>(null);
-  const [isCheckingDb, setIsCheckingDb] = useState(false);
+  const { profile, isLoading } = useProfile(); // Blockchain is source of truth
   
   // Check localStorage for saved tab on mount
   const [activeTab, setActiveTab] = useState<'browse' | 'matches' | 'profile' | 'notifications'>(() => {
@@ -41,74 +37,6 @@ export default function Home() {
     autoRefresh: true
   });
 
-  // Helper function to check database with retry
-  const checkDatabaseWithRetry = async (retries = 5): Promise<boolean> => {
-    if (!address) return false;
-
-    for (let i = 0; i < retries; i++) {
-      try {
-        console.log(`🔍 Checking database (attempt ${i + 1}/${retries})...`);
-
-        const response = await fetch('/api/profile/status', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ address }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        console.log('📋 Database check result:', data);
-
-        if (data.profileExists) {
-          console.log(`✅ Profile found in ${data.source}!`);
-          setDbProfile(data);
-          return true;
-        }
-
-        // Wait before retrying (exponential backoff)
-        if (i < retries - 1) {
-          const waitTime = 2000 * (i + 1);
-          console.log(`⏳ Waiting ${waitTime}ms before retry...`);
-          await new Promise((resolve) => setTimeout(resolve, waitTime));
-        }
-      } catch (err) {
-        console.error(`❌ Database check attempt ${i + 1} failed:`, err);
-      }
-    }
-
-    console.log('ℹ️ No profile found in database after all retries');
-    return false;
-  };
-
-  // New effect: If blockchain check fails/takes too long, check database
-  useEffect(() => {
-    const checkDatabaseFallback = async () => {
-      if (!isConnected || !address) return;
-      
-      // If blockchain profile doesn't exist after loading completes
-      if (!isLoading && !profile?.exists) {
-        console.log('🔄 Blockchain profile not found, checking database...');
-        setIsCheckingDb(true);
-        
-        const dbProfileExists = await checkDatabaseWithRetry();
-        
-        if (dbProfileExists) {
-          console.log('✅ Profile found, ready to use app!');
-          // Profile exists, component will re-render and show main app
-        }
-        
-        setIsCheckingDb(false);
-      }
-    };
-
-    checkDatabaseFallback();
-  }, [isLoading, profile?.exists, isConnected, address]);
-
   useEffect(() => {
     if (isLoading) {
       const timer = setTimeout(() => {
@@ -118,11 +46,11 @@ export default function Home() {
     }
   }, [isLoading]);
 
-  if (isLoading || isCheckingDb) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center">
         <div className="text-white text-2xl">
-          {isCheckingDb ? 'Checking profile status...' : 'Loading...'}
+          Loading profile...
         </div>
       </div>
     );
@@ -170,8 +98,8 @@ export default function Home() {
     );
   }
 
-  // Landing Page - Not Connected OR (Connected but No Profile in blockchain AND no dbProfile)
-  if (!isConnected || (!profile?.exists && !dbProfile?.profileExists)) {
+  // Landing Page - Show when not connected OR when connected but no blockchain profile exists
+  if (!isConnected || !profile?.exists) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center animate-fadeIn">
@@ -205,7 +133,7 @@ export default function Home() {
           {/* Show wallet status if connected */}
           {isConnected && (
             <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-700 font-medium">Wallet Connected</p>
+              <p className="text-sm text-blue-700 font-medium">✓ Wallet Connected</p>
               <p className="text-xs text-blue-600 font-mono mt-1">
                 {address?.slice(0, 6)}...{address?.slice(-4)}
               </p>
@@ -215,7 +143,7 @@ export default function Home() {
           <div className="mb-8">
             <p className="text-gray-700 mb-4 text-base">
               {isConnected 
-                ? "You're connected! Create your profile"
+                ? "Ready to create your on-chain profile!"
                 : "Your wallet is your dating profile"
               }
             </p>
@@ -236,11 +164,11 @@ export default function Home() {
           </div>
 
           <div className="space-y-4">
-            {/* If wallet connected, show Create Profile button prominently */}
+            {/* If wallet connected, show Create Profile button */}
             {isConnected ? (
               <>
                 <button
-                  onClick={() => router.push('/register/wallet')}
+                  onClick={() => router.push('/register/wallet/complete')}
                   className="w-full bg-gradient-to-r from-pink-600 to-purple-600 text-white py-3 rounded-xl font-semibold 
                     transition-all duration-200
                     hover:shadow-lg hover:shadow-purple-500/50 hover:scale-[1.02]
@@ -309,7 +237,7 @@ export default function Home() {
     );
   }
 
-  // Main App - Connected with Profile (either blockchain or database)
+  // Main App - Connected with Profile on blockchain
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-blue-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
