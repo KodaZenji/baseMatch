@@ -100,9 +100,15 @@ export default function Home() {
 
   // Landing Page - Show when not connected OR when connected but no blockchain profile exists
   if (!isConnected || !profile?.exists) {
-    return (
+  return (
+    <>
+      {/* Auto-connect for Base app users */}
+      <BaseAppAutoConnect />
+      
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center animate-fadeIn">
+  
+  
+  <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center animate-fadeIn">
           <div className="flex justify-center mb-6">
             <div className="relative">
               <div className="bg-white rounded-full p-3 shadow-lg">
@@ -228,8 +234,9 @@ export default function Home() {
           </div>
         </div>
       </div>
-    );
-  }
+    </>
+  );
+}
 
   // Main App - Connected with Profile on blockchain
   return (
