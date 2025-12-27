@@ -193,15 +193,9 @@ export default function Home() {
               </>
             ) : (
               <>
-                <button
-                  onClick={() => router.push('/register/wallet')}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold 
-                    transition-all duration-200
-                    hover:shadow-lg hover:shadow-purple-500/50 hover:scale-[1.02]
-                    active:scale-[0.98] active:shadow-md"
-                >
-                  Connect Wallet
-                </button>
+                <div className="flex justify-center mb-4">
+                  <ConnectButton />
+                </div>
                 <div className="relative flex items-center my-2">
                   <div className="flex-grow border-t border-gray-300"></div>
                   <span className="mx-4 text-gray-500 text-sm">OR</span>
