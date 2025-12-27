@@ -138,7 +138,7 @@ export default function CompleteWalletProfilePage() {
             }));
 
             // Redirect to mint page
-            router.push('/mint');
+            router.push('/register/wallet/mint');
         } catch (err) {
             console.error('❌ Error:', err);
             setError(err instanceof Error ? err.message : 'Failed to complete profile');
