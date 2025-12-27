@@ -1,4 +1,7 @@
-import { useState, useEffect } from 'react';
+// frontend/hooks/useProfiles.ts
+// Enhanced version with cache-busting and periodic refresh
+
+import { useState, useEffect, useCallback } from 'react';
 import { useReadContract } from 'wagmi';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 
@@ -18,59 +21,116 @@ interface Profile {
     };
 }
 
-// For fetching profiles from Supabase database
-// In production, you could also use a subgraph or blockchain events indexer
-
 export function useProfiles() {
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [loading, setLoading] = useState(true);
+    const [lastFetchTime, setLastFetchTime] = useState(0);
 
     // Check if contract is deployed
-    const isContractDeployed = CONTRACTS.PROFILE_NFT && CONTRACTS.PROFILE_NFT.startsWith('0x') && CONTRACTS.PROFILE_NFT.length === 42;
+    const isContractDeployed = CONTRACTS.PROFILE_NFT && 
+                               CONTRACTS.PROFILE_NFT.startsWith('0x') && 
+                               CONTRACTS.PROFILE_NFT.length === 42;
 
-    // Fetch profiles from blockchain
-    useEffect(() => {
+    // Memoized fetch function that can be called externally
+    const fetchProfiles = useCallback(async (forceRefresh = false) => {
         if (!isContractDeployed) {
             setProfiles([]);
             setLoading(false);
             return;
         }
 
-        const fetchProfiles = async () => {
-            try {
-                setLoading(true);
+        // Prevent too frequent fetches (debounce)
+        const now = Date.now();
+        if (!forceRefresh && now - lastFetchTime < 2000) {
+            console.log('⏱️ Skipping fetch - too soon since last fetch');
+            return;
+        }
 
-                // Fetch profiles from Supabase
-                const response = await fetch('/api/profiles');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch profiles');
+        try {
+            setLoading(true);
+            console.log('🔄 Fetching profiles from database...');
+
+            // Add cache-busting timestamp to ensure fresh data
+            const cacheBuster = `?t=${Date.now()}`;
+            const response = await fetch(`/api/profiles${cacheBuster}`, {
+                // Disable browser cache for this request
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
                 }
+            });
 
-                const data = await response.json();
-                const fetchedProfiles: Profile[] = (data.profiles || []).map((profile: any) => ({
-                    wallet_address: profile.wallet_address,
-                    name: profile.name || '',
-                    age: profile.age || 0,
-                    gender: profile.gender || '',
-                    interests: profile.interests || '',
-                    photoUrl: profile.photoUrl || '',
-                    email_verified: profile.email_verified || false,  
-                    wallet_verified: profile.wallet_verified || false, 
-                }));
-
-                setProfiles(fetchedProfiles);
-            } catch (error) {
-                console.error('Error fetching profiles:', error);
-                setProfiles([]);
-            } finally {
-                setLoading(false);
+            if (!response.ok) {
+                throw new Error('Failed to fetch profiles');
             }
-        };
 
-        // Fetch with a small delay to allow for debouncing
-        const timer = setTimeout(fetchProfiles, 500);
+            const data = await response.json();
+            const fetchedProfiles: Profile[] = (data.profiles || []).map((profile: any) => ({
+                wallet_address: profile.wallet_address,
+                name: profile.name || '',
+                age: profile.age || 0,
+                gender: profile.gender || '',
+                interests: profile.interests || '',
+                photoUrl: profile.photoUrl || '', // ✅ This will now get fresh data
+                email_verified: profile.email_verified || false,  
+                wallet_verified: profile.wallet_verified || false, 
+            }));
+
+            console.log(`✅ Fetched ${fetchedProfiles.length} profiles`);
+            console.log('📸 Sample photoUrls:', fetchedProfiles.slice(0, 3).map(p => ({ 
+                name: p.name, 
+                photoUrl: p.photoUrl 
+            })));
+
+            setProfiles(fetchedProfiles);
+            setLastFetchTime(now);
+        } catch (error) {
+            console.error('❌ Error fetching profiles:', error);
+            setProfiles([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [isContractDeployed, lastFetchTime]);
+
+    // Initial fetch on mount
+    useEffect(() => {
+        const timer = setTimeout(() => fetchProfiles(true), 500);
         return () => clearTimeout(timer);
     }, [isContractDeployed]);
 
-    return { profiles, loading };
+    // ✅ AUTO-REFRESH: Fetch fresh data every 30 seconds
+    // This ensures users see updated profile pictures without manual refresh
+    useEffect(() => {
+        if (!isContractDeployed) return;
+
+        const refreshInterval = setInterval(() => {
+            console.log('🔄 Auto-refreshing profiles...');
+            fetchProfiles(true);
+        }, 30000); // Refresh every 30 seconds
+
+        return () => clearInterval(refreshInterval);
+    }, [isContractDeployed, fetchProfiles]);
+
+    // ✅ VISIBILITY CHANGE: Refresh when user returns to tab
+    // This catches profile updates that happened while user was away
+    useEffect(() => {
+        if (!isContractDeployed) return;
+
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                console.log('👀 Tab became visible - refreshing profiles');
+                fetchProfiles(true);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [isContractDeployed, fetchProfiles]);
+
+    return { 
+        profiles, 
+        loading, 
+        refresh: () => fetchProfiles(true) // ✅ Expose manual refresh function
+    };
 }
