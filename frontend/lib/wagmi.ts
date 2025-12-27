@@ -1,30 +1,51 @@
 import { http, createConfig } from "wagmi";
 import { base } from "wagmi/chains";
-import { coinbaseWallet } from "wagmi/connectors";
+import { coinbaseWallet, walletConnect, injected } from "wagmi/connectors";
+
+// Get WalletConnect Project ID from environment variables
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '';
 
 export const config = createConfig({
   chains: [base],
   connectors: [
+    // Injected wallets (MetaMask, Rainbow, etc. browser extensions)
+    injected({
+      target: 'metaMask',
+      shimDisconnect: true,
+    }),
+    
+    // Coinbase Wallet
     coinbaseWallet({
       appName: "BaseMatch",
       preference: "all",
     }),
+    
+    // WalletConnect - for mobile wallet connections
+    walletConnect({
+      projectId,
+      metadata: {
+        name: 'BaseMatch',
+        description: 'Find Your Match On-Chain',
+        url: 'https://basematch.app',
+        icons: ['https://ipfs.filebase.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw'],
+      },
+      showQrModal: true,
+    }),
   ],
   transports: {
     [base.id]: http('https://base-mainnet.g.alchemy.com/v2/eij573azum6O085qLp7TD', {
-      batch: true, // Batches multiple requests together
+      batch: true,
       fetchOptions: {
-        cache: 'no-store', // Always get fresh data
+        cache: 'no-store',
       },
-      retryCount: 3, // Retry failed requests
-      timeout: 10_000, // 10 second timeout
+      retryCount: 3,
+      timeout: 10_000,
     }),
   },
-  // Enable these for max performance
   batch: {
     multicall: {
-      wait: 16, // Batch calls every 16ms (1 frame at 60fps)
+      wait: 16,
     },
   },
-  pollingInterval: 4_000, // Check for updates every 4 seconds
+  pollingInterval: 4_000,
 });
