@@ -18,14 +18,14 @@
     "subtitle": "Web3 Dating on Base",
     "description": "Find your match with blockchain-powered dating. Your wallet is your identity",
     "screenshotUrls": [
-      "https://ipfs.filebase.io/ipfs/QmUJJaVsNmYZx3UEA2uCsWZPSi7dWZwNdYVFQ3JoiqX2Dh.png",
-      "https://ipfs.filebase.io/ipfs/QmXGzurMptqWtiWsjn2K3wh8KgpeZvkmL4oxPg7aufw81f.png",
-      "https://ipfs.filebase.io/ipfs/QmT416AjZaMRrytbZeBSG9evcBt3E6vYUtBAzifrTWrCb1.png",
-      "https://ipfs.filebase.io/ipfs/QmXPGAiX4u9b4Zo59R5yC5LDTBXiLKoZgsPbiirFtJTYBx.png",
-      "https://ipfs.filebase.io/ipfs/QmQiBPhRcnPHSFcWKHBq9bnWSfo81YuHXQ9gJJcjut4BtJ.png",
-      "https://ipfs.filebase.io/ipfs/QmNaKoci4ysWFcnpRqTxqsT6RowHGayQAWGdd9SxQKmEjs.png",
-      "https://ipfs.filebase.io/ipfs/QmesezhbiBMS77KM1bAVs5LvBNH3dpiYXsVHiGX4anEn4Z.png"
-    ],
+  "https://basematch.app/screenshots/screenshot1.png",
+  "https://basematch.app/screenshots/screenshot2.png",
+  "https://basematch.app/screenshots/screenshot3.png",
+  "https://basematch.app/screenshots/screenshot4.png",
+  "https://basematch.app/screenshots/screenshot5.png",
+  "https://basematch.app/screenshots/screenshot6.png",
+  "https://basematch.app/screenshots/screenshot7.png"
+],
     "primaryCategory": "social",
     "tags": [
       "dating",
