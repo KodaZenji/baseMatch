@@ -5,7 +5,7 @@ import { MATCHING_ABI, CONTRACTS, PROFILE_NFT_ABI } from '@/lib/contracts';
 interface MatchProfile {
     address: string;
     name: string;
-    age: number;
+    birthYear: number;
     gender: string;
     interests: string;
     photoUrl: string;
@@ -50,7 +50,7 @@ export function useMatches(userAddress: string | undefined) {
                             return {
                                 address,
                                 name: profileData.name || 'Unknown User',
-                                age: profileData.age || 0,
+                                birthYear: profileData.birthYear || 0,
                                 gender: profileData.gender || '',
                                 interests: profileData.interests || '',
                                 photoUrl: profileData.photoUrl || '',
@@ -65,7 +65,7 @@ export function useMatches(userAddress: string | undefined) {
                     return {
                         address,
                         name: 'User',
-                        age: 0,
+                        birthYear: 0,
                         gender: '',
                         interests: 'Interests not loaded',
                         photoUrl: '',

@@ -28,7 +28,7 @@ export async function GET() {
         // and ready for matching.
         const { data: profiles, error } = await supabaseService
             .from('profiles')
-            .select('wallet_address, name, age, gender, interests, photoUrl, wallet_verified, email_verified')
+            .select('wallet_address, name, birthYear, gender, interests, photoUrl, wallet_verified, email_verified')
             .not('name', 'is', null)           // Profile must have a Name
             .not('wallet_address', 'is', null) // Profile must have a Wallet Address linked
             .eq('wallet_verified', true)       // Wallet verification must be TRUE (final step)
@@ -37,13 +37,13 @@ export async function GET() {
         if (error) {
             console.error('❌ Supabase fetch error in /api/profiles:', error);
             return NextResponse.json(
-                { error: 'Database query failed', details: error.message }, 
+                { error: 'Database query failed', details: error.message },
                 { status: 500 }
             );
         }
-        
+
         console.log(`✅ Profiles sent to frontend: ${profiles?.length || 0}`);
-        
+
         // ✅ Log sample photoUrls for debugging (first 3 profiles)
         if (profiles && profiles.length > 0) {
             console.log('📸 Sample verified profiles:', profiles.slice(0, 3).map(p => ({
@@ -56,7 +56,7 @@ export async function GET() {
 
         // Returning the data in the format expected by useProfiles (data.profiles)
         return NextResponse.json(
-            { 
+            {
                 profiles: profiles || [],
                 timestamp: new Date().toISOString() // ✅ For debugging cache issues
             },
@@ -74,10 +74,10 @@ export async function GET() {
     } catch (error) {
         console.error('❌ Unexpected error in /api/profiles:', error);
         return NextResponse.json(
-            { 
+            {
                 error: 'Internal server error',
                 details: error instanceof Error ? error.message : 'Unknown error'
-            }, 
+            },
             { status: 500 }
         );
     }

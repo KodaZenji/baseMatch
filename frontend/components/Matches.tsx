@@ -33,7 +33,7 @@ export default function Matches() {
                 console.log(`Match ${i}:`, {
                     address: match.address,
                     name: match.name,
-                    age: match.age,
+                    age: match.birthYear,
                     interests: match.interests
                 });
             });
@@ -203,7 +203,7 @@ export default function Matches() {
                                 profile={{
                                     wallet_address: match.address,
                                     name: match.name,
-                                    age: match.age,
+                                    birthYear: match.birthYear,
                                     gender: match.gender,
                                     interests: match.interests,
                                     photo_url: match.photoUrl,

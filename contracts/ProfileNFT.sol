@@ -18,12 +18,13 @@ contract ProfileNFT is Initializable, ERC721Upgradeable, OwnableUpgradeable, UUP
     struct Profile {
         uint256 tokenId;
         string name;
-        uint8 age;
+        uint8 age; // Old field kept for storage compatibility
         string gender;
         string interests;
         string photoUrl;
         string email;
         bool exists;
+        uint256 birthYear; // New field for dynamic age calculation
     }
 
     uint256 private _tokenIdCounter;
@@ -93,9 +94,8 @@ contract ProfileNFT is Initializable, ERC721Upgradeable, OwnableUpgradeable, UUP
         return string(result);
     }
 
-    // ... existing code ...
     event ProfileCreated(address indexed user, uint256 tokenId, string name);
-    event ProfileUpdated(address indexed user, string name, uint8 age, string gender, string interests, string photoUrl, string email);
+    event ProfileUpdated(address indexed user, string name, uint8 age, string gender, string interests, string photoUrl, string email, uint256 birthYear);
     event ProfileDeleted(address indexed user, uint256 tokenId);
     event EmailRegistered(string email, address user);
 
@@ -124,14 +124,15 @@ contract ProfileNFT is Initializable, ERC721Upgradeable, OwnableUpgradeable, UUP
      */
     function createProfile(
         string memory name,
-        uint8 age,
+        uint256 birthYear,
         string memory gender,
         string memory interests,
         string memory photoUrl
     ) external {
         require(!profiles[msg.sender].exists, "Profile already exists");
-        require(age >= 18, "Must be 18 or older");
-        require(age <= 120, "Age must be realistic");
+        require(birthYear > 0, "Birth year must be set");
+        require(_calculateAgeFromBirthYear(birthYear) >= 18, "Must be 18 or older");
+        require(_calculateAgeFromBirthYear(birthYear) <= 120, "Age must be realistic");
         require(bytes(name).length >= MIN_NAME_LENGTH && bytes(name).length <= MAX_NAME_LENGTH, "Name must be 2-100 characters");
         require(bytes(interests).length > 0 && bytes(interests).length <= MAX_INTERESTS_LENGTH, "Interests must be 1-500 characters");
         require(bytes(photoUrl).length <= MAX_PHOTO_URL_LENGTH, "Photo URL too long");
@@ -143,12 +144,13 @@ contract ProfileNFT is Initializable, ERC721Upgradeable, OwnableUpgradeable, UUP
         profiles[msg.sender] = Profile({
             tokenId: newTokenId,
             name: name,
-            age: age,
+            age: uint8(_calculateAgeFromBirthYear(birthYear)), // Store calculated age for compatibility
             gender: gender,
             interests: interests,
             photoUrl: photoUrl,
             email: "",
-            exists: true
+            exists: true,
+            birthYear: birthYear
         });
 
         addressToTokenId[msg.sender] = newTokenId;
@@ -163,14 +165,15 @@ contract ProfileNFT is Initializable, ERC721Upgradeable, OwnableUpgradeable, UUP
      */
     function registerWithEmail(
         string memory name,
-        uint8 age,
+        uint256 birthYear,
         string memory gender,
         string memory interests,
         string memory email
     ) external {
         require(!profiles[msg.sender].exists, "Profile already exists");
-        require(age >= 18, "Must be 18 or older");
-        require(age <= 120, "Age must be realistic");
+        require(birthYear > 0, "Birth year must be set");
+        require(_calculateAgeFromBirthYear(birthYear) >= 18, "Must be 18 or older");
+        require(_calculateAgeFromBirthYear(birthYear) <= 120, "Age must be realistic");
         require(bytes(name).length >= MIN_NAME_LENGTH && bytes(name).length <= MAX_NAME_LENGTH, "Name must be 2-100 characters");
         require(bytes(interests).length > 0 && bytes(interests).length <= MAX_INTERESTS_LENGTH, "Interests must be 1-500 characters");
         require(bytes(email).length > 0, "Email cannot be empty");
@@ -190,12 +193,13 @@ contract ProfileNFT is Initializable, ERC721Upgradeable, OwnableUpgradeable, UUP
         profiles[msg.sender] = Profile({
             tokenId: newTokenId,
             name: name,
-            age: age,
+            age: uint8(_calculateAgeFromBirthYear(birthYear)), // Store calculated age for compatibility
             gender: gender,
             interests: interests,
             photoUrl: "",
             email: normalizedEmail,
-            exists: true
+            exists: true,
+            birthYear: birthYear
         });
 
         addressToTokenId[msg.sender] = newTokenId;
@@ -211,15 +215,16 @@ contract ProfileNFT is Initializable, ERC721Upgradeable, OwnableUpgradeable, UUP
      */
     function updateProfile(
         string memory name,
-        uint8 age,
+        uint256 birthYear,
         string memory gender,
         string memory interests,
         string memory photoUrl,
         string memory email
     ) external {
         require(profiles[msg.sender].exists, "Profile does not exist");
-        require(age >= 18, "Must be 18 or older");
-        require(age <= 120, "Age must be realistic");
+        require(birthYear > 0, "Birth year must be set");
+        require(_calculateAgeFromBirthYear(birthYear) >= 18, "Must be 18 or older");
+        require(_calculateAgeFromBirthYear(birthYear) <= 120, "Age must be realistic");
         require(bytes(name).length >= MIN_NAME_LENGTH && bytes(name).length <= MAX_NAME_LENGTH, "Name must be 2-100 characters");
         require(bytes(interests).length > 0 && bytes(interests).length <= MAX_INTERESTS_LENGTH, "Interests must be 1-500 characters");
         require(bytes(photoUrl).length <= MAX_PHOTO_URL_LENGTH, "Photo URL too long");
@@ -246,12 +251,13 @@ contract ProfileNFT is Initializable, ERC721Upgradeable, OwnableUpgradeable, UUP
 
         Profile storage profile = profiles[msg.sender];
         profile.name = name;
-        profile.age = age;
+        profile.age = uint8(_calculateAgeFromBirthYear(birthYear)); // Update calculated age for compatibility
         profile.gender = gender;
         profile.interests = interests;
         profile.photoUrl = photoUrl;
+        profile.birthYear = birthYear;
 
-        emit ProfileUpdated(msg.sender, name, age, gender, interests, photoUrl, profile.email);
+        emit ProfileUpdated(msg.sender, name, uint8(_calculateAgeFromBirthYear(birthYear)), gender, interests, photoUrl, profile.email, birthYear);
     }
 
     /**
@@ -259,6 +265,76 @@ contract ProfileNFT is Initializable, ERC721Upgradeable, OwnableUpgradeable, UUP
      */
     function _emailsEqual(string memory a, string memory b) private pure returns (bool) {
         return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
+    }
+
+    /**
+     * @dev Calculate age from birth year
+     * Using a fixed current year since block.timestamp doesn't work well for years
+     * We'll use a more precise calculation based on timestamp
+     */
+    function _calculateAge(uint256 birthYear) private view returns (uint256) {
+        require(birthYear > 0, "Birth year must be set");
+        require(birthYear <= block.timestamp, "Birth year cannot be in the future");
+        
+        // Get the current year from timestamp
+        uint256 currentYear = _getYear(block.timestamp);
+        
+        uint256 age = currentYear - birthYear;
+        
+        // Check if birthday has passed this year, if not subtract 1
+        // For simplicity, we'll just return the year difference
+        // A more precise calculation would require month/day tracking
+        return age;
+    }
+    
+    /**
+     * @dev Get year from timestamp
+     * This is a simplified calculation - for more precision, we'd need to account for leap years
+     */
+    function _getYear(uint256 timestamp) private pure returns (uint256) {
+        // Unix timestamp for Jan 1, 1970
+        uint256 secondsPerDay = 24 * 60 * 60;
+        uint256 daysPerYear = 365;
+        
+        // Days since Unix epoch
+        uint256 daysSinceEpoch = timestamp / secondsPerDay;
+        
+        // Approximate year (1970 + days/365)
+        uint256 approximateYear = 1970 + (daysSinceEpoch / daysPerYear);
+        
+        return approximateYear;
+    }
+    
+    /**
+     * @dev Calculate age from birth year for storage compatibility
+     */
+    function _calculateAgeFromBirthYear(uint256 birthYear) private view returns (uint256) {
+        require(birthYear > 0, "Birth year must be set");
+        require(birthYear <= _getYear(block.timestamp), "Birth year cannot be in the future");
+        
+        uint256 currentYear = _getYear(block.timestamp);
+        uint256 age = currentYear - birthYear;
+        
+        // Make sure age doesn't exceed uint8 max value
+        require(age <= 255, "Age too high for storage");
+        
+        return age;
+    }
+    
+    /**
+     * @dev Get current age for a profile
+     */
+    function getCurrentAge(address user) external view returns (uint256) {
+        require(profiles[user].exists, "Profile does not exist");
+        return _calculateAge(profiles[user].birthYear);
+    }
+    
+    /**
+     * @dev Get birth year for a profile
+     */
+    function getBirthYear(address user) external view returns (uint256) {
+        require(profiles[user].exists, "Profile does not exist");
+        return profiles[user].birthYear;
     }
 
     /**

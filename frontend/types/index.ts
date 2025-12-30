@@ -1,7 +1,7 @@
 export interface UserProfile {
     tokenId: bigint;
     name: string;
-    age: number;
+    birthYear: number;
     interests: string;
     photoUrl: string;
     email: string;
@@ -58,7 +58,7 @@ export interface ProfileCompleteResponse {
     contractAddress: string;
     mintingPayload: {
         name: string;
-        age: number;
+        birthYear: number;
         gender: string;
         interests: string;
         photoUrl: string;

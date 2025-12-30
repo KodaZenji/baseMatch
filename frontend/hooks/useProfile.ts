@@ -31,7 +31,7 @@ export function useProfile(address?: string) {
     const profile = profileData ? {
         tokenId: (profileData as any).tokenId,
         name: (profileData as any).name,
-        age: (profileData as any).age,
+        birthYear: (profileData as any).birthYear,
         gender: (profileData as any).gender,
         interests: (profileData as any).interests,
         photoUrl: (profileData as any).photoUrl,

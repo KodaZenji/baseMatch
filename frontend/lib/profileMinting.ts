@@ -90,7 +90,7 @@ export async function handleProfileMint(
     walletAddress: string,
     profileData: {
         name: string;
-        age: number;
+        birthYear: number;
         gender: string;
         interests: string;
     }
@@ -111,10 +111,10 @@ export async function handleProfileMint(
         console.log('Avatar uploaded to Supabase:', photoUrl);
 
         // Step 3: Prepare contract transaction arguments
-        // createProfile(name, age, gender, interests, photoUrl)
+        // createProfile(name, birthYear, gender, interests, photoUrl)
         const contractArgs: [string, number, string, string, string] = [
             profileData.name,
-            profileData.age,
+            profileData.birthYear,
             profileData.gender,
             profileData.interests,
             photoUrl,
@@ -143,7 +143,7 @@ export async function handleEmailRegistration(
     walletAddress: string,
     profileData: {
         name: string;
-        age: number;
+        birthYear: number;
         gender: string;
         interests: string;
         email: string;
@@ -167,10 +167,10 @@ export async function handleEmailRegistration(
         }
 
         // Step 2: Prepare contract transaction arguments
-        // registerWithEmail(name, age, gender, interests, email)
+        // registerWithEmail(name, birthYear, gender, interests, email)
         const contractArgs: [string, number, string, string, string] = [
             profileData.name,
-            profileData.age,
+            profileData.birthYear,
             profileData.gender,
             profileData.interests,
             profileData.email,
@@ -199,7 +199,7 @@ export async function handleProfileTextUpdate(
     tokenId: string,
     newProfileData: {
         name: string;
-        age: number;
+        birthYear: number;
         gender: string;
         interests: string;
         photoUrl: string;
@@ -223,10 +223,10 @@ export async function handleProfileTextUpdate(
         }
 
         // Step 2: Prepare contract transaction arguments
-        // updateProfile(name, age, gender, interests, photoUrl, email)
+        // updateProfile(name, birthYear, gender, interests, photoUrl, email)
         const contractArgs: [string, number, string, string, string, string] = [
             newProfileData.name,
-            newProfileData.age,
+            newProfileData.birthYear,
             newProfileData.gender,
             newProfileData.interests,
             photoUrl,

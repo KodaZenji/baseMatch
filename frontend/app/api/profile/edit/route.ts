@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     const blockchainProfile = {
       tokenId: (profileData as any).tokenId?.toString() || '0',
       name: (profileData as any).name || '',
-      age: (profileData as any).age || 0,
+      birthYear: (profileData as any).birthYear || 0,
       gender: (profileData as any).gender || '',
       interests: (profileData as any).interests || '',
       photoUrl: (profileData as any).photoUrl || '',
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { wallet_address, email, name, age, gender, interests } = body;
+    const { wallet_address, email, name, birthYear, gender, interests } = body;
 
     if (!wallet_address) {
       return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 });
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (name !== undefined) updateData.name = name;
-    if (age !== undefined) updateData.age = age;
+    if (birthYear !== undefined) updateData.birthYear = birthYear;
     if (gender !== undefined) updateData.gender = gender;
     if (interests !== undefined) updateData.interests = interests;
 

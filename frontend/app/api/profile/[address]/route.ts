@@ -45,7 +45,7 @@ export async function GET(
         const profile = {
             tokenId: (profileData as any).tokenId?.toString() || '0',
             name: (profileData as any).name || '',
-            age: (profileData as any).age || 0,
+            birthYear: (profileData as any).birthYear || 0,
             gender: (profileData as any).gender || '',
             interests: (profileData as any).interests || '',
             photoUrl: (profileData as any).photoUrl || '',

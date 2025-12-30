@@ -12,7 +12,7 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { email, name, age, gender, interests, photoUrl } = body;
+        const { email, name, birthYear, gender, interests, photoUrl } = body;
 
         if (!email) {
             return NextResponse.json(
@@ -22,14 +22,17 @@ export async function POST(request: NextRequest) {
         }
 
         // Validate data
-        if (!name || !age || !gender || !interests) {
+        if (!name || !birthYear || !gender || !interests) {
             return NextResponse.json(
                 { error: 'All fields are required' },
                 { status: 400 }
             );
         }
 
-        if (age < 18 || age > 120) {
+        // Validate birth year to ensure age is between 18 and 120
+        const currentYear = new Date().getFullYear();
+        const calculatedAge = currentYear - birthYear;
+        if (calculatedAge < 18 || calculatedAge > 120) {
             return NextResponse.json(
                 { error: 'Age must be between 18 and 120' },
                 { status: 400 }
@@ -43,7 +46,7 @@ export async function POST(request: NextRequest) {
             .from('profiles')
             .update({
                 name,
-                age,
+                birthYear,
                 gender,
                 interests,
                 photoUrl: photoUrl || '',

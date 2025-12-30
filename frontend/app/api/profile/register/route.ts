@@ -8,18 +8,21 @@ const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { address, name, age, gender, interests, email, photoUrl } = body;
+    const { address, name, birthYear, gender, interests, email, photoUrl } = body;
 
     console.log('📥 Registration request');
 
-    if (!address || !name || !age || !gender || !interests) {
+    if (!address || !name || !birthYear || !gender || !interests) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const normalizedAddress = address.toLowerCase();
     const normalizedEmail = email?.toLowerCase().trim() || null;
 
-    if (age < 18 || age > 120) {
+    // Validate birth year to ensure age is between 18 and 120
+    const currentYear = new Date().getFullYear();
+    const calculatedAge = currentYear - birthYear;
+    if (calculatedAge < 18 || calculatedAge > 120) {
       return NextResponse.json({ error: 'Age must be between 18 and 120' }, { status: 400 });
     }
 
@@ -39,7 +42,7 @@ export async function POST(request: NextRequest) {
         .update({
           wallet_verified: true,
           name,
-          age,
+          birthYear,
           gender,
           interests,
           email: normalizedEmail,
@@ -59,7 +62,7 @@ export async function POST(request: NextRequest) {
           wallet_verified: true,
           email_verified: false,
           name,
-          age,
+          birthYear,
           gender,
           interests,
           email: normalizedEmail,

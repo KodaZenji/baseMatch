@@ -1,5 +1,5 @@
 
- 
+
 // Function to generate a compact avatar representation
 export function generateCompactAvatar(seed: string): string {
     // Generate a simple hash-based color scheme
@@ -33,7 +33,7 @@ export function compressProfileData(profile: any): string {
     const minimalProfile = {
         id: profile.tokenId.toString(),
         n: profile.name.substring(0, 20), // Limit name length
-        a: profile.age,
+        by: profile.birthYear,
         i: profile.interests.substring(0, 100), // Limit interests length
         // Photo/avatar is stored separately as URI
     };

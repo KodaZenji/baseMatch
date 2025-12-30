@@ -8,12 +8,12 @@ import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 interface Profile {
     wallet_address: string;
     name: string;
-    age: number;
+    birthYear: number;
     gender: string;
     interests: string;
     photoUrl: string;
-    email_verified?: boolean;  
-    wallet_verified?: boolean; 
+    email_verified?: boolean;
+    wallet_verified?: boolean;
     reputation?: {
         totalDates: number;
         noShows: number;
@@ -27,9 +27,9 @@ export function useProfiles() {
     const [lastFetchTime, setLastFetchTime] = useState(0);
 
     // Check if contract is deployed
-    const isContractDeployed = CONTRACTS.PROFILE_NFT && 
-                               CONTRACTS.PROFILE_NFT.startsWith('0x') && 
-                               CONTRACTS.PROFILE_NFT.length === 42;
+    const isContractDeployed = CONTRACTS.PROFILE_NFT &&
+        CONTRACTS.PROFILE_NFT.startsWith('0x') &&
+        CONTRACTS.PROFILE_NFT.length === 42;
 
     // Memoized fetch function that can be called externally
     const fetchProfiles = useCallback(async (forceRefresh = false) => {
@@ -69,18 +69,18 @@ export function useProfiles() {
             const fetchedProfiles: Profile[] = (data.profiles || []).map((profile: any) => ({
                 wallet_address: profile.wallet_address,
                 name: profile.name || '',
-                age: profile.age || 0,
+                birthYear: profile.birthYear || 0,
                 gender: profile.gender || '',
                 interests: profile.interests || '',
                 photoUrl: profile.photoUrl || '', // ✅ This will now get fresh data
-                email_verified: profile.email_verified || false,  
-                wallet_verified: profile.wallet_verified || false, 
+                email_verified: profile.email_verified || false,
+                wallet_verified: profile.wallet_verified || false,
             }));
 
             console.log(`✅ Fetched ${fetchedProfiles.length} profiles`);
-            console.log('📸 Sample photoUrls:', fetchedProfiles.slice(0, 3).map(p => ({ 
-                name: p.name, 
-                photoUrl: p.photoUrl 
+            console.log('📸 Sample photoUrls:', fetchedProfiles.slice(0, 3).map(p => ({
+                name: p.name,
+                photoUrl: p.photoUrl
             })));
 
             setProfiles(fetchedProfiles);
@@ -128,9 +128,9 @@ export function useProfiles() {
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, [isContractDeployed, fetchProfiles]);
 
-    return { 
-        profiles, 
-        loading, 
+    return {
+        profiles,
+        loading,
         refresh: () => fetchProfiles(true) // ✅ Expose manual refresh function
     };
 }

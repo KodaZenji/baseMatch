@@ -5,7 +5,7 @@ export const PROFILE_NFT_ABI = [
         stateMutability: "nonpayable",
         inputs: [
             { name: "name", type: "string" },
-            { name: "age", type: "uint8" },
+            { name: "birthYear", type: "uint256" },
             { name: "gender", type: "string" },
             { name: "interests", type: "string" },
             { name: "photoUrl", type: "string" }
@@ -18,7 +18,7 @@ export const PROFILE_NFT_ABI = [
         stateMutability: "nonpayable",
         inputs: [
             { name: "name", type: "string" },
-            { name: "age", type: "uint8" },
+            { name: "birthYear", type: "uint256" },
             { name: "gender", type: "string" },
             { name: "interests", type: "string" },
             { name: "email", type: "string" }
