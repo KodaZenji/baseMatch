@@ -95,8 +95,8 @@ export default function ProfileCard({
             {/* Notification */}
             {notification && (
                 <div className={`m-3 p-2.5 rounded-lg text-sm ${notification.type === 'success'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-red-100 text-red-700'
                     }`}>
                     {notification.message}
                 </div>
@@ -157,7 +157,7 @@ export default function ProfileCard({
 
                 <div className="flex flex-wrap items-center text-gray-600 mb-3 gap-1.5">
                     <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-1 rounded-full">
-                        {profile.age} years
+                        {profile.birthYear ? new Date().getFullYear() - profile.birthYear : profile.age} years
                     </span>
 
                     {profile.email_verified && (

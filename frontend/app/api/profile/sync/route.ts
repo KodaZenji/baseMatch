@@ -16,14 +16,14 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { 
-            walletAddress, 
-            name, 
-            age, 
-            gender, 
-            interests, 
+        const {
+            walletAddress,
+            name,
+            birthYear,
+            gender,
+            interests,
             photoUrl,
-            email 
+            email
         } = body;
 
         // Must have either wallet address or email to identify the profile
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
             // Only update fields that are provided
             if (normalizedAddress !== null) updateData.wallet_address = normalizedAddress;
             if (name !== undefined) updateData.name = name;
-            if (age !== undefined) updateData.age = age;
+            if (birthYear !== undefined) updateData.birthYear = birthYear;
             if (gender !== undefined) updateData.gender = gender;
             if (interests !== undefined) updateData.interests = interests;
             if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
                 .insert({
                     wallet_address: normalizedAddress || '',
                     name: name || '',
-                    age: age || 0,
+                    birthYear: birthYear || 0,
                     gender: gender || '',
                     interests: interests || '',
                     photoUrl: photoUrl || '',
@@ -130,9 +130,9 @@ export async function POST(request: NextRequest) {
         // ============ CREATE PROFILE COMPLETION NOTIFICATION ============
         // Check if profile is complete (has all required fields)
         const isProfileComplete = !!(
-            profileData.name && 
-            profileData.age && 
-            profileData.gender && 
+            profileData.name &&
+            profileData.birthYear &&
+            profileData.gender &&
             profileData.interests &&
             (profileData.wallet_address || profileData.email)
         );
@@ -140,14 +140,14 @@ export async function POST(request: NextRequest) {
         if (isProfileComplete) {
             try {
                 const userAddress = profileData.wallet_address || profileData.email;
-                
+
                 await supabaseService
                     .from('notifications')
                     .insert({
                         user_address: userAddress.toLowerCase(),
                         type: 'profile_complete',
                         title: isNewProfile ? '✅ Profile Created!' : '✅ Profile Updated!',
-                        message: isNewProfile 
+                        message: isNewProfile
                             ? 'Your profile has been successfully created and is now visible to others!'
                             : 'Your profile has been successfully updated!',
                         metadata: {
@@ -155,14 +155,14 @@ export async function POST(request: NextRequest) {
                             is_new: isNewProfile,
                             updated_fields: {
                                 name: !!name,
-                                age: !!age,
+                                birthYear: !!birthYear,
                                 gender: !!gender,
                                 interests: !!interests,
                                 photoUrl: !!photoUrl
                             }
                         }
                     });
-                
+
                 console.log('✅ Profile completion notification created for:', userAddress);
             } catch (notifError) {
                 // Don't fail the sync if notification fails

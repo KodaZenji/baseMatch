@@ -23,7 +23,7 @@ export interface Notification {
     updated_field?: string;
     updated_fields?: {
       name?: boolean;
-      age?: boolean;
+      birthYear?: boolean;
       gender?: boolean;
       interests?: boolean;
       photoUrl?: boolean;

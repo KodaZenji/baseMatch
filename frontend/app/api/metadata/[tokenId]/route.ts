@@ -76,18 +76,153 @@ async function callContract(
 /*                          Decode (Safe Fallback)                              */
 /* -------------------------------------------------------------------------- */
 
-function decodeProfileResponse(_data: string) {
+function hexToBigInt(hex: string): bigint {
+  return BigInt(hex.startsWith('0x') ? hex : '0x' + hex);
+}
+
+function hexToString(hex: string): string {
+  if (!hex || hex === '0x') return '';
+
+  // Remove '0x' prefix if present
+  const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
+
+  // Check if this is a dynamic string (starts with length offset)
+  const lengthOffset = cleanHex.substring(0, 64);
+  const dataOffset = cleanHex.substring(64, 128);
+
+  // If the first 64 chars represent length, it's a dynamic string
+  const length = Number(hexToBigInt('0x' + lengthOffset));
+
+  if (length > 0) {
+    // Extract string data after length offset and data offset (128 chars)
+    const stringData = cleanHex.substring(128, 128 + length * 2);
+
+    // Convert hex string to bytes and then to UTF-8 string
+    try {
+      const bytes = new Uint8Array(stringData.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []);
+      return new TextDecoder().decode(bytes);
+    } catch (e) {
+      return '';
+    }
+  } else {
+    // If not dynamic, try direct conversion
+    try {
+      const bytes = new Uint8Array(cleanHex.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) || []);
+      return new TextDecoder().decode(bytes);
+    } catch (e) {
+      return '';
+    }
+  }
+}
+
+function decodeProfileResponse(data: string) {
   // NOTE: intentionally defensive — prevents build/runtime crashes
-  return {
-    tokenId: '0',
-    name: 'BaseMatch Profile',
-    age: 0,
-    gender: 'Not specified',
-    interests: '',
-    photoUrl: '',
-    email: '',
-    exists: true
-  };
+  try {
+    if (!data || data === '0x') {
+      return {
+        tokenId: '0',
+        name: 'BaseMatch Profile',
+        birthYear: 0,
+        gender: 'Not specified',
+        interests: '',
+        photoUrl: '',
+        email: '',
+        exists: true
+      };
+    }
+
+    // Remove '0x' prefix if present
+    const hexData = data.startsWith('0x') ? data.slice(2) : data;
+
+    // Decode Profile struct fields:
+    // 1. tokenId (uint256) - 32 bytes
+    // 2. name (string) - dynamic
+    // 3. age (uint8) - 32 bytes (but only 1 byte is meaningful)
+    // 4. gender (string) - dynamic
+    // 5. interests (string) - dynamic
+    // 6. photoUrl (string) - dynamic
+    // 7. email (string) - dynamic
+    // 8. exists (bool) - 32 bytes
+    // 9. birthYear (uint256) - 32 bytes
+
+    let offset = 0;
+
+    // tokenId (uint256) - first 32 bytes
+    const tokenIdHex = hexData.substring(offset, offset + 64);
+    offset += 64;
+    const tokenId = hexToBigInt(tokenIdHex).toString();
+
+    // name (string) - next 32 bytes contain offset to actual string data
+    const nameOffsetHex = hexData.substring(offset, offset + 64);
+    offset += 64;
+    const nameOffset = Number(hexToBigInt(nameOffsetHex)) * 2; // multiply by 2 since we're working with hex chars
+
+    // age (uint8) - next 32 bytes, but only last 2 chars are meaningful
+    const ageHex = hexData.substring(offset, offset + 64);
+    offset += 64;
+    // For compatibility with old field, but we'll use birthYear
+
+    // gender (string) - next 32 bytes contain offset
+    const genderOffsetHex = hexData.substring(offset, offset + 64);
+    offset += 64;
+    const genderOffset = Number(hexToBigInt(genderOffsetHex)) * 2;
+
+    // interests (string) - next 32 bytes contain offset
+    const interestsOffsetHex = hexData.substring(offset, offset + 64);
+    offset += 64;
+    const interestsOffset = Number(hexToBigInt(interestsOffsetHex)) * 2;
+
+    // photoUrl (string) - next 32 bytes contain offset
+    const photoUrlOffsetHex = hexData.substring(offset, offset + 64);
+    offset += 64;
+    const photoUrlOffset = Number(hexToBigInt(photoUrlOffsetHex)) * 2;
+
+    // email (string) - next 32 bytes contain offset
+    const emailOffsetHex = hexData.substring(offset, offset + 64);
+    offset += 64;
+    const emailOffset = Number(hexToBigInt(emailOffsetHex)) * 2;
+
+    // exists (bool) - next 32 bytes
+    const existsHex = hexData.substring(offset, offset + 64);
+    offset += 64;
+    const exists = hexToBigInt(existsHex) !== 0n;
+
+    // birthYear (uint256) - next 32 bytes
+    const birthYearHex = hexData.substring(offset, offset + 64);
+    offset += 64;
+    const birthYear = Number(hexToBigInt(birthYearHex));
+
+    // Now extract the actual string values using their offsets
+    const name = hexToString('0x' + hexData.substring(nameOffset, nameOffset + 1024)); // arbitrary length limit
+    const gender = hexToString('0x' + hexData.substring(genderOffset, genderOffset + 1024));
+    const interests = hexToString('0x' + hexData.substring(interestsOffset, interestsOffset + 2048));
+    const photoUrl = hexToString('0x' + hexData.substring(photoUrlOffset, photoUrlOffset + 2048));
+    const email = hexToString('0x' + hexData.substring(emailOffset, emailOffset + 1024));
+
+    return {
+      tokenId,
+      name,
+      birthYear,
+      gender,
+      interests,
+      photoUrl,
+      email,
+      exists
+    };
+  } catch (error) {
+    console.error('Error decoding profile response:', error);
+    // Fallback to default values
+    return {
+      tokenId: '0',
+      name: 'BaseMatch Profile',
+      birthYear: 0,
+      gender: 'Not specified',
+      interests: '',
+      photoUrl: '',
+      email: '',
+      exists: true
+    };
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -116,7 +251,7 @@ async function fetchOnChainProfileData(
   return {
     tokenId,
     name: `BaseMatch Profile #${tokenId}`,
-    age: 0,
+    birthYear: 0,
     gender: 'Not specified',
     interests: '',
     photoUrl: '',
@@ -135,12 +270,17 @@ function constructImageUrl(tokenId: string, photoUrl?: string) {
 }
 
 function generateMetadata(profile: any, networkName: string) {
+  // Calculate current age from birth year
+  const currentYear = new Date().getFullYear();
+  const calculatedAge = currentYear - profile.birthYear;
+
   return {
     name: `${profile.name} #${profile.tokenId}`,
     description: `BaseMatch Profile NFT - Soulbound Token on ${networkName}`,
     image: constructImageUrl(profile.tokenId, profile.photoUrl),
     attributes: [
-      { trait_type: 'Age', value: profile.age },
+      { trait_type: 'Age', value: calculatedAge },
+      { trait_type: 'Birth Year', value: profile.birthYear },
       { trait_type: 'Gender', value: profile.gender },
       { trait_type: 'Interests', value: profile.interests || 'Not specified' },
       { trait_type: 'Network', value: networkName },

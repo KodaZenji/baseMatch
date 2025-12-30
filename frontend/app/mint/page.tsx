@@ -63,7 +63,7 @@ export default function MintPage() {
             id: profile_id,
             wallet_address: walletAddress,
             name: data.registerWithEmailPayload?.name,
-            age: data.registerWithEmailPayload?.age,
+            birthYear: data.registerWithEmailPayload?.birthYear,
             gender: data.registerWithEmailPayload?.gender,
             interests: data.registerWithEmailPayload?.interests,
           }),
@@ -334,7 +334,7 @@ export default function MintPage() {
           address: (mintData.contractAddress || CONTRACTS.PROFILE_NFT) as `0x${string}`,
           abi: PROFILE_NFT_ABI,
           functionName: 'registerWithEmail',
-          args: [payload.name, payload.age, payload.gender, payload.interests, payload.email],
+          args: [payload.name, payload.birthYear, payload.gender, payload.interests, payload.email],
         });
       } else {
         // Wallet-first flow
@@ -343,7 +343,7 @@ export default function MintPage() {
           address: (mintData.contractAddress || CONTRACTS.PROFILE_NFT) as `0x${string}`,
           abi: PROFILE_NFT_ABI,
           functionName: 'createProfile',
-          args: [payload.name, payload.age, payload.gender, payload.interests, payload.photoUrl],
+          args: [payload.name, payload.birthYear, payload.gender, payload.interests, payload.photoUrl],
         });
       }
     } catch (err) {

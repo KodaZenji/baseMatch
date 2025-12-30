@@ -21,7 +21,7 @@ export default function ProfileEdit() {
     const [avatarUrl, setAvatarUrl] = useState('');
     const [formData, setFormData] = useState({
         name: '',
-        age: '',
+        birthYear: '',
         gender: '',
         interests: '',
         photoUrl: '',
@@ -67,7 +67,7 @@ export default function ProfileEdit() {
                         if (data.profile) {
                             setFormData({
                                 name: data.profile.name || '',
-                                age: data.profile.age ? data.profile.age.toString() : '',
+                                birthYear: data.profile.birthYear ? data.profile.birthYear.toString() : '',
                                 gender: data.profile.gender || '',
                                 interests: data.profile.interests || '',
                                 photoUrl: data.profile.photoUrl || '',
@@ -107,10 +107,10 @@ export default function ProfileEdit() {
                 if (response.ok) {
                     const mergedProfile = await response.json();
 
-                    if (!formData.name && !formData.age && !formData.gender && !formData.interests) {
+                    if (!formData.name && !formData.birthYear && !formData.gender && !formData.interests) {
                         setFormData({
                             name: mergedProfile.name || '',
-                            age: mergedProfile.age ? mergedProfile.age.toString() : '',
+                            birthYear: mergedProfile.birthYear ? mergedProfile.birthYear.toString() : '',
                             gender: mergedProfile.gender || '',
                             interests: mergedProfile.interests || '',
                             photoUrl: mergedProfile.photoUrl || '',
@@ -229,14 +229,15 @@ export default function ProfileEdit() {
         hasShownSuccessRef.current = false;
         hasSyncedRef.current = false;
 
-        if (!formData.name || !formData.age || !formData.gender || !formData.interests) {
+        if (!formData.name || !formData.birthYear || !formData.gender || !formData.interests) {
             showNotification('Please fill in all required fields', 'error');
             return;
         }
 
-        const age = parseInt(formData.age);
+        const birthYear = parseInt(formData.birthYear);
 
-        if (isNaN(age) || age < 18 || age > 100) {
+        const currentYear = new Date().getFullYear();
+        if (isNaN(birthYear) || currentYear - birthYear < 18 || currentYear - birthYear > 100) {
             showNotification('Please enter a valid age between 18 and 100', 'error');
             return;
         }
@@ -249,7 +250,7 @@ export default function ProfileEdit() {
                     body: JSON.stringify({
                         email: userEmail,
                         name: formData.name,
-                        age,
+                        birthYear,
                         gender: formData.gender,
                         interests: formData.interests,
                         photoUrl: newPhotoUrl || formData.photoUrl,
@@ -284,7 +285,7 @@ export default function ProfileEdit() {
                     wallet_address: address,
                     email: formData.email,
                     name: formData.name,
-                    age,
+                    birthYear,
                     gender: formData.gender,
                     interests: formData.interests,
                 }),
@@ -309,7 +310,7 @@ export default function ProfileEdit() {
                 profile.tokenId.toString(),
                 {
                     name: formData.name,
-                    age,
+                    birthYear,
                     gender: formData.gender,
                     interests: formData.interests,
                     photoUrl: newPhotoUrl || formData.photoUrl || '',
@@ -332,7 +333,7 @@ export default function ProfileEdit() {
         }
     };
 
-const handleDeleteProfile = async () => {
+    const handleDeleteProfile = async () => {
         if (!profile?.exists) {
             showNotification('Profile does not exist', 'error');
             return;
@@ -360,7 +361,7 @@ const handleDeleteProfile = async () => {
 
     const syncProfileToDatabase = async (profileData: {
         name: string;
-        age: number;
+        birthYear: number;
         gender: string;
         interests: string;
         photoUrl: string;
@@ -376,14 +377,14 @@ const handleDeleteProfile = async () => {
         try {
             console.log('Step 3: Syncing blockchain confirmation back to database...');
             console.log('📸 Photo URL being synced:', profileData.photoUrl); // ✅ Debug log
-            
+
             const response = await fetch('/api/profile/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     walletAddress: address,
                     name: profileData.name,
-                    age: profileData.age,
+                    birthYear: profileData.birthYear,
                     gender: profileData.gender,
                     interests: profileData.interests,
                     photoUrl: profileData.photoUrl, // ✅ This ensures photo URL is synced
@@ -427,10 +428,10 @@ const handleDeleteProfile = async () => {
                     // ✅ Make sure we're passing the correct photoUrl
                     const photoToSync = newPhotoUrl || formData.photoUrl;
                     console.log('🎯 Syncing photo URL:', photoToSync); // ✅ Debug log
-                    
+
                     await syncProfileToDatabase({
                         name: formData.name,
-                        age: parseInt(formData.age),
+                        birthYear: parseInt(formData.birthYear),
                         gender: formData.gender,
                         interests: formData.interests,
                         photoUrl: photoToSync, // ✅ Use the most recent photo
@@ -586,8 +587,8 @@ const handleDeleteProfile = async () => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Age *</label>
                         <input
                             type="number"
-                            value={formData.age}
-                            onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
+                            value={formData.birthYear}
+                            onChange={(e) => setFormData(prev => ({ ...prev, birthYear: e.target.value }))}
                             className="w-full px-4 py-3 border text-gray-700 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="18"
                             min="18"

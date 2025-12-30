@@ -12,7 +12,7 @@ export default function CompleteWalletProfilePage() {
 
     const [formData, setFormData] = useState({
         name: '',
-        age: '',
+        birthYear: '',
         gender: '',
         interests: '',
         email: '',
@@ -81,12 +81,14 @@ export default function CompleteWalletProfilePage() {
             if (!address) throw new Error('Wallet not connected');
 
             // Validate form
-            if (!formData.name || !formData.age || !formData.gender || !formData.interests || !formData.email) {
+            if (!formData.name || !formData.birthYear || !formData.gender || !formData.interests || !formData.email) {
                 throw new Error('Please fill in all required fields');
             }
 
-            const ageNum = parseInt(formData.age);
-            if (isNaN(ageNum) || ageNum < 18 || ageNum > 120) {
+            const birthYear = parseInt(formData.birthYear);
+            const currentYear = new Date().getFullYear();
+            const calculatedAge = currentYear - birthYear;
+            if (isNaN(birthYear) || calculatedAge < 18 || calculatedAge > 120) {
                 throw new Error('Age must be between 18 and 120');
             }
 
@@ -103,7 +105,7 @@ export default function CompleteWalletProfilePage() {
                 body: JSON.stringify({
                     address,
                     name: formData.name,
-                    age: ageNum,
+                    birthYear: birthYear,
                     gender: formData.gender,
                     interests: formData.interests,
                     email: formData.email,
@@ -112,7 +114,7 @@ export default function CompleteWalletProfilePage() {
             });
 
             const data = await response.json();
-            
+
             if (!response.ok) {
                 throw new Error(data.error || 'Registration failed');
             }
@@ -128,7 +130,7 @@ export default function CompleteWalletProfilePage() {
                 useRegisterWithWallet: true, // This flag tells mint page to use wallet flow
                 registerWithWalletPayload: {
                     name: formData.name,
-                    age: ageNum,
+                    birthYear: birthYear,
                     gender: formData.gender,
                     interests: formData.interests,
                     email: formData.email,
@@ -220,8 +222,8 @@ export default function CompleteWalletProfilePage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Age *</label>
                         <input
                             type="number"
-                            value={formData.age}
-                            onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                            value={formData.birthYear}
+                            onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
                             min="18"
                             max="120"
                             required

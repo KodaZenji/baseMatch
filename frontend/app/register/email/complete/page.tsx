@@ -13,7 +13,7 @@ export default function CompleteEmailProfilePage() {
     const [profile_id, setProfile_id] = useState('');
     const [formData, setFormData] = useState({
         name: '',
-        age: '',
+        birthYear: '',
         gender: '',
         interests: '',
         photoUrl: '',
@@ -87,11 +87,14 @@ export default function CompleteEmailProfilePage() {
             if (!profile_id) throw new Error('Profile ID not found. Please verify your email again.');
 
             // Validate form
-            if (!formData.name || !formData.age || !formData.gender || !formData.interests) {
+            if (!formData.name || !formData.birthYear || !formData.gender || !formData.interests) {
                 throw new Error('Please fill in all required fields');
             }
 
-            if (parseInt(formData.age) < 18 || parseInt(formData.age) > 120) {
+            const currentYear = new Date().getFullYear();
+            const birthYear = parseInt(formData.birthYear);
+            const calculatedAge = currentYear - birthYear;
+            if (calculatedAge < 18 || calculatedAge > 120) {
                 throw new Error('Age must be between 18 and 120');
             }
 
@@ -104,7 +107,7 @@ export default function CompleteEmailProfilePage() {
                 useRegisterWithEmail: true,
                 registerWithEmailPayload: {
                     name: formData.name,
-                    age: parseInt(formData.age),
+                    birthYear: parseInt(formData.birthYear),
                     gender: formData.gender,
                     interests: formData.interests,
                     email: email,
@@ -155,8 +158,8 @@ export default function CompleteEmailProfilePage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Age *</label>
                         <input
                             type="number"
-                            value={formData.age}
-                            onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                            value={formData.birthYear}
+                            onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
                             min="18"
                             max="120"
                             required

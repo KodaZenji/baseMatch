@@ -79,7 +79,7 @@ export interface ProfileRegisterResponse {
     contractAddress: string;
     createProfilePayload: {
         name: string;
-        age: number;
+        birthYear: number;
         gender: string;
         interests: string;
         photoUrl: string;
