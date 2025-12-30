@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
         const normalizedEmail = email.toLowerCase().trim();
 
-        
+
         const { data: profile, error } = await supabaseService
             .from('profiles')
             .select('*')
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
             success: true,
             profile: {
                 name: profile.name,
-                age: profile.age,
+                birthYear: profile.birth_year,
                 gender: profile.gender,
                 interests: profile.interests,
                 photoUrl: profile.photo_url,

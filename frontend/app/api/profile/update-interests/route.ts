@@ -98,14 +98,14 @@ export async function POST(request: NextRequest) {
                         new_interests: newInterests
                     }
                 });
-            
+
             console.log('✅ Interests update notification created for:', normalizedAddress);
         } catch (notifError) {
             // Don't fail the update if notification fails
             console.error('Failed to create interests notification:', notifError);
         }
-        
-        
+
+
         const { encodeFunctionData } = await import('viem');
 
         const callData = encodeFunctionData({
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
                     stateMutability: 'nonpayable',
                     inputs: [
                         { name: 'name', type: 'string' },
-                        { name: 'age', type: 'uint8' },
+                        { name: 'birthYear', type: 'uint256' },
                         { name: 'gender', type: 'string' },
                         { name: 'interests', type: 'string' },
                         { name: 'photoUrl', type: 'string' },
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
             functionName: 'updateProfile',
             args: [
                 profile.name || '',
-                profile.age || 18,
+                profile.birth_year || 0,
                 profile.gender || '',
                 newInterests, // Updated interests
                 profile.photo_url || '',
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
 
     } catch (error) {
         console.error('Error updating interests:', error);
-         return NextResponse.json(
+        return NextResponse.json(
             { error: 'Failed to process interests update' },
             { status: 500 }
         );

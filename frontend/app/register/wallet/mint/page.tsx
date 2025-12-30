@@ -99,7 +99,7 @@ export default function WalletMintPage() {
 
     try {
       const payload = mintData.registerWithWalletPayload;
-      
+
       console.log('🚀 Minting with payload:', payload);
 
       writeContract({
@@ -108,7 +108,7 @@ export default function WalletMintPage() {
         functionName: 'createProfile',
         args: [
           payload.name,
-          payload.age,
+          payload.birthYear,
           payload.gender,
           payload.interests,
           payload.photoUrl || '',
@@ -274,14 +274,14 @@ export default function WalletMintPage() {
           <div>
             <p className="text-gray-700 mb-2">Ready to mint your BaseMatch profile NFT?</p>
             <p className="text-gray-500 text-sm mb-6">This will create your on-chain profile.</p>
-            
+
             {/* Show preview of data being minted */}
             {mintData?.registerWithWalletPayload && (
               <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
                 <p className="text-xs text-gray-500 mb-2">Profile Preview:</p>
                 <div className="space-y-1 text-sm text-gray-700">
                   <p><span className="font-medium">Name:</span> {mintData.registerWithWalletPayload.name}</p>
-                  <p><span className="font-medium">Age:</span> {mintData.registerWithWalletPayload.age}</p>
+                  <p><span className="font-medium">Age:</span> {new Date().getFullYear() - mintData.registerWithWalletPayload.birthYear}</p>
                   <p><span className="font-medium">Gender:</span> {mintData.registerWithWalletPayload.gender}</p>
                 </div>
               </div>
@@ -294,7 +294,7 @@ export default function WalletMintPage() {
             >
               {isPending || isConfirming || isMinting ? 'Minting...' : '✨ Mint Profile NFT'}
             </button>
-            
+
             <button
               onClick={() => router.push('/register/wallet/complete')}
               className="w-full mt-4 bg-gray-300 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-400"
