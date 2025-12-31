@@ -20,7 +20,6 @@ export const config = getDefaultConfig({
   transports: {
     [base.id]: http(alchemyRpcUrl, {
       batch: {
-        multicall: true, // Enable multicall for better performance
         batchSize: 1024, // Larger batch size
         wait: 50, // Wait 50ms to batch requests together
       },
