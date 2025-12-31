@@ -121,26 +121,24 @@ export default function CompleteWalletProfilePage() {
 
             console.log('✅ Profile registered:', data);
 
-            // Store for minting - MATCH THE EMAIL FLOW STRUCTURE
-            localStorage.setItem('walletFirstMint', JSON.stringify({
-                profile_id: data.userInfo?.profileId, // Use snake_case like email flow
-                id: data.userInfo?.profileId, // Also store as id for compatibility
+            // Store for minting
+            localStorage.setItem('walletRegistration', JSON.stringify({
+                profile_id: data.userInfo?.profileId,
+                id: data.userInfo?.profileId,
                 address: address,
                 email: formData.email,
-                useRegisterWithWallet: true, // This flag tells mint page to use wallet flow
-                registerWithWalletPayload: {
+                createProfilePayload: {
                     name: formData.name,
                     birthYear: birthYear,
                     gender: formData.gender,
                     interests: formData.interests,
-                    email: formData.email,
-                    photoUrl: avatarUrl, // Include photoUrl in payload
+                    photoUrl: avatarUrl,
                 },
                 contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS,
             }));
 
             // Redirect to mint page
-            router.push('/register/wallet/mint');
+            router.push('/mint');
         } catch (err) {
             console.error('❌ Error:', err);
             setError(err instanceof Error ? err.message : 'Failed to complete profile');
@@ -217,7 +215,7 @@ export default function CompleteWalletProfilePage() {
                         />
                     </div>
 
-                    {/* Birth Year */}
+                    {/* Birth Year - FIXED */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Birth Year *</label>
                         <select
@@ -227,16 +225,26 @@ export default function CompleteWalletProfilePage() {
                             className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                             <option value="">Select birth year</option>
-                            {Array.from({ length: 105 }, (_, i) => {
-                                const year = 2025 - i; // From 2025 down to 1920
-                                const calculatedAge = new Date().getFullYear() - year;
-                                return calculatedAge >= 18 && calculatedAge <= 120 ? (
-                                    <option key={year} value={year}>
-                                        {year} (age {calculatedAge})
-                                    </option>
-                                ) : null;
-                            }).filter(Boolean)}
+                            {(() => {
+                                const currentYear = new Date().getFullYear();
+                                const options = [];
+                                // Generate years for ages 18 to 100
+                                for (let age = 18; age <= 100; age++) {
+                                    const year = currentYear - age;
+                                    options.push(
+                                        <option key={year} value={year}>
+                                            {year} ({age} years old)
+                                        </option>
+                                    );
+                                }
+                                return options;
+                            })()}
                         </select>
+                        {formData.birthYear && (
+                            <p className="text-xs text-gray-500 mt-1">
+                                Age: {new Date().getFullYear() - parseInt(formData.birthYear)} years old
+                            </p>
+                        )}
                     </div>
 
                     {/* Gender */}
