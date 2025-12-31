@@ -237,8 +237,9 @@ export default function ProfileEdit() {
         const birthYear = parseInt(formData.birthYear);
 
         const currentYear = new Date().getFullYear();
-        if (isNaN(birthYear) || currentYear - birthYear < 18 || currentYear - birthYear > 100) {
-            showNotification('Please enter a valid age between 18 and 100', 'error');
+        const calculatedAge = currentYear - birthYear;
+        if (isNaN(birthYear) || calculatedAge < 18 || calculatedAge > 120) {
+            showNotification('Please enter a valid birth year corresponding to an age between 18 and 120', 'error');
             return;
         }
 
@@ -325,13 +326,13 @@ export default function ProfileEdit() {
                 abi: PROFILE_NFT_ABI,
                 functionName: 'updateProfile',
                 args: [
-  updateData.contractArgs[0],
-  BigInt(updateData.contractArgs[1]), // ← FIX (age → bigint)
-  updateData.contractArgs[2],
-  updateData.contractArgs[3],
-  updateData.contractArgs[4],
-  updateData.contractArgs[5],
-] as const,
+                    updateData.contractArgs[0],
+                    BigInt(updateData.contractArgs[1]), // ← FIX (age → bigint)
+                    updateData.contractArgs[2],
+                    updateData.contractArgs[3],
+                    updateData.contractArgs[4],
+                    updateData.contractArgs[5],
+                ] as const,
             });
 
         } catch (error) {
@@ -589,19 +590,26 @@ export default function ProfileEdit() {
                         />
                     </div>
 
-                    {/* Age */}
+                    {/* Birth Year */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Age *</label>
-                        <input
-                            type="number"
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Birth Year *</label>
+                        <select
                             value={formData.birthYear}
                             onChange={(e) => setFormData(prev => ({ ...prev, birthYear: e.target.value }))}
                             className="w-full px-4 py-3 border text-gray-700 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="18"
-                            min="18"
-                            max="100"
                             required
-                        />
+                        >
+                            <option value="">Select birth year</option>
+                            {Array.from({ length: 105 }, (_, i) => {
+                                const year = 2025 - i; // From 2025 down to 1920
+                                const calculatedAge = new Date().getFullYear() - year;
+                                return calculatedAge >= 18 && calculatedAge <= 120 ? (
+                                    <option key={year} value={year}>
+                                        {year} (age {calculatedAge})
+                                    </option>
+                                ) : null;
+                            }).filter(Boolean)}
+                        </select>
                     </div>
 
                     {/* Gender */}

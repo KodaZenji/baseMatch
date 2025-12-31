@@ -94,8 +94,8 @@ export default function CompleteEmailProfilePage() {
             const currentYear = new Date().getFullYear();
             const birthYear = parseInt(formData.birthYear);
             const calculatedAge = currentYear - birthYear;
-            if (calculatedAge < 18 || calculatedAge > 120) {
-                throw new Error('Age must be between 18 and 120');
+            if (isNaN(birthYear) || calculatedAge < 18 || calculatedAge > 120) {
+                throw new Error('Birth year must correspond to an age between 18 and 120');
             }
 
             // Store for minting using registerWithEmail with profile_id
@@ -153,19 +153,26 @@ export default function CompleteEmailProfilePage() {
                         />
                     </div>
 
-                    {/* Age */}
+                    {/* Birth Year */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Age *</label>
-                        <input
-                            type="number"
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Birth Year *</label>
+                        <select
                             value={formData.birthYear}
                             onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
-                            min="18"
-                            max="120"
                             required
                             className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="18"
-                        />
+                        >
+                            <option value="">Select birth year</option>
+                            {Array.from({ length: 105 }, (_, i) => {
+                                const year = 2025 - i; // From 2025 down to 1920
+                                const calculatedAge = new Date().getFullYear() - year;
+                                return calculatedAge >= 18 && calculatedAge <= 120 ? (
+                                    <option key={year} value={year}>
+                                        {year} (age {calculatedAge})
+                                    </option>
+                                ) : null;
+                            }).filter(Boolean)}
+                        </select>
                     </div>
 
                     {/* Gender */}
