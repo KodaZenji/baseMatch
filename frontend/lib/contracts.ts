@@ -126,7 +126,7 @@ export const PROFILE_NFT_ABI = [
         inputs: [
             { name: "user", type: "address", indexed: true },
             { name: "name", type: "string", indexed: false },
-            { name: "age", type: "uint8", indexed: false },
+            { name: "birthYear", type: "uint256", indexed: false },
             { name: "gender", type: "string", indexed: false },
             { name: "interests", type: "string", indexed: false },
             { name: "photoUrl", type: "string", indexed: false },
