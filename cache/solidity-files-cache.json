@@ -502,8 +502,8 @@
       ]
     },
     "C:\\Users\\ADMIN\\baseMatch\\contracts\\ProfileNFT.sol": {
-      "lastModificationDate": 1765908286269,
-      "contentHash": "be58697f95a5e37a0ab73f8ded210067",
+      "lastModificationDate": 1767054225111,
+      "contentHash": "4ad1d43fa228fd0bd328be889e1d6885",
       "sourceName": "contracts/ProfileNFT.sol",
       "solcConfig": {
         "version": "0.8.22",
