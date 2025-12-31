@@ -107,7 +107,7 @@ export default function ProfileEdit() {
                 if (response.ok) {
                     const mergedProfile = await response.json();
 
-                    if (!formData.name && !formData.birthYear && !formData.gender && !formData.interests) {
+                    
                         setFormData({
                             name: mergedProfile.name || '',
                             birthYear: mergedProfile.birthYear ? mergedProfile.birthYear.toString() : '',
@@ -120,7 +120,7 @@ export default function ProfileEdit() {
                         if (mergedProfile.email) {
                             setUserEmail(mergedProfile.email);
                         }
-                    }
+                    hasLoadedProfile.current = true; // Mark as loaded
                 }
             } catch (error) {
                 console.error('Error fetching merged profile:', error);
