@@ -37,6 +37,7 @@ export default function ProfileEdit() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const hasShownSuccessRef = useRef(false);
+    const hasLoadedProfile = useRef(false); 
 
     const { writeContract, data: hash, isPending, isError, error } = useWriteContract();
     const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
