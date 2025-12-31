@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { Heart } from 'lucide-react';
 
 export default function CompleteEmailProfilePage() {
     const router = useRouter();
@@ -16,7 +17,6 @@ export default function CompleteEmailProfilePage() {
         birthYear: '',
         gender: '',
         interests: '',
-        photoUrl: '',
     });
 
     const [isLoading, setIsLoading] = useState(false);
@@ -37,8 +37,21 @@ export default function CompleteEmailProfilePage() {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
                 <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-                    <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
-                        ❤️ BaseMatch
+                    <div className="flex justify-center mb-6">
+                        <div className="bg-white rounded-full p-3 shadow-lg">
+                            <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
+                            <svg width="0" height="0">
+                                <defs>
+                                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#ec4899" />
+                                        <stop offset="100%" stopColor="#a855f7" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        </div>
+                    </div>
+                    <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                        BaseMatch
                     </h1>
                     <p className="text-gray-700 mb-2 font-semibold">Step 2: Connect Wallet</p>
                     <p className="text-gray-600 mb-6">
@@ -60,8 +73,21 @@ export default function CompleteEmailProfilePage() {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
                 <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-                    <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-6">
-                        ❤️ BaseMatch
+                    <div className="flex justify-center mb-6">
+                        <div className="bg-white rounded-full p-3 shadow-lg">
+                            <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
+                            <svg width="0" height="0">
+                                <defs>
+                                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#ec4899" />
+                                        <stop offset="100%" stopColor="#a855f7" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        </div>
+                    </div>
+                    <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                        BaseMatch
                     </h1>
                     <p className="text-gray-700 mb-6">
                         Please verify your email first
@@ -100,8 +126,8 @@ export default function CompleteEmailProfilePage() {
 
             // Store for minting using registerWithEmail with profile_id
             localStorage.setItem('emailFirstMint', JSON.stringify({
-                profile_id: profile_id, // Store as profile_id (snake_case)
-                id: profile_id, // Also store as id for compatibility
+                profile_id: profile_id,
+                id: profile_id,
                 email,
                 address,
                 useRegisterWithEmail: true,
@@ -127,8 +153,22 @@ export default function CompleteEmailProfilePage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full">
-                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 mb-2 text-center">
-                    ❤️ BaseMatch
+                <div className="flex justify-center mb-6">
+                    <div className="bg-white rounded-full p-3 shadow-lg">
+                        <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
+                        <svg width="0" height="0">
+                            <defs>
+                                <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#ec4899" />
+                                    <stop offset="100%" stopColor="#a855f7" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                </div>
+
+                <h1 className="text-3xl font-bold mb-2 text-center bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                    BaseMatch
                 </h1>
                 <p className="text-gray-600 text-center mb-2">Complete Your Profile</p>
                 <p className="text-sm text-gray-500 text-center mb-8">Email: {email}</p>
@@ -153,7 +193,7 @@ export default function CompleteEmailProfilePage() {
                         />
                     </div>
 
-                    {/* Birth Year */}
+                    {/* Birth Year - FIXED */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Birth Year *</label>
                         <select
@@ -163,16 +203,26 @@ export default function CompleteEmailProfilePage() {
                             className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                             <option value="">Select birth year</option>
-                            {Array.from({ length: 105 }, (_, i) => {
-                                const year = 2025 - i; // From 2025 down to 1920
-                                const calculatedAge = new Date().getFullYear() - year;
-                                return calculatedAge >= 18 && calculatedAge <= 120 ? (
-                                    <option key={year} value={year}>
-                                        {year} (age {calculatedAge})
-                                    </option>
-                                ) : null;
-                            }).filter(Boolean)}
+                            {(() => {
+                                const currentYear = new Date().getFullYear();
+                                const options = [];
+                                // Generate years for ages 18 to 100
+                                for (let age = 18; age <= 100; age++) {
+                                    const year = currentYear - age;
+                                    options.push(
+                                        <option key={year} value={year}>
+                                            {year} ({age} years old)
+                                        </option>
+                                    );
+                                }
+                                return options;
+                            })()}
                         </select>
+                        {formData.birthYear && (
+                            <p className="text-xs text-gray-500 mt-1">
+                                Age: {new Date().getFullYear() - parseInt(formData.birthYear)} years old
+                            </p>
+                        )}
                     </div>
 
                     {/* Gender */}
@@ -182,7 +232,7 @@ export default function CompleteEmailProfilePage() {
                             value={formData.gender}
                             onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                             required
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-600"
                         >
                             <option value="">Select gender</option>
                             <option value="Female">Female</option>
@@ -191,10 +241,7 @@ export default function CompleteEmailProfilePage() {
                         </select>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Photo (Optional)</label>
-                        <p className="text-xs text-gray-500 mb-2">Photos can be added later when editing your profile</p>
-                    </div>
+                    {/* Interests */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Interests *</label>
                         <textarea
@@ -212,7 +259,7 @@ export default function CompleteEmailProfilePage() {
                         disabled={isLoading}
                         className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
                     >
-                        {isLoading ? 'Processing...' : 'Mint Profile NFT'}
+                        {isLoading ? 'Processing...' : 'Continue to Mint →'}
                     </button>
                 </form>
 
@@ -224,7 +271,7 @@ export default function CompleteEmailProfilePage() {
                         }}
                         className="text-gray-600 hover:text-gray-800 text-sm"
                     >
-                        Back to home
+                        ← Back to home
                     </button>
                 </div>
             </div>
