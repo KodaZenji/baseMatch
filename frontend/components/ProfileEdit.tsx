@@ -601,8 +601,9 @@ export default function ProfileEdit() {
                         >
                             <option value="">Select birth year</option>
                             {Array.from({ length: 105 }, (_, i) => {
-                                const year = 2025 - i; // From 2025 down to 1920
-                                const calculatedAge = new Date().getFullYear() - year;
+    const currentYear = new Date().getFullYear(); // Use current year dynamically
+    const year = currentYear - i; // Calculate from current year
+    const calculatedAge = currentYear - year;
                                 return calculatedAge >= 18 && calculatedAge <= 120 ? (
                                     <option key={year} value={year}>
                                         {year} (age {calculatedAge})
