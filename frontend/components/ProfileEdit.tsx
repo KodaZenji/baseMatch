@@ -101,7 +101,7 @@ export default function ProfileEdit() {
     // Populate form with merged profile data (blockchain + database)
     useEffect(() => {
         const fetchMergedProfile = async () => {
-            if (!address) return;
+            if (!address || hasLoadedProfile.current) return; // ✅ ADD hasLoadedProfile check
 
             try {
                 const response = await fetch(`/api/profile/edit?address=${address}`);
