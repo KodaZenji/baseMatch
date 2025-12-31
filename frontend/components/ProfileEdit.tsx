@@ -324,7 +324,14 @@ export default function ProfileEdit() {
                 address: CONTRACTS.PROFILE_NFT as `0x${string}`,
                 abi: PROFILE_NFT_ABI,
                 functionName: 'updateProfile',
-                args: updateData.contractArgs,
+                args: [
+  updateData.contractArgs[0],
+  BigInt(updateData.contractArgs[1]), // ← FIX (age → bigint)
+  updateData.contractArgs[2],
+  updateData.contractArgs[3],
+  updateData.contractArgs[4],
+  updateData.contractArgs[5],
+] as const,
             });
 
         } catch (error) {
