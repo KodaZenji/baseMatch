@@ -39,16 +39,16 @@ export async function GET(request: NextRequest) {
       args: [normalizedAddress as `0x${string}`],
     });
 
-    const blockchainProfile = {
-      tokenId: (profileData as any).tokenId?.toString() || '0',
-      name: (profileData as any).name || '',
-      birthYear: (profileData as any).birthYear || 0,
-      gender: (profileData as any).gender || '',
-      interests: (profileData as any).interests || '',
-      photoUrl: (profileData as any).photoUrl || '',
-      exists: (profileData as any).exists || false,
-    };
-
+  const blockchainProfile = {
+  tokenId: (profileData as any).tokenId?.toString() || '0',
+  name: (profileData as any).name || '',
+  birthYear: Number((profileData as any).birthYear) || 0, // ✅ Convert BigInt to Number
+  gender: (profileData as any).gender || '',
+  interests: (profileData as any).interests || '',
+  photoUrl: (profileData as any).photoUrl || '',
+  exists: (profileData as any).exists || false,
+};
+    
     // Fetch database profile
     const { data: dbProfile, error: dbError } = await supabaseService
       .from('profiles')
