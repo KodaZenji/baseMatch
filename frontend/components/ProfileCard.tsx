@@ -87,16 +87,18 @@ export default function ProfileCard({
     const isButtonDisabled = (isPendingProp ?? false) || isConfirming || isWritePending;
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 
-            hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-1 hover:border-purple-300
+        <div className="bg-white dark:bg-gradient-to-br dark:from-slate-800 dark:via-slate-850 dark:to-slate-900 
+            rounded-2xl shadow-lg overflow-hidden transition-all duration-300 
+            hover:shadow-2xl hover:shadow-purple-500/20 dark:hover:shadow-purple-500/30 hover:-translate-y-1 
+            hover:border-purple-300 dark:hover:border-purple-500/50
             active:scale-[0.98] active:shadow-xl active:shadow-purple-500/30
-            border border-gray-100">
+            border border-gray-100 dark:border-slate-700/50">
 
             {/* Notification */}
             {notification && (
                 <div className={`m-3 p-2.5 rounded-lg text-sm ${notification.type === 'success'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-red-100 text-red-700'
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
                     }`}>
                     {notification.message}
                 </div>
@@ -104,7 +106,10 @@ export default function ProfileCard({
 
             {/* Profile Image - Click to preview */}
             <div
-                className="relative w-full aspect-[4/3] bg-gradient-to-br from-pink-50 to-purple-50 overflow-hidden cursor-pointer group"
+                className="relative w-full aspect-[4/3] 
+                    bg-gradient-to-br from-pink-50 to-purple-50 
+                    dark:bg-gradient-to-br dark:from-slate-700 dark:via-purple-900/20 dark:to-indigo-900/30
+                    overflow-hidden cursor-pointer group"
                 onClick={(e) => {
                     e.stopPropagation();
                     setShowImagePreview(true);
@@ -132,8 +137,8 @@ export default function ProfileCard({
                         </div>
                     </>
                 ) : (
-                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <User className="text-gray-400" size={80} />
+                    <div className="w-full h-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center">
+                        <User className="text-gray-400 dark:text-slate-500" size={80} />
                     </div>
                 )}
             </div>
@@ -141,11 +146,14 @@ export default function ProfileCard({
             {/* Profile Info */}
             <div className="p-4 sm:p-5 md:p-6">
                 <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900">{profile.name}</h3>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{profile.name}</h3>
                     {onGift && (
                         <button
                             onClick={onGift}
-                            className="flex items-center gap-1.5 text-pink-600 hover:text-pink-700 active:text-pink-800 
+                            className="flex items-center gap-1.5 
+                                text-pink-600 dark:text-pink-400 
+                                hover:text-pink-700 dark:hover:text-pink-300 
+                                active:text-pink-800 dark:active:text-pink-500 
                                 font-medium text-sm transition-colors duration-200
                                 hover:scale-105 active:scale-95"
                         >
@@ -155,14 +163,14 @@ export default function ProfileCard({
                     )}
                 </div>
 
-                <div className="flex flex-wrap items-center text-gray-600 mb-3 gap-1.5">
-                    <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-1 rounded-full">
+                <div className="flex flex-wrap items-center text-gray-600 dark:text-gray-300 mb-3 gap-1.5">
+                    <span className="bg-gray-100 dark:bg-slate-700/70 text-gray-800 dark:text-gray-200 text-xs font-medium px-2 py-1 rounded-full">
                         {profile.birthYear ? new Date().getFullYear() - profile.birthYear : profile.age} years
                     </span>
 
                     {profile.email_verified && (
                         <span
-                            className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1"
+                            className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1"
                             title="Email Verified"
                         >
                             <Mail size={12} />
@@ -172,7 +180,7 @@ export default function ProfileCard({
 
                     {profile.wallet_verified && (
                         <span
-                            className="bg-purple-100 text-purple-800 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1"
+                            className="bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1"
                             title="Wallet Linked & Verified"
                         >
                             <Link2 size={12} />
@@ -181,19 +189,20 @@ export default function ProfileCard({
                     )}
 
                     {profile.gender && (
-                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                        <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs font-medium px-2 py-1 rounded-full">
                             {profile.gender}
                         </span>
                     )}
                 </div>
 
-                <p className="text-gray-600 text-sm sm:text-base mb-4 line-clamp-2">{profile.interests}</p>
+                <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base mb-4 line-clamp-2">{profile.interests}</p>
 
                 <div className="flex space-x-3">
                     <button
                         onClick={handleExpressInterest}
                         disabled={isButtonDisabled}
-                        className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white 
+                        className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 
+                            dark:from-blue-500 dark:to-purple-500 text-white 
                             py-2.5 sm:py-3 rounded-xl font-semibold 
                             transition-all duration-200
                             hover:opacity-90 hover:shadow-lg hover:shadow-purple-500/50 hover:scale-[1.02]
