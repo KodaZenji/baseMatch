@@ -106,10 +106,7 @@ export default function ProfileCard({
 
             {/* Profile Image - Click to preview */}
             <div
-                className="relative w-full aspect-[4/3] 
-                    bg-gradient-to-br from-pink-50 to-purple-50 
-                    dark:bg-gradient-to-br dark:from-slate-700 dark:via-purple-900/20 dark:to-indigo-900/30
-                    overflow-hidden cursor-pointer group"
+                className="relative w-full aspect-[4/3] overflow-hidden cursor-pointer group bg-neutral-100 dark:bg-neutral-800"
                 onClick={(e) => {
                     e.stopPropagation();
                     setShowImagePreview(true);
@@ -120,25 +117,22 @@ export default function ProfileCard({
                         <img
                             src={profile.photoUrl}
                             alt={profile.name}
-                            className="w-full h-full object-cover scale-90 transition-transform group-hover:scale-95"
+                            className="w-full h-full object-contain p-4 transition-transform group-hover:scale-105"
                         />
-                        <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity flex items-center justify-center">
-                            <span className="text-white text-4xl opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                        </div>
+                        <div className="absolute inset-0 bg-black/5 dark:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     </>
                 ) : avatarUrl ? (
                     <>
                         <img
                             src={avatarUrl}
                             alt={profile.name}
-                            className="w-full h-full object-cover scale-90 transition-transform group-hover:scale-95"
+                            className="w-full h-full object-contain p-8 transition-transform group-hover:scale-105"
                         />
-                        <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity flex items-center justify-center">
-                        </div>
+                        <div className="absolute inset-0 bg-black/5 dark:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     </>
                 ) : (
-                    <div className="w-full h-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center">
-                        <User className="text-gray-400 dark:text-slate-500" size={80} />
+                    <div className="w-full h-full flex items-center justify-center">
+                        <User className="text-neutral-400 dark:text-neutral-600" size={80} />
                     </div>
                 )}
             </div>
