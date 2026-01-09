@@ -61,7 +61,6 @@ export async function POST(request: Request) {
                         email: normalizedEmail,
                         wallet_address: normalizedWallet || null,
                         name: name || null,
-                        age: calculatedAge, // Store calculated age
                         birthYear: birthYear ? parseInt(birthYear) : null, // Also store birthYear if available
                         gender: gender || null,
                         interests: interests || null,
