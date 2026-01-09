@@ -26,18 +26,35 @@ body {
   min-height: 100vh;
 }
 
-/* Subtle gradient background for dark mode */
 .dark body {
   background: linear-gradient(135deg, #0a0a0f 0%, #1a1d2e 50%, #0a0a0f 100%);
   background-attachment: fixed;
 }
 
 /* ============================================
-   REMOVE ALL FORCED LIGHT MODE STYLES
+   FORCE OVERRIDE ALL GRADIENTS IN DARK MODE
    ============================================ */
 
-/* Let elements use their natural Tailwind dark mode variants */
-/* Don't force any backgrounds - keep them transparent if they should be */
+/* Override blue/indigo gradients used in registration/profile pages */
+.dark .bg-gradient-to-br,
+.dark .bg-gradient-to-r,
+.dark .bg-gradient-to-l,
+.dark .bg-gradient-to-t,
+.dark .bg-gradient-to-b {
+  background: transparent !important;
+}
+
+/* Remove all forced gradient backgrounds */
+.dark [class*="from-indigo"],
+.dark [class*="from-blue"],
+.dark [class*="via-blue"],
+.dark [class*="to-indigo"] {
+  background: transparent !important;
+}
+
+/* ============================================
+   OVERRIDE WHITE BACKGROUNDS GLOBALLY
+   ============================================ */
 
 .dark .bg-white {
   background-color: transparent !important;
@@ -50,45 +67,55 @@ body {
 }
 
 /* ============================================
-   ONLY STYLE ACTUAL CARDS (with shadow-lg class)
+   CARDS AND CONTAINERS
    ============================================ */
 
-/* Profile cards and dashboard cards that SHOULD have backgrounds */
-.dark .shadow-lg {
-  background: rgba(22, 22, 29, 0.7) !important;
+/* Style actual cards with glassmorphism */
+.dark .rounded-3xl.shadow-2xl,
+.dark .rounded-2xl.shadow-lg,
+.dark .rounded-xl.shadow-lg {
+  background: rgba(22, 22, 29, 0.85) !important;
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(59, 130, 246, 0.15) !important;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(59, 130, 246, 0.05) !important;
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(59, 130, 246, 0.08) !important;
 }
 
-.dark .shadow-lg:hover {
-  border-color: rgba(59, 130, 246, 0.3) !important;
-  box-shadow: 0 12px 35px -10px rgba(59, 130, 246, 0.2) !important;
-  transform: translateY(-2px);
-  transition: all 0.3s ease;
-}
-
-/* ============================================
-   HIDE SQUARE PURPLE NAVIGATION
-   ============================================ */
-
-.dark .grid.grid-cols-4,
-.dark .grid.grid-cols-2.gap-4 {
-  display: none !important;
+/* Email/profile card containers */
+.dark .p-8.max-w-md,
+.dark .p-6.max-w-md {
+  background: rgba(22, 22, 29, 0.85) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
 }
 
 /* ============================================
-   TEXT VISIBILITY - GRAY FOR HEADERS/LABELS
+   TEXT COLORS - FORCE VISIBILITY
    ============================================ */
 
+/* Headers and titles */
 .dark h1,
 .dark h2,
 .dark h3 {
-  color: #9ca3af;
+  color: #9ca3af !important;
 }
 
+/* "Edit Your Profile", "BaseMatch", "Email Registration" titles */
+.dark .text-3xl,
+.dark .text-2xl,
+.dark .text-xl {
+  color: #d1d5db !important;
+}
+
+/* Labels */
 .dark label,
+.dark .text-sm.font-medium {
+  color: #9ca3af !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Gray text */
 .dark .text-gray-700,
 .dark .text-gray-600,
 .dark .text-gray-500,
@@ -96,29 +123,28 @@ body {
   color: #9ca3af !important;
 }
 
+/* Body text */
 .dark .text-gray-900,
 .dark .text-gray-800 {
   color: #e5e7eb !important;
 }
 
-/* ============================================
-   BUTTONS - BLUE/PURPLE GRADIENT
-   ============================================ */
-
-.dark button.bg-purple-600,
-.dark button.bg-purple-500,
-.dark button[class*="from-blue-500"],
-.dark button[class*="from-purple-"] {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
-  border: 1px solid rgba(59, 130, 246, 0.3) !important;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
+/* Helper text - "Click the pencil to upload..." */
+.dark p.text-sm,
+.dark .text-center.text-sm,
+.dark .text-xs {
+  color: #9ca3af !important;
+  opacity: 0.9 !important;
+  visibility: visible !important;
 }
 
-.dark button.bg-purple-600:hover,
-.dark button.bg-purple-500:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%) !important;
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-  transform: translateY(-1px);
+/* ============================================
+   HIDE SQUARE NAVIGATION GRIDS
+   ============================================ */
+
+.dark .grid.grid-cols-4,
+.dark .grid.grid-cols-2.gap-4 {
+  display: none !important;
 }
 
 /* ============================================
@@ -128,23 +154,66 @@ body {
 .dark input,
 .dark textarea,
 .dark select {
-  background: rgba(30, 30, 42, 0.5) !important;
+  background: rgba(30, 30, 42, 0.6) !important;
   border: 1px solid rgba(59, 130, 246, 0.25) !important;
   color: #f8fafc !important;
 }
 
 .dark input::placeholder,
-.dark textarea::placeholder {
+.dark textarea::placeholder,
+.dark input[placeholder] {
   color: rgba(148, 163, 184, 0.5) !important;
 }
 
 .dark input:focus,
 .dark textarea:focus,
 .dark select:focus {
-  background: rgba(30, 30, 42, 0.7) !important;
+  background: rgba(30, 30, 42, 0.8) !important;
   border-color: rgba(59, 130, 246, 0.6) !important;
   outline: none !important;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+
+.dark input:disabled,
+.dark textarea:disabled {
+  background: rgba(30, 30, 42, 0.3) !important;
+  opacity: 0.5;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+/* Purple/Blue gradient buttons */
+.dark button.bg-purple-600,
+.dark button.bg-purple-500,
+.dark button[class*="from-pink"],
+.dark button[class*="from-blue"],
+.dark button[class*="from-green"] {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
+  color: white !important;
+}
+
+.dark button.bg-purple-600:hover,
+.dark button.bg-purple-500:hover,
+.dark button[class*="from-pink"]:hover,
+.dark button[class*="from-blue"]:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%) !important;
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+/* Green button override for registration */
+.dark button[class*="from-green"] {
+  background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
+}
+
+.dark button[class*="from-green"]:hover {
+  background: linear-gradient(135deg, #059669 0%, #0d9488 100%) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
 }
 
 /* ============================================
@@ -153,26 +222,30 @@ body {
 
 .dark .bg-green-500,
 .dark .bg-green-600 {
-  background: #22c55e !important;
+  background: #10b981 !important;
+  color: white !important;
 }
 
-.dark .bg-green-100 {
-  background: rgba(34, 197, 94, 0.15) !important;
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  color: #4ade80 !important;
+.dark .bg-green-100,
+.dark .bg-green-50 {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399 !important;
 }
 
 .dark .text-green-800,
 .dark .text-green-700 {
-  color: #4ade80 !important;
+  color: #34d399 !important;
 }
 
 .dark .bg-blue-500,
 .dark .bg-blue-600 {
   background: #3b82f6 !important;
+  color: white !important;
 }
 
-.dark .bg-blue-100 {
+.dark .bg-blue-100,
+.dark .bg-blue-50 {
   background: rgba(59, 130, 246, 0.15) !important;
   border: 1px solid rgba(59, 130, 246, 0.3);
   color: #60a5fa !important;
@@ -184,27 +257,25 @@ body {
 }
 
 /* ============================================
-   STAT CARD GRADIENTS (subtle)
+   GRADIENT TEXT - KEEP COLORFUL
    ============================================ */
 
-.dark .from-blue-50.to-blue-100 {
-  background: linear-gradient(to bottom right, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.15)) !important;
+.dark .bg-gradient-to-r.from-pink-500.to-purple-500.bg-clip-text,
+.dark .bg-gradient-to-r.from-blue-600.to-purple-600.bg-clip-text {
+  background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
 }
 
-.dark .from-purple-50.to-purple-100 {
-  background: linear-gradient(to bottom right, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.15)) !important;
-}
+/* ============================================
+   FEATURE BOXES
+   ============================================ */
 
-.dark .from-green-50.to-green-100 {
-  background: linear-gradient(to bottom right, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.15)) !important;
-}
-
-.dark .from-red-50.to-red-100 {
-  background: linear-gradient(to bottom right, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.15)) !important;
-}
-
-.dark .from-pink-50.to-purple-50 {
-  background: linear-gradient(to bottom right, rgba(236, 72, 153, 0.1), rgba(139, 92, 246, 0.1)) !important;
+.dark .from-pink-50.to-purple-50,
+.dark .bg-gradient-to-br.from-pink-50 {
+  background: linear-gradient(to bottom right, rgba(236, 72, 153, 0.1), rgba(168, 85, 247, 0.1)) !important;
+  border: 1px solid rgba(236, 72, 153, 0.2);
 }
 
 /* ============================================
@@ -221,15 +292,26 @@ body {
 }
 
 /* ============================================
-   HOVER STATES (minimal)
+   BACK BUTTON
    ============================================ */
 
-.dark .hover\:bg-gray-50:hover {
-  background-color: rgba(59, 130, 246, 0.05) !important;
+.dark .rounded-full.bg-purple-600 {
+  background: rgba(59, 130, 246, 0.2) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
+.dark .rounded-full.bg-purple-600:hover {
+  background: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* ============================================
+   HOVER STATES
+   ============================================ */
+
+.dark .hover\:bg-gray-50:hover,
 .dark .hover\:bg-gray-100:hover {
-  background-color: rgba(59, 130, 246, 0.1) !important;
+  background-color: rgba(59, 130, 246, 0.08) !important;
 }
 
 /* ============================================
@@ -264,4 +346,20 @@ body {
 
 .dark a:hover {
   color: #60a5fa;
+}
+
+/* ============================================
+   SHADOWS
+   ============================================ */
+
+.dark .shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
+}
+
+.dark .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5) !important;
 }
