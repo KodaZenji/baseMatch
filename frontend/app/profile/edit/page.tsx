@@ -12,7 +12,6 @@ export default function ProfileEditPage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Check if user has email verified (from localStorage or session)
         const emailVerified = localStorage.getItem('emailVerified');
         const userEmail = localStorage.getItem('userEmail');
         
@@ -24,28 +23,25 @@ export default function ProfileEditPage() {
     }, []);
 
     useEffect(() => {
-        // Only redirect if loading is done and user is neither wallet connected nor email verified
         if (!isLoading && !isConnected && !isEmailUser) {
             router.push('/');
         }
     }, [isConnected, isEmailUser, isLoading, router]);
 
-    // Show loading state while checking authentication
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-gray-500">Loading...</div>
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center transition-colors">
+                <div className="text-gray-500 dark:text-gray-400">Loading...</div>
             </div>
         );
     }
 
-    // If not authenticated at all, don't render anything (will redirect)
     if (!isConnected && !isEmailUser) {
         return null;
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
             <ProfileEdit />
         </div>
     );
