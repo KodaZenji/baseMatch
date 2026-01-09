@@ -1,42 +1,21 @@
 @import "tailwindcss";
 
-/* Enable dark mode with class strategy (used by your Sun/Moon toggle) */
 @variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* LIGHT MODE VARIABLES */
   --background: #f8fafc;
   --foreground: #0f172a;
-  --card-bg: #ffffff;
-  --card-border: rgba(0, 0, 0, 0.08);
-  --input-bg: #ffffff;
-  --hover-bg: #f1f5f9;
-  --text-helper: #64748b; /* Readable gray for light bg */
-  --accent-blue: #3b82f6;
-  --accent-green: #22c55e;
 }
 
 .dark {
-  /* DARK MODE VARIABLES */
   --background: #0a0a0f;
   --foreground: #f8fafc;
-  --card-bg: rgba(22, 22, 29, 0.7);
-  --card-border: rgba(255, 255, 255, 0.08);
-  --input-bg: rgba(30, 30, 42, 0.5);
-  --hover-bg: rgba(59, 130, 246, 0.1);
-  --text-helper: #94a3b8; /* Readable gray for dark bg */
-  --accent-blue: #3b82f6;
-  --accent-green: #22c55e;
 }
 
-/* System preference fallback if no class is present */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
     --background: #0a0a0f;
     --foreground: #f8fafc;
-    --card-bg: rgba(22, 22, 29, 0.7);
-    --card-border: rgba(255, 255, 255, 0.08);
-    --text-helper: #94a3b8;
   }
 }
 
@@ -45,65 +24,244 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), sans-serif;
   min-height: 100vh;
-  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* --- REMOVED PURPLE CONTAINERS --- */
-/* We target specific card-like elements instead of every div */
-.dark .card,
-.dark [class*="card"],
-.dark .modal-content {
-  background: var(--card-bg) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--card-border);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.4);
+/* Subtle gradient background for dark mode */
+.dark body {
+  background: linear-gradient(135deg, #0a0a0f 0%, #1a1d2e 50%, #0a0a0f 100%);
+  background-attachment: fixed;
 }
 
-/* Light mode cards - clean and professional */
-.card, [class*="card"] {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 1rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+/* ============================================
+   REMOVE ALL FORCED LIGHT MODE STYLES
+   ============================================ */
+
+/* Let elements use their natural Tailwind dark mode variants */
+/* Don't force any backgrounds - keep them transparent if they should be */
+
+.dark .bg-white {
+  background-color: transparent !important;
 }
 
-/* --- HELPER TEXT FIX --- */
-.text-gray-500, .text-muted-foreground, .helper-text, small {
-  color: var(--text-helper) !important;
+.dark .bg-gray-50,
+.dark .bg-gray-100,
+.dark .bg-gray-200 {
+  background-color: transparent !important;
 }
 
-/* --- BLUE ACCENTS (Primary Action) --- */
-.dark button:not(.btn-ghost):not(.btn-success),
-.btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
-  color: white !important;
-  border: none !important;
+/* ============================================
+   ONLY STYLE ACTUAL CARDS (with shadow-lg class)
+   ============================================ */
+
+/* Profile cards and dashboard cards that SHOULD have backgrounds */
+.dark .shadow-lg {
+  background: rgba(22, 22, 29, 0.7) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(59, 130, 246, 0.15) !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(59, 130, 246, 0.05) !important;
 }
 
-/* --- GREEN ACCENTS (Verified/Success) --- */
-.verified-badge, .status-success, .btn-success {
-  background: rgba(34, 197, 94, 0.1) !important;
-  border: 1px solid rgba(34, 197, 94, 0.3) !important;
-  color: var(--accent-green) !important;
+.dark .shadow-lg:hover {
+  border-color: rgba(59, 130, 246, 0.3) !important;
+  box-shadow: 0 12px 35px -10px rgba(59, 130, 246, 0.2) !important;
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
 }
 
-/* --- FIXING THE NAV & WALLET ICONS --- */
-/* Remove the purple boxes around nav items and wallet selection */
-.dark .nav-item, 
-.dark .wallet-option,
-.dark div[class*="bg-purple-"] {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+/* ============================================
+   HIDE SQUARE PURPLE NAVIGATION
+   ============================================ */
+
+.dark .grid.grid-cols-4,
+.dark .grid.grid-cols-2.gap-4 {
+  display: none !important;
 }
 
-.dark .wallet-option:hover {
-  background: var(--hover-bg) !important;
+/* ============================================
+   TEXT VISIBILITY - GRAY FOR HEADERS/LABELS
+   ============================================ */
+
+.dark h1,
+.dark h2,
+.dark h3 {
+  color: #9ca3af;
 }
 
-/* Custom Scrollbar for Dark Mode */
+.dark label,
+.dark .text-gray-700,
+.dark .text-gray-600,
+.dark .text-gray-500,
+.dark .text-gray-400 {
+  color: #9ca3af !important;
+}
+
+.dark .text-gray-900,
+.dark .text-gray-800 {
+  color: #e5e7eb !important;
+}
+
+/* ============================================
+   BUTTONS - BLUE/PURPLE GRADIENT
+   ============================================ */
+
+.dark button.bg-purple-600,
+.dark button.bg-purple-500,
+.dark button[class*="from-blue-500"],
+.dark button[class*="from-purple-"] {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
+}
+
+.dark button.bg-purple-600:hover,
+.dark button.bg-purple-500:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%) !important;
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+/* ============================================
+   INPUT FIELDS
+   ============================================ */
+
+.dark input,
+.dark textarea,
+.dark select {
+  background: rgba(30, 30, 42, 0.5) !important;
+  border: 1px solid rgba(59, 130, 246, 0.25) !important;
+  color: #f8fafc !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgba(148, 163, 184, 0.5) !important;
+}
+
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  background: rgba(30, 30, 42, 0.7) !important;
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+
+/* ============================================
+   BADGES
+   ============================================ */
+
+.dark .bg-green-500,
+.dark .bg-green-600 {
+  background: #22c55e !important;
+}
+
+.dark .bg-green-100 {
+  background: rgba(34, 197, 94, 0.15) !important;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #4ade80 !important;
+}
+
+.dark .text-green-800,
+.dark .text-green-700 {
+  color: #4ade80 !important;
+}
+
+.dark .bg-blue-500,
+.dark .bg-blue-600 {
+  background: #3b82f6 !important;
+}
+
+.dark .bg-blue-100 {
+  background: rgba(59, 130, 246, 0.15) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa !important;
+}
+
+.dark .text-blue-800,
+.dark .text-blue-700 {
+  color: #60a5fa !important;
+}
+
+/* ============================================
+   STAT CARD GRADIENTS (subtle)
+   ============================================ */
+
+.dark .from-blue-50.to-blue-100 {
+  background: linear-gradient(to bottom right, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.15)) !important;
+}
+
+.dark .from-purple-50.to-purple-100 {
+  background: linear-gradient(to bottom right, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.15)) !important;
+}
+
+.dark .from-green-50.to-green-100 {
+  background: linear-gradient(to bottom right, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.15)) !important;
+}
+
+.dark .from-red-50.to-red-100 {
+  background: linear-gradient(to bottom right, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.15)) !important;
+}
+
+.dark .from-pink-50.to-purple-50 {
+  background: linear-gradient(to bottom right, rgba(236, 72, 153, 0.1), rgba(139, 92, 246, 0.1)) !important;
+}
+
+/* ============================================
+   BORDERS
+   ============================================ */
+
+.dark .border-gray-200,
+.dark .border-gray-300 {
+  border-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+.dark hr {
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+/* ============================================
+   HOVER STATES (minimal)
+   ============================================ */
+
+.dark .hover\:bg-gray-50:hover {
+  background-color: rgba(59, 130, 246, 0.05) !important;
+}
+
+.dark .hover\:bg-gray-100:hover {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* ============================================
+   SCROLLBAR
+   ============================================ */
+
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: rgba(20, 20, 28, 0.3);
+}
+
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.4);
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.6);
+}
+
+/* ============================================
+   LINKS
+   ============================================ */
+
+.dark a {
+  color: #3b82f6;
+}
+
+.dark a:hover {
+  color: #60a5fa;
 }
