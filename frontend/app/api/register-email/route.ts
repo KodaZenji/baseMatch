@@ -12,7 +12,7 @@ function generateVerificationCode(): string {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, age, gender, interests, email, walletAddress } = body;
+        const { name, birthYear, gender, interests, email, walletAddress } = body;
 
         if (!email) {
             return NextResponse.json(
@@ -50,6 +50,10 @@ export async function POST(request: Request) {
 
         if (!profileId) {
             // New profile - create it
+            // FIXED: Use birthYear to calculate age, then store birthYear
+            const currentYear = new Date().getFullYear();
+            const calculatedAge = birthYear ? currentYear - parseInt(birthYear) : null;
+
             const { data: profile, error: insertError } = await supabaseService
                 .from('profiles')
                 .insert([
@@ -57,7 +61,8 @@ export async function POST(request: Request) {
                         email: normalizedEmail,
                         wallet_address: normalizedWallet || null,
                         name: name || null,
-                        age: age ? parseInt(age) : null,
+                        age: calculatedAge, // Store calculated age
+                        birthYear: birthYear ? parseInt(birthYear) : null, // Also store birthYear if available
                         gender: gender || null,
                         interests: interests || null,
                         email_verified: false,
