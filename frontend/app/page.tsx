@@ -19,13 +19,13 @@ function DarkModeToggle({ isDark, onToggle }: { isDark: boolean; onToggle: () =>
   return (
     <button
       onClick={onToggle}
-      className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+      className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors backdrop-blur-sm"
       aria-label="Toggle dark mode"
     >
       {isDark ? (
         <Sun className="w-5 h-5 text-yellow-400" />
       ) : (
-        <Moon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+        <Moon className="w-5 h-5 text-gray-600" />
       )}
     </button>
   );
@@ -46,30 +46,30 @@ function ExploreMenu({ isOpen, onClose, setActiveTab }: {
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity"
           onClick={onClose}
         />
       )}
       
       <div
-        className={`fixed top-0 right-0 h-full w-72 bg-white dark:bg-gray-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-72 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         <div className="p-6">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <X className="w-6 h-6 text-gray-600 dark:text-gray-300" />
           </button>
 
-          <h2 className="text-2xl font-bold mb-8 text-gray-800 dark:text-white">Menu</h2>
+          <h2 className="text-2xl font-bold mb-8 text-gray-800 dark:text-gray-200">Menu</h2>
 
           <nav className="space-y-4">
             <button
               onClick={() => handleNavClick('notifications')}
-              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
+              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200"
             >
               <MessageCircle className="w-5 h-5" />
               <span className="font-medium">Messages</span>
@@ -77,7 +77,7 @@ function ExploreMenu({ isOpen, onClose, setActiveTab }: {
 
             <button
               onClick={() => handleNavClick('matches')}
-              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
+              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200"
             >
               <Users className="w-5 h-5" />
               <span className="font-medium">Matches</span>
@@ -85,7 +85,7 @@ function ExploreMenu({ isOpen, onClose, setActiveTab }: {
 
             <button
               onClick={() => handleNavClick('profile')}
-              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
+              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200"
             >
               <LayoutDashboard className="w-5 h-5" />
               <span className="font-medium">Dashboard</span>
@@ -97,7 +97,7 @@ function ExploreMenu({ isOpen, onClose, setActiveTab }: {
               href="https://x.com/basematch"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200"
             >
               <Twitter className="w-5 h-5" />
               <span className="font-medium">X.com</span>
@@ -107,7 +107,7 @@ function ExploreMenu({ isOpen, onClose, setActiveTab }: {
               href="https://discord.gg/basematch"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200"
             >
               <MessageSquare className="w-5 h-5" />
               <span className="font-medium">Discord</span>
@@ -129,32 +129,32 @@ function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity"
           onClick={onClose}
         />
       )}
       
       <div
-        className={`fixed top-0 right-0 h-full w-72 bg-white dark:bg-gray-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-72 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         <div className="p-6">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <X className="w-6 h-6 text-gray-600 dark:text-gray-300" />
           </button>
 
-          <h2 className="text-2xl font-bold mb-8 text-gray-800 dark:text-white">Connect With Us</h2>
+          <h2 className="text-2xl font-bold mb-8 text-gray-800 dark:text-gray-200">Connect With Us</h2>
 
           <nav className="space-y-4">
             <a
               href="https://x.com/basematch_"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 p-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600"
+              className="flex items-center gap-3 p-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700"
             >
               <Twitter className="w-6 h-6" />
               <div>
@@ -167,7 +167,7 @@ function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
               href="https://discord.gg/basematch"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 p-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600"
+              className="flex items-center gap-3 p-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700"
             >
               <MessageSquare className="w-6 h-6" />
               <div>
@@ -250,10 +250,10 @@ export default function Home() {
   if (loadingTimeout) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
-        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border border-gray-200 dark:border-gray-700">
           <div className="flex justify-center mb-6">
             <div className="relative">
-              <div className="bg-white dark:bg-gray-700 rounded-full p-3 shadow-lg">
+              <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
                 <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
                 <svg width="0" height="0">
                   <defs>
@@ -291,13 +291,13 @@ export default function Home() {
         <BaseAppAutoConnect />
         
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 max-w-md w-full text-center animate-fadeIn relative">
+          <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full text-center animate-fadeIn relative border border-gray-200 dark:border-gray-700">
             {/* Dark Mode Toggle & Menu for Landing */}
             <div className="absolute top-4 right-4 flex items-center gap-2">
               <DarkModeToggle isDark={isDark} onToggle={toggleDarkMode} />
               <button
                 onClick={() => setIsMenuOpen(true)}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <Menu className="w-6 h-6 text-gray-600 dark:text-gray-300" />
               </button>
@@ -305,7 +305,7 @@ export default function Home() {
 
             <div className="flex justify-center mb-6">
               <div className="relative">
-                <div className="bg-white dark:bg-gray-700 rounded-full p-3 shadow-lg">
+                <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
                   <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
                   <svg width="0" height="0">
                     <defs>
@@ -327,7 +327,7 @@ export default function Home() {
             </div>
 
             {isConnected && (
-              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">✓ Wallet Connected</p>
                 <p className="text-xs text-blue-600 dark:text-blue-400 font-mono mt-1">
                   {address?.slice(0, 6)}...{address?.slice(-4)}
@@ -342,7 +342,7 @@ export default function Home() {
                   : "Your wallet is your dating profile"
                 }
               </p>
-              <div className="bg-gradient-to-br from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 rounded-xl p-4 text-sm text-gray-700 dark:text-gray-300 space-y-2">
+              <div className="bg-gradient-to-br from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 rounded-xl p-4 text-sm text-gray-700 dark:text-gray-300 space-y-2 border border-pink-200 dark:border-pink-900/30">
                 <div className="flex items-center gap-2">
                   <span className="text-green-500">✓</span>
                   <span>Wallet = Your Identity</span>
@@ -425,10 +425,11 @@ export default function Home() {
     );
   }
 
-  // Main App - Explore View
+  // Main App - Explore View with Glassmorphic Header/Nav
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 transition-colors">
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-colors">
+    <div className="min-h-screen transition-colors">
+      {/* Glassmorphic Header */}
+      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-50 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -451,7 +452,7 @@ export default function Home() {
               <DarkModeToggle isDark={isDark} onToggle={toggleDarkMode} />
               <button
                 onClick={() => setIsMenuOpen(true)}
-                className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="p-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors backdrop-blur-sm"
               >
                 <Menu className="w-6 h-6 text-gray-600 dark:text-gray-300" />
               </button>
@@ -461,12 +462,13 @@ export default function Home() {
         </div>
       </header>
 
-      <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 transition-colors">
+      {/* Glassmorphic Navigation */}
+      <nav className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8">
             <button
               onClick={() => setActiveTab('browse')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'browse'
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'browse'
                 ? 'border-pink-500 text-indigo-600 dark:text-indigo-400'
                 : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
@@ -475,7 +477,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setActiveTab('matches')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'matches'
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'matches'
                 ? 'border-pink-500 text-indigo-600 dark:text-indigo-400'
                 : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
@@ -484,7 +486,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setActiveTab('profile')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'profile'
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'profile'
                 ? 'border-pink-500 text-indigo-600 dark:text-indigo-400'
                 : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
@@ -493,7 +495,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setActiveTab('notifications')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm relative ${activeTab === 'notifications'
+              className={`py-4 px-1 border-b-2 font-medium text-sm relative transition-colors ${activeTab === 'notifications'
                 ? 'border-pink-500 text-indigo-600 dark:text-indigo-400'
                 : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
