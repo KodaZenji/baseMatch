@@ -4,20 +4,31 @@ import { useAccount, useWriteContract } from 'wagmi';
 import { MATCHING_ABI, CONTRACTS } from '@/lib/contracts';
 import ProfileCard from './ProfileCard';
 import { useProfiles } from '@/hooks/useProfiles';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import GiftingModal from './GiftingModal';
-import { RefreshCw } from 'lucide-react'; // Add this import
+import { RefreshCw } from 'lucide-react';
+
+// Fisher-Yates shuffle algorithm
+function shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
 
 export default function BrowseProfiles() {
     const { address } = useAccount();
-    const { profiles, loading, refresh } = useProfiles(); // ✅ Get refresh function
+    const { profiles, loading, refresh } = useProfiles();
     const [showSuccess, setShowSuccess] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [isTestMode, setIsTestMode] = useState(true);
     const [showGiftingModal, setShowGiftingModal] = useState(false);
     const [selectedRecipient, setSelectedRecipient] = useState({ address: '', name: '' });
     const [isExpressingInterest, setIsExpressingInterest] = useState(false);
-    const [isRefreshing, setIsRefreshing] = useState(false); // ✅ Track manual refresh state
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [shuffleSeed, setShuffleSeed] = useState(0); // Track when to reshuffle
 
     const { writeContract, isPending, isError, error } = useWriteContract();
 
@@ -29,10 +40,20 @@ export default function BrowseProfiles() {
         setIsTestMode(!hasValidContracts);
     }, []);
 
-    // ✅ Manual refresh handler
+    // Auto-shuffle every 5 minutes (300000ms)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setShuffleSeed(prev => prev + 1);
+        }, 300000); // 5 minutes
+
+        return () => clearInterval(interval);
+    }, []);
+
+    // Manual refresh handler with reshuffle
     const handleManualRefresh = async () => {
         setIsRefreshing(true);
         await refresh();
+        setShuffleSeed(prev => prev + 1); // Trigger reshuffle
         setTimeout(() => setIsRefreshing(false), 1000);
     };
 
@@ -131,6 +152,15 @@ export default function BrowseProfiles() {
         }
     }, [isError, error]);
 
+    // Filter out current user and shuffle profiles
+    const shuffledProfiles = useMemo(() => {
+        const filtered = profiles.filter(
+            profile => profile.wallet_address.toLowerCase() !== address?.toLowerCase()
+        );
+        return shuffleArray(filtered);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [profiles, address, shuffleSeed]); // Re-shuffle when shuffleSeed changes
+
     if (loading && profiles.length === 0) {
         return (
             <div className="flex justify-center items-center h-64">
@@ -139,21 +169,18 @@ export default function BrowseProfiles() {
         );
     }
 
-    // Filter out the current user's profile from the discovery page
-    const filteredProfiles = profiles.filter(profile => profile.wallet_address.toLowerCase() !== address?.toLowerCase());
-
     return (
         <div>
             {/* Header with title and refresh button */}
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Discover People</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Discover People</h2>
                 
-                {/* ✅ Manual Refresh Button */}
+                {/* Manual Refresh Button */}
                 <button
                     onClick={handleManualRefresh}
                     disabled={isRefreshing}
                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50"
-                    title="Refresh profiles"
+                    title="Refresh and shuffle profiles"
                 >
                     <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                     <span className="hidden sm:inline">Refresh</span>
@@ -179,16 +206,16 @@ export default function BrowseProfiles() {
                 </div>
             )}
 
-            {/* ✅ Loading overlay during refresh */}
+            {/* Loading overlay during refresh */}
             <div className="relative">
                 {loading && profiles.length > 0 && (
-                    <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center z-10 rounded-lg">
-                        <div className="text-blue-600 font-semibold">Refreshing...</div>
+                    <div className="absolute inset-0 bg-white dark:bg-slate-900 bg-opacity-50 dark:bg-opacity-50 flex items-center justify-center z-10 rounded-lg">
+                        <div className="text-blue-600 dark:text-blue-400 font-semibold">Refreshing...</div>
                     </div>
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredProfiles.map((profile) => (
+                    {shuffledProfiles.map((profile) => (
                         <ProfileCard
                             key={profile.wallet_address}
                             profile={profile}
@@ -200,10 +227,10 @@ export default function BrowseProfiles() {
                 </div>
             </div>
 
-            {filteredProfiles.length === 0 && (
+            {shuffledProfiles.length === 0 && (
                 <div className="text-center py-12">
-                    <p className="text-gray-500 text-lg">No profiles to show yet</p>
-                    <p className="text-gray-400">Check back later or invite your friends!</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-lg">No profiles to show yet</p>
+                    <p className="text-gray-400 dark:text-gray-500">Check back later or invite your friends!</p>
                 </div>
             )}
 
