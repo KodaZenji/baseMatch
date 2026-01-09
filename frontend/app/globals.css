@@ -1,37 +1,43 @@
 @import "tailwindcss";
 
-/* Enable dark mode with class strategy */
+/* Enable dark mode with class strategy (used by your Sun/Moon toggle) */
 @variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* LIGHT MODE VARIABLES */
+  --background: #f8fafc;
+  --foreground: #0f172a;
   --card-bg: #ffffff;
-  --card-border: rgba(0, 0, 0, 0.1);
-  --input-bg: #f5f5f5;
-  --hover-bg: #f0f0f0;
+  --card-border: rgba(0, 0, 0, 0.08);
+  --input-bg: #ffffff;
+  --hover-bg: #f1f5f9;
+  --text-helper: #64748b; /* Readable gray for light bg */
   --accent-blue: #3b82f6;
   --accent-green: #22c55e;
-  --text-gray: #6b7280;
 }
 
 .dark {
-  --background: #0a0a0f; /* Deeper black for better contrast */
+  /* DARK MODE VARIABLES */
+  --background: #0a0a0f;
   --foreground: #f8fafc;
   --card-bg: rgba(22, 22, 29, 0.7);
-  --card-border: rgba(255, 255, 255, 0.08); /* Neutral border instead of purple */
+  --card-border: rgba(255, 255, 255, 0.08);
   --input-bg: rgba(30, 30, 42, 0.5);
-  --hover-bg: rgba(59, 130, 246, 0.1); /* Blue hover */
+  --hover-bg: rgba(59, 130, 246, 0.1);
+  --text-helper: #94a3b8; /* Readable gray for dark bg */
   --accent-blue: #3b82f6;
   --accent-green: #22c55e;
-  --text-gray: #94a3b8; /* Visible gray helper text */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* System preference fallback if no class is present */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: #0a0a0f;
+    --foreground: #f8fafc;
+    --card-bg: rgba(22, 22, 29, 0.7);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --text-helper: #94a3b8;
+  }
 }
 
 body {
@@ -39,74 +45,54 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), sans-serif;
   min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.dark body {
-  background: radial-gradient(circle at top right, #1e1b4b, #0a0a0f 40%);
-  background-attachment: fixed;
-}
-
-/* --- FIX: REMOVED UNIVERSAL PURPLE CONTAINERS --- */
-/* Only apply glassmorphism to actual cards/modals, not every div */
+/* --- REMOVED PURPLE CONTAINERS --- */
+/* We target specific card-like elements instead of every div */
 .dark .card,
-.dark .modal-content,
-.dark [role="dialog"] {
+.dark [class*="card"],
+.dark .modal-content {
   background: var(--card-bg) !important;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--card-border);
-  border-radius: 1.25rem;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.4);
 }
 
-/* --- FIX: HELPER TEXT VISIBILITY --- */
-.dark .helper-text, 
-.dark p.text-gray-500, 
-.dark .text-muted-foreground {
-  color: var(--text-gray) !important;
+/* Light mode cards - clean and professional */
+.card, [class*="card"] {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* --- BUTTONS: BLUE PRIMARY --- */
-.dark button:not(.btn-ghost):not(.btn-success) {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border: none;
-  color: white;
-  font-weight: 600;
-  transition: all 0.2s ease;
+/* --- HELPER TEXT FIX --- */
+.text-gray-500, .text-muted-foreground, .helper-text, small {
+  color: var(--text-helper) !important;
 }
 
-.dark button:not(.btn-ghost):hover {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+/* --- BLUE ACCENTS (Primary Action) --- */
+.dark button:not(.btn-ghost):not(.btn-success),
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: white !important;
+  border: none !important;
 }
 
-/* --- SUCCESS STATES: GREEN --- */
-.dark .verified, 
-.dark .status-success,
-.dark .btn-success {
-  background: rgba(34, 197, 94, 0.15) !important;
+/* --- GREEN ACCENTS (Verified/Success) --- */
+.verified-badge, .status-success, .btn-success {
+  background: rgba(34, 197, 94, 0.1) !important;
   border: 1px solid rgba(34, 197, 94, 0.3) !important;
-  color: #4ade80 !important;
+  color: var(--accent-green) !important;
 }
 
-/* --- INPUTS --- */
-.dark input, .dark select {
-  background: var(--input-bg) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
-}
-
-.dark input:focus {
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
-
-/* --- REMOVE PURPLE FROM NAV/WALLET ICONS --- */
-/* Target the specific purple boxes in your screenshots */
-.dark .nav-link, 
+/* --- FIXING THE NAV & WALLET ICONS --- */
+/* Remove the purple boxes around nav items and wallet selection */
+.dark .nav-item, 
 .dark .wallet-option,
-.dark div[class*="bg-purple"] {
+.dark div[class*="bg-purple-"] {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -114,5 +100,10 @@ body {
 
 .dark .wallet-option:hover {
   background: var(--hover-bg) !important;
-  border-radius: 12px;
+}
+
+/* Custom Scrollbar for Dark Mode */
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
 }
