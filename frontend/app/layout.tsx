@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   title: "BaseMatch - Web3 Dating on Base",
   description: "The dating app where your wallet is your identity and reputation matters.",
 
-  // Open Graph (for social sharing)
   openGraph: {
     title: "BaseMatch - Find Your Match On-Chain",
     description: "Your wallet is your dating profile. Build real reputation, meet real people.",
@@ -23,7 +22,6 @@ export const metadata: Metadata = {
     type: 'website',
   },
 
-  // Twitter Card
   twitter: {
     card: 'summary_large_image',
     title: 'BaseMatch - Find Your Match On-Chain',
@@ -31,7 +29,6 @@ export const metadata: Metadata = {
     images: ['https://ipfs.filebase.io/ipfs/QmdvmF7F39sYqF345gyzWnWQdff66JjDNTFokBXwwrPW5b.png'],
   },
 
-  // Icons
   icons: {
     icon: 'https://ipfs.filebase.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw.png',
     apple: 'https://ipfs.filebase.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw.png',
@@ -49,15 +46,10 @@ export const metadata: Metadata = {
           name: "BaseMatch",
           url: "https://basematch.app",
           splashImageUrl: "https://ipfs.filebase.io/ipfs/QmZkcUNwxJvjdhs1u6WZMWu7F8911UwZZ3AwHufoUToUWD.png",
-          splashBackgroundColor: "#3B82F6"
+          splashBackgroundColor: "#0a0a0f"
         }
       }
     }),
-    'fc:frame': 'vNext',
-    'fc:frame:image': 'https://ipfs.filebase.io/ipfs/QmdvmF7F39sYqF345gyzWnWQdff66JjDNTFokBXwwrPW5b.png',
-    'fc:frame:button:1': 'Find Your Match',
-    'fc:frame:button:1:action': 'link',
-    'fc:frame:button:1:target': 'https://basematch.app',
   }
 };
 
@@ -67,10 +59,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    /* suppressHydrationWarning is critical when using a theme toggle */
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${lexend.variable} font-sans antialiased`}
-        style={{ fontFamily: 'var(--font-lexend)' }}
+        style={{ fontFamily: 'var(--font-lexend), sans-serif' }}
       >
         <Providers>
           <ReminderCheckerWrapper />
