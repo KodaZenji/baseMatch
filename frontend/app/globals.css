@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
+/* Enable dark mode with class strategy */
+@variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+}
+
+/* Add dark mode variables */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 @theme inline {
@@ -12,8 +21,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Keep system preference as fallback */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light) {
     --background: #0a0a0a;
     --foreground: #ededed;
   }
