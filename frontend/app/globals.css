@@ -12,17 +12,17 @@
   --hover-bg: #f0f0f0;
 }
 
-/* Enhanced dark mode with vibrant, modern colors */
+/* Enhanced dark mode - Base theme blue/purple */
 .dark {
   --background: #0f0f14;
   --foreground: #e8e8f0;
   --card-bg: rgba(20, 20, 28, 0.6);
-  --card-border: rgba(139, 92, 246, 0.15);
+  --card-border: rgba(59, 130, 246, 0.2);
   --input-bg: rgba(30, 30, 42, 0.5);
-  --hover-bg: rgba(139, 92, 246, 0.1);
-  --accent-primary: #8b5cf6;
-  --accent-secondary: #06b6d4;
-  --glow: rgba(139, 92, 246, 0.2);
+  --hover-bg: rgba(59, 130, 246, 0.1);
+  --accent-primary: #3b82f6;
+  --accent-secondary: #8b5cf6;
+  --glow: rgba(59, 130, 246, 0.2);
 }
 
 @theme inline {
@@ -32,15 +32,14 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* System preference fallback */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
     --background: #0f0f14;
     --foreground: #e8e8f0;
     --card-bg: rgba(20, 20, 28, 0.6);
-    --card-border: rgba(139, 92, 246, 0.15);
+    --card-border: rgba(59, 130, 246, 0.2);
     --input-bg: rgba(30, 30, 42, 0.5);
-    --hover-bg: rgba(139, 92, 246, 0.1);
+    --hover-bg: rgba(59, 130, 246, 0.1);
   }
 }
 
@@ -51,74 +50,216 @@ body {
   min-height: 100vh;
 }
 
-/* Dark mode gradient background */
 .dark body {
-  background: linear-gradient(135deg, #0f0f14 0%, #1a1a28 50%, #0f0f14 100%);
+  background: linear-gradient(135deg, #0f0f14 0%, #1a1d2e 50%, #0f0f14 100%);
   background-attachment: fixed;
 }
 
-/* Global glassmorphism card styles */
+/* ============================================
+   HIDE ALL SQUARE PURPLE NAVIGATION BUTTONS
+   ============================================ */
+
+/* Hide ALL purple/violet square buttons in navigation */
+.dark button[class*="bg-purple-"],
+.dark button[class*="bg-violet-"],
+.dark .bg-purple-500,
+.dark .bg-purple-600,
+.dark .bg-violet-500,
+.dark .bg-violet-600 {
+  display: none !important;
+}
+
+/* Hide grid containers with navigation buttons */
+.dark .grid.grid-cols-4,
+.dark .grid.grid-cols-2 {
+  display: none !important;
+}
+
+/* Hide Browse, Matches, Dashboard, Notifications square buttons */
+.dark nav > .grid,
+.dark header > .grid,
+.dark .flex > .grid {
+  display: none !important;
+}
+
+/* ============================================
+   MAKE SECTION HEADERS VISIBLE AND GRAY
+   ============================================ */
+
+/* Show "Your Dashboard", "Discover People", etc in gray */
+.dark h1,
+.dark h2,
+.dark h3 {
+  color: #9ca3af !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
+/* Specific heading styles */
+.dark .text-3xl.font-bold,
+.dark .text-2xl.font-bold,
+.dark .text-xl.font-bold,
+.dark h1.font-bold,
+.dark h2.font-bold {
+  color: #9ca3af !important;
+}
+
+/* Profile username should be visible */
+.dark .text-xl.font-semibold,
+.dark .text-lg.font-medium,
+.dark .text-2xl.font-semibold {
+  color: #d1d5db !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* ============================================
+   FORM LABELS VISIBLE AND GRAY
+   ============================================ */
+
+/* All form labels visible in gray */
+.dark label,
+.dark label.text-sm,
+.dark .text-sm.font-medium,
+.dark .text-gray-700,
+.dark .text-gray-600,
+.dark .text-gray-500 {
+  color: #9ca3af !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
+/* Asterisk (*) in labels */
+.dark label span,
+.dark label::after {
+  color: #9ca3af !important;
+}
+
+/* Helper text like "Click the pencil to upload..." */
+.dark .text-purple-400,
+.dark .text-center.text-sm,
+.dark p.text-sm,
+.dark .text-sm.text-gray-400,
+.dark .text-sm.text-gray-500,
+.dark .text-xs.text-gray-400,
+.dark .text-xs.text-gray-500 {
+  color: #9ca3af !important;
+  opacity: 0.9 !important;
+  visibility: visible !important;
+}
+
+/* "Click the pencil to upload your photo" specifically */
+.dark p[class*="text-"],
+.dark .text-center {
+  color: #9ca3af !important;
+  visibility: visible !important;
+}
+
+/* ============================================
+   GLASSMORPHISM CARDS
+   ============================================ */
+
 .dark .card,
 .dark [class*="card"],
-.dark [class*="bg-white"],
-.dark .bg-gray-50,
-.dark .bg-gray-100 {
+.dark .bg-white:not(button),
+.dark .bg-gray-50:not(button),
+.dark .bg-gray-100:not(button),
+.dark .rounded-lg.p-6,
+.dark .rounded-xl.p-6 {
   background: rgba(20, 20, 28, 0.6) !important;
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
   box-shadow: 
     0 8px 32px 0 rgba(0, 0, 0, 0.37),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+    inset 0 1px 0 0 rgba(59, 130, 246, 0.05);
 }
 
-/* Hover effects for cards */
 .dark .card:hover,
 .dark [class*="card"]:hover {
-  border-color: rgba(139, 92, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.4) !important;
   box-shadow: 
-    0 12px 40px 0 rgba(139, 92, 246, 0.2),
+    0 12px 40px 0 rgba(59, 130, 246, 0.25),
+    0 0 20px 0 rgba(139, 92, 246, 0.15),
     inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
   transform: translateY(-2px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Input fields with glassmorphism */
+/* Light mode cards */
+.light .card,
+.light [class*="card"],
+:root:not(.dark) .card,
+:root:not(.dark) [class*="card"] {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  border-radius: 0.75rem;
+}
+
+/* ============================================
+   INPUT FIELDS
+   ============================================ */
+
 .dark input,
 .dark textarea,
 .dark select {
   background: rgba(30, 30, 42, 0.5) !important;
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  color: var(--foreground);
+  border: 1px solid rgba(59, 130, 246, 0.25) !important;
+  color: #e8e8f0 !important;
   transition: all 0.2s ease;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgba(156, 163, 175, 0.5) !important;
 }
 
 .dark input:focus,
 .dark textarea:focus,
 .dark select:focus {
   background: rgba(30, 30, 42, 0.7) !important;
-  border-color: rgba(139, 92, 246, 0.5);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.6) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
 }
 
-.dark input::placeholder,
-.dark textarea::placeholder {
-  color: rgba(232, 232, 240, 0.4);
+.light input,
+.light textarea,
+.light select,
+:root:not(.dark) input,
+:root:not(.dark) textarea,
+:root:not(.dark) select {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #171717;
 }
 
-/* Buttons with enhanced styling */
-.dark button:not(.btn-ghost) {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+.light input:focus,
+.light textarea:focus,
+.light select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ============================================
+   BUTTONS WITH BLUE/PURPLE GRADIENT
+   ============================================ */
+
+.dark button:not(.btn-ghost):not([class*="bg-transparent"]) {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
+  color: white !important;
   transition: all 0.3s ease;
 }
 
-.dark button:not(.btn-ghost):hover {
-  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+.dark button:not(.btn-ghost):not([class*="bg-transparent"]):hover {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%) !important;
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4), 0 0 30px rgba(139, 92, 246, 0.2);
   transform: translateY(-1px);
 }
 
@@ -126,7 +267,10 @@ body {
   transform: translateY(0);
 }
 
-/* Proportional text sizing */
+/* ============================================
+   TEXT SIZING
+   ============================================ */
+
 .dark h1 {
   font-size: clamp(1.75rem, 5vw, 2.25rem);
   font-weight: 700;
@@ -144,8 +288,8 @@ body {
 }
 
 .dark p,
-.dark span,
-.dark div {
+.dark span:not(.text-xs):not(.text-sm),
+.dark div:not(.text-xs):not(.text-sm) {
   font-size: clamp(0.875rem, 2vw, 0.9375rem);
   line-height: 1.6;
 }
@@ -159,54 +303,35 @@ body {
   font-size: clamp(0.6875rem, 1.5vw, 0.75rem);
 }
 
-/* Mobile optimizations */
 @media (max-width: 768px) {
-  .dark .card,
-  .dark [class*="card"] {
+  .dark .card {
     backdrop-filter: blur(15px) saturate(160%);
-  }
-  
-  .dark h1 {
-    font-size: clamp(1.5rem, 6vw, 2rem);
-  }
-  
-  .dark h2 {
-    font-size: clamp(1.25rem, 5vw, 1.75rem);
-  }
-  
-  .dark h3 {
-    font-size: clamp(1.125rem, 4vw, 1.5rem);
-  }
-  
-  .dark p {
-    font-size: clamp(0.8125rem, 3vw, 0.875rem);
   }
 }
 
-/* Desktop optimizations */
 @media (min-width: 1024px) {
-  .dark .card,
-  .dark [class*="card"] {
+  .dark .card {
     backdrop-filter: blur(25px) saturate(200%);
   }
 }
 
-/* Accent gradient text */
+/* ============================================
+   MISC STYLING
+   ============================================ */
+
 .dark .gradient-text {
-  background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Dividers */
 .dark hr,
 .dark .border-t,
 .dark .border-b {
-  border-color: rgba(139, 92, 246, 0.15) !important;
+  border-color: rgba(59, 130, 246, 0.2) !important;
 }
 
-/* Scrollbar styling */
 .dark ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -217,20 +342,46 @@ body {
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.3);
+  background: rgba(59, 130, 246, 0.4);
   border-radius: 4px;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.5);
+  background: rgba(59, 130, 246, 0.6);
 }
 
-/* Loading states */
+.dark a:not(.btn) {
+  color: #3b82f6;
+  transition: color 0.2s ease;
+}
+
+.dark a:not(.btn):hover {
+  color: #60a5fa;
+}
+
+.dark .badge,
+.dark .pill {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.dark .alert {
+  background: rgba(30, 30, 42, 0.6);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 0.75rem;
+}
+
 .dark .skeleton {
   background: linear-gradient(
     90deg,
     rgba(30, 30, 42, 0.4) 25%,
-    rgba(139, 92, 246, 0.1) 50%,
+    rgba(59, 130, 246, 0.15) 50%,
     rgba(30, 30, 42, 0.4) 75%
   );
   background-size: 200% 100%;
@@ -238,63 +389,6 @@ body {
 }
 
 @keyframes loading {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
-
-/* Backdrop blur for modals */
-.dark .modal-backdrop,
-.dark .overlay {
-  background: rgba(15, 15, 20, 0.8);
-  backdrop-filter: blur(12px);
-}
-
-/* Link styling */
-.dark a:not(.btn) {
-  color: #8b5cf6;
-  transition: color 0.2s ease;
-}
-
-.dark a:not(.btn):hover {
-  color: #a78bfa;
-  text-decoration: underline;
-}
-
-/* Badge/Pill styling */
-.dark .badge,
-.dark .pill {
-  background: rgba(139, 92, 246, 0.15);
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  color: #a78bfa;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-/* Alert/Notification styling */
-.dark .alert {
-  background: rgba(30, 30, 42, 0.6);
-  backdrop-filter: blur(15px);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 0.75rem;
-}
-
-.dark .alert-success {
-  border-color: rgba(34, 197, 94, 0.3);
-  background: rgba(34, 197, 94, 0.1);
-}
-
-.dark .alert-error {
-  border-color: rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.1);
-}
-
-.dark .alert-warning {
-  border-color: rgba(251, 191, 36, 0.3);
-  background: rgba(251, 191, 36, 0.1);
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
