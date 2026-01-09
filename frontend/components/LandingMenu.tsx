@@ -1,4 +1,13 @@
-export function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+// components/LandingMenu.tsx
+import React from 'react';
+import { X, Twitter, MessageSquare } from 'lucide-react';
+
+interface LandingMenuProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function LandingMenu({ isOpen, onClose }: LandingMenuProps) {
   return (
     <>
       {isOpen && (
@@ -7,7 +16,7 @@ export function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () 
           onClick={onClose}
         />
       )}
-      
+
       <div
         className={`fixed top-0 right-0 h-full w-72 bg-white dark:bg-gray-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
@@ -21,7 +30,9 @@ export function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () 
             <X className="w-6 h-6 text-gray-600 dark:text-gray-300" />
           </button>
 
-          <h2 className="text-2xl font-bold mb-8 text-gray-800 dark:text-white">Connect With Us</h2>
+          <h2 className="text-2xl font-bold mb-8 text-gray-800 dark:text-white">
+            Connect With Us
+          </h2>
 
           <nav className="space-y-4">
             <a
