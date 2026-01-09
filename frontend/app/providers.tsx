@@ -6,6 +6,7 @@ import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { config } from '@/lib/wagmi';
 import { validateEnvironment } from '@/lib/validateEnv';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { DarkModeProvider } from '@/components/DarkModeProvider';
 import { base } from 'wagmi/chains';
 import '@rainbow-me/rainbowkit/styles.css';
 import { useState, useEffect } from 'react';
@@ -45,20 +46,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
     return (
         <ErrorBoundary>
-            <WagmiProvider config={config}>
-                <QueryClientProvider client={queryClient}>
-                    <RainbowKitProvider
-                        initialChain={base}
-                        theme={darkTheme({
-                            accentColor: '#FF1493',
-                            accentColorForeground: 'white',
-                            borderRadius: 'large',
-                        })}
-                    >
-                        {children}
-                    </RainbowKitProvider>
-                </QueryClientProvider>
-            </WagmiProvider>
+            <DarkModeProvider>
+                <WagmiProvider config={config}>
+                    <QueryClientProvider client={queryClient}>
+                        <RainbowKitProvider
+                            initialChain={base}
+                            theme={darkTheme({
+                                accentColor: '#FF1493',
+                                accentColorForeground: 'white',
+                                borderRadius: 'large',
+                            })}
+                        >
+                            {children}
+                        </RainbowKitProvider>
+                    </QueryClientProvider>
+                </WagmiProvider>
+            </DarkModeProvider>
         </ErrorBoundary>
     );
 }
