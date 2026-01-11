@@ -29,6 +29,19 @@ export default function ProfileCard({
     // 🎯 Fetch reputation data
     const { reputation, loading: reputationLoading } = useReputation(profile.wallet_address);
 
+    // 🐛 DEBUG LOGGING - Remove this after testing
+    useEffect(() => {
+        console.log('🔍 ProfileCard Reputation Debug:', {
+            profileName: profile.name,
+            walletAddress: profile.wallet_address,
+            reputation,
+            reputationLoading,
+            hasReputation: !!reputation,
+            totalDates: reputation?.totalDates,
+            contractAddress: CONTRACTS.REPUTATION,
+        });
+    }, [profile.name, profile.wallet_address, reputation, reputationLoading]);
+
     // 🎯 Calculate if profile is a "Keeper"
     const isKeeper = reputation && 
         reputation.totalDates >= 3 && 
@@ -192,7 +205,7 @@ export default function ProfileCard({
                     )}
                 </div>
 
-                {/* 🎯 Reputation Stats Section */}
+                {/* 🎯 Reputation Stats Section - FIXED LOGIC */}
                 {!reputationLoading && reputation && reputation.totalDates > 0 && (
                     <div className="mb-3 flex flex-wrap gap-2">
                         {/* Rating Badge */}
@@ -209,26 +222,28 @@ export default function ProfileCard({
                         </span>
 
                         {/* Show-up Rate Badge */}
-                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1
-                            ${showUpRate! >= 85
-                                ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                                : showUpRate! >= 50
-                                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                                : 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
-                            }`}
-                        >
-                            {showUpRate! >= 85 ? (
-                                <CheckCircle className="w-3 h-3" />
-                            ) : (
-                                <AlertTriangle className="w-3 h-3" />
-                            )}
-                            {reputation.totalDates - reputation.noShows}/{reputation.totalDates} showed up
-                        </span>
+                        {showUpRate !== null && (
+                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1
+                                ${showUpRate >= 85
+                                    ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                    : showUpRate >= 50
+                                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                                    : 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
+                                }`}
+                            >
+                                {showUpRate >= 85 ? (
+                                    <CheckCircle className="w-3 h-3" />
+                                ) : (
+                                    <AlertTriangle className="w-3 h-3" />
+                                )}
+                                {reputation.totalDates - reputation.noShows}/{reputation.totalDates} showed up
+                            </span>
+                        )}
                     </div>
                 )}
 
-                {/* 🎯 New User Badge (if no reputation yet) */}
-                {!reputationLoading && reputation && reputation.totalDates === 0 && (
+                {/* 🎯 New User Badge - FIXED: Shows when no reputation OR totalDates is 0 */}
+                {!reputationLoading && (!reputation || (reputation && reputation.totalDates === 0)) && (
                     <div className="mb-3">
                         <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 inline-flex">
                             <Sparkles className="w-3 h-3" />
