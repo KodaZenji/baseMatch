@@ -23,13 +23,6 @@ export function useReputation(address: string | undefined, refreshKey: number = 
         CONTRACTS.REPUTATION.length === 42
     );
 
-    // 🐛 DEBUG
-    console.log('🔍 useReputation init:', {
-        address,
-        isContractDeployed,
-        contractAddress: CONTRACTS.REPUTATION
-    });
-
     const { 
         data: reputationData, 
         isLoading: isReputationLoading, 
@@ -67,17 +60,8 @@ export function useReputation(address: string | undefined, refreshKey: number = 
         }
     }, [refreshKey, refetch, refetchRating, address, isContractDeployed]);
 
-    // 🎯 FIXED: Process data and set loading state properly
+    // Process data and set loading state
     useEffect(() => {
-        console.log('🔍 useReputation data effect:', {
-            address,
-            isReputationLoading,
-            isRatingLoading,
-            hasReputationData: !!reputationData,
-            hasRatingData: !!averageRatingData,
-            isContractDeployed
-        });
-
         // If contract is not deployed, set defaults and stop loading
         if (!isContractDeployed) {
             setReputation({
@@ -114,7 +98,6 @@ export function useReputation(address: string | undefined, refreshKey: number = 
                     averageRating: avgRating,
                 };
 
-                console.log('🔍 Setting reputation data:', repData);
                 setReputation(repData);
             } catch (err) {
                 console.error('Error processing reputation data:', err);
@@ -130,7 +113,6 @@ export function useReputation(address: string | undefined, refreshKey: number = 
             }
         } else {
             // No data returned, set defaults
-            console.log('🔍 No reputation data, setting defaults');
             setReputation({
                 totalDates: 0,
                 noShows: 0,
@@ -143,7 +125,6 @@ export function useReputation(address: string | undefined, refreshKey: number = 
 
     useEffect(() => {
         if (readError) {
-            console.error('🔍 Read error:', readError);
             setError(readError as Error);
             setLoading(false); // Stop loading on error
         }
