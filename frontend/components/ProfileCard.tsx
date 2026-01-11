@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import blockies from 'blockies-ts';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { MATCHING_ABI, CONTRACTS } from '@/lib/contracts';
-import { Gift, Search, User, Mail, Link2, X, Loader, Star, CheckCircle, AlertTriangle, Sparkles } from 'lucide-react';
+import { Gift, User, Mail, Link2, X, Loader, Star, CheckCircle, AlertTriangle, Sparkles } from 'lucide-react';
 import { useReputation } from '@/hooks/useReputation';
 
 export default function ProfileCard({
@@ -26,10 +26,10 @@ export default function ProfileCard({
     const { writeContract, data: hash, isPending: isWritePending, error } = useWriteContract();
     const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-    // Fetch reputation data
+    // 🎯 Fetch reputation data
     const { reputation, loading: reputationLoading } = useReputation(profile.wallet_address);
 
-    //  Calculate if profile is a "Keeper"
+    // 🎯 Calculate if profile is a "Keeper"
     const isKeeper = reputation && 
         reputation.totalDates >= 3 && 
         reputation.averageRating >= 4.0 &&
@@ -102,21 +102,22 @@ export default function ProfileCard({
     const isButtonDisabled = (isPendingProp ?? false) || isConfirming || isWritePending;
 
     return (
-        <div className={`bg-white dark:bg-gradient-to-br dark:from-slate-800 dark:via-slate-850 dark:to-slate-900 
+        <div 
+            className={`bg-white dark:bg-gradient-to-br dark:from-slate-800 dark:via-slate-850 dark:to-slate-900 
             rounded-2xl shadow-lg overflow-hidden transition-all duration-300 
             hover:shadow-2xl hover:shadow-purple-500/20 dark:hover:shadow-purple-500/30 hover:-translate-y-1 
             hover:border-purple-300 dark:hover:border-purple-500/50
             active:scale-[0.98] active:shadow-xl active:shadow-purple-500/30
             border relative
             ${isKeeper 
-                ? 'border-amber-200 dark:border-amber-500/30 keeper-glow' 
+                ? 'border-amber-200 dark:border-amber-500/30 shadow-[0_0_0_1px_rgba(251,191,36,0.3),0_4px_24px_rgba(251,191,36,0.15)] dark:shadow-[0_0_0_1px_rgba(251,191,36,0.4),0_4px_32px_rgba(251,191,36,0.2)]' 
                 : 'border-gray-100 dark:border-slate-700/50'
             }`}
         >
-            {/* 🌟 NEW: Keeper Badge */}
+            {/* 🌟 Keeper Badge */}
             {isKeeper && (
                 <div className="absolute top-3 right-3 z-10">
-                    <span className="bg-gradient-to-r from-amber-400 to-yellow-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 animate-pulse-subtle">
+                    <span className="bg-gradient-to-r from-amber-400 to-yellow-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 animate-[pulse-subtle_3s_ease-in-out_infinite]">
                         <Star className="w-3 h-3 fill-white" />
                         Keeper
                     </span>
@@ -191,7 +192,7 @@ export default function ProfileCard({
                     )}
                 </div>
 
-                {/* 🎯 NEW: Reputation Stats Section */}
+                {/* 🎯 Reputation Stats Section */}
                 {!reputationLoading && reputation && reputation.totalDates > 0 && (
                     <div className="mb-3 flex flex-wrap gap-2">
                         {/* Rating Badge */}
@@ -226,7 +227,7 @@ export default function ProfileCard({
                     </div>
                 )}
 
-                {/* 🎯 NEW: New User Badge (if no reputation yet) */}
+                {/* 🎯 New User Badge (if no reputation yet) */}
                 {!reputationLoading && reputation && reputation.totalDates === 0 && (
                     <div className="mb-3">
                         <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 inline-flex">
@@ -349,25 +350,6 @@ export default function ProfileCard({
                     </div>
                 </div>
             )}
-
-            {/* 🎯 NEW: Add CSS for keeper glow effect */}
-            <style jsx>{`
-                @keyframes pulse-subtle {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0.85; }
-                }
-                .animate-pulse-subtle {
-                    animation: pulse-subtle 3s ease-in-out infinite;
-                }
-                .keeper-glow {
-                    box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.3),
-                                0 4px 24px rgba(251, 191, 36, 0.15);
-                }
-                :global(.dark) .keeper-glow {
-                    box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.4),
-                                0 4px 32px rgba(251, 191, 36, 0.2);
-                }
-            `}</style>
         </div>
     );
 }
