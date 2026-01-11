@@ -26,23 +26,10 @@ export default function ProfileCard({
     const { writeContract, data: hash, isPending: isWritePending, error } = useWriteContract();
     const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-    // 🎯 Fetch reputation data
+    //  Fetch reputation data
     const { reputation, loading: reputationLoading } = useReputation(profile.wallet_address);
 
-    // 🐛 DEBUG LOGGING - Remove this after testing
-    useEffect(() => {
-        console.log('🔍 ProfileCard Reputation Debug:', {
-            profileName: profile.name,
-            walletAddress: profile.wallet_address,
-            reputation,
-            reputationLoading,
-            hasReputation: !!reputation,
-            totalDates: reputation?.totalDates,
-            contractAddress: CONTRACTS.REPUTATION,
-        });
-    }, [profile.name, profile.wallet_address, reputation, reputationLoading]);
-
-    // 🎯 Calculate if profile is a "Keeper"
+    //  Calculate if profile is a "Keeper"
     const isKeeper = reputation && 
         reputation.totalDates >= 3 && 
         reputation.averageRating >= 4.0 &&
@@ -205,7 +192,7 @@ export default function ProfileCard({
                     )}
                 </div>
 
-                {/* 🎯 Reputation Stats Section - FIXED LOGIC */}
+                {/* 🎯 Reputation Stats Section */}
                 {!reputationLoading && reputation && reputation.totalDates > 0 && (
                     <div className="mb-3 flex flex-wrap gap-2">
                         {/* Rating Badge */}
@@ -242,7 +229,7 @@ export default function ProfileCard({
                     </div>
                 )}
 
-                {/* 🎯 New User Badge - FIXED: Shows when no reputation OR totalDates is 0 */}
+                {/* 🎯 New User Badge */}
                 {!reputationLoading && (!reputation || (reputation && reputation.totalDates === 0)) && (
                     <div className="mb-3">
                         <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 inline-flex">
