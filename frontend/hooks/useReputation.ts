@@ -23,6 +23,13 @@ export function useReputation(address: string | undefined, refreshKey: number = 
         CONTRACTS.REPUTATION.length === 42
     );
 
+    // 🐛 DEBUG
+    console.log('🔍 useReputation init:', {
+        address,
+        isContractDeployed,
+        contractAddress: CONTRACTS.REPUTATION
+    });
+
     const { 
         data: reputationData, 
         isLoading: isReputationLoading, 
@@ -34,12 +41,15 @@ export function useReputation(address: string | undefined, refreshKey: number = 
         functionName: 'getReputation',
         args: address && isContractDeployed ? [address as `0x${string}`] : undefined,
         query: {
-            // Explicitly cast to boolean to fix the "Type 'string | boolean'" build error
             enabled: Boolean(address && isContractDeployed),
         }
     });
 
-    const { data: averageRatingData, refetch: refetchRating } = useReadContract({
+    const { 
+        data: averageRatingData, 
+        isLoading: isRatingLoading,
+        refetch: refetchRating 
+    } = useReadContract({
         address: isContractDeployed ? (CONTRACTS.REPUTATION as `0x${string}`) : undefined,
         abi: REPUTATION_ABI,
         functionName: 'getAverageRating',
@@ -57,27 +67,19 @@ export function useReputation(address: string | undefined, refreshKey: number = 
         }
     }, [refreshKey, refetch, refetchRating, address, isContractDeployed]);
 
+    // 🎯 FIXED: Process data and set loading state properly
     useEffect(() => {
-        if (!isReputationLoading && reputationData) {
-            try {
-                // reputationData is typically returned as a readonly array/tuple from wagmi
-                const data = reputationData as any;
-                const avgRating = averageRatingData ? Number(averageRatingData) : 0;
+        console.log('🔍 useReputation data effect:', {
+            address,
+            isReputationLoading,
+            isRatingLoading,
+            hasReputationData: !!reputationData,
+            hasRatingData: !!averageRatingData,
+            isContractDeployed
+        });
 
-                setReputation({
-                    totalDates: Number(data[0] ?? data.totalDates ?? 0),
-                    noShows: Number(data[1] ?? data.noShows ?? 0),
-                    totalRating: Number(data[2] ?? data.totalRating ?? 0),
-                    ratingCount: Number(data[3] ?? data.ratingCount ?? 0),
-                    averageRating: avgRating,
-                });
-                setLoading(false);
-            } catch (err) {
-                console.error('Error processing reputation data:', err);
-                setError(err instanceof Error ? err : new Error('Unknown error'));
-                setLoading(false);
-            }
-        } else if (!isReputationLoading && !reputationData) {
+        // If contract is not deployed, set defaults and stop loading
+        if (!isContractDeployed) {
             setReputation({
                 totalDates: 0,
                 noShows: 0,
@@ -86,12 +88,64 @@ export function useReputation(address: string | undefined, refreshKey: number = 
                 averageRating: 0,
             });
             setLoading(false);
+            return;
         }
-    }, [reputationData, averageRatingData, isReputationLoading]);
+
+        // Wait for both queries to finish loading
+        if (isReputationLoading || isRatingLoading) {
+            setLoading(true);
+            return;
+        }
+
+        // Both queries are done loading
+        setLoading(false);
+
+        // If we have reputation data, process it
+        if (reputationData) {
+            try {
+                const data = reputationData as any;
+                const avgRating = averageRatingData ? Number(averageRatingData) : 0;
+
+                const repData = {
+                    totalDates: Number(data[0] ?? data.totalDates ?? 0),
+                    noShows: Number(data[1] ?? data.noShows ?? 0),
+                    totalRating: Number(data[2] ?? data.totalRating ?? 0),
+                    ratingCount: Number(data[3] ?? data.ratingCount ?? 0),
+                    averageRating: avgRating,
+                };
+
+                console.log('🔍 Setting reputation data:', repData);
+                setReputation(repData);
+            } catch (err) {
+                console.error('Error processing reputation data:', err);
+                setError(err instanceof Error ? err : new Error('Unknown error'));
+                // Still set default values on error
+                setReputation({
+                    totalDates: 0,
+                    noShows: 0,
+                    totalRating: 0,
+                    ratingCount: 0,
+                    averageRating: 0,
+                });
+            }
+        } else {
+            // No data returned, set defaults
+            console.log('🔍 No reputation data, setting defaults');
+            setReputation({
+                totalDates: 0,
+                noShows: 0,
+                totalRating: 0,
+                ratingCount: 0,
+                averageRating: 0,
+            });
+        }
+    }, [reputationData, averageRatingData, isReputationLoading, isRatingLoading, isContractDeployed, address]);
 
     useEffect(() => {
         if (readError) {
+            console.error('🔍 Read error:', readError);
             setError(readError as Error);
+            setLoading(false); // Stop loading on error
         }
     }, [readError]);
 
