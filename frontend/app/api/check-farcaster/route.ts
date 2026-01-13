@@ -14,7 +14,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ exists: false });
     }
 
-    const neynarClient = new NeynarAPIClient(process.env.NEYNAR_API_KEY);
+    // Fix: Pass config object instead of just string
+    const neynarClient = new NeynarAPIClient({ 
+      apiKey: process.env.NEYNAR_API_KEY 
+    });
 
     const result = await neynarClient.fetchBulkUsersByEthereumAddress([
       address.toLowerCase() as `0x${string}`
