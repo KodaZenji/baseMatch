@@ -163,18 +163,7 @@ function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
               </div>
             </a>
 
-            <a
-              href="https://discord.gg/vF7bZWhJ85"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 p-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700"
-            >
-              <MessageSquare className="w-6 h-6" />
-              <div>
-                <div className="font-semibold">Join our Discord</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Community chat</div>
-              </div>
-            </a>
+            
           </nav>
         </div>
       </div>
