@@ -84,7 +84,7 @@ export function useProfileEdit(): UseProfileEditReturn {
     const [farcasterProfile, setFarcasterProfile] = useState<any>(null);
     const [showFarcasterOptions, setShowFarcasterOptions] = useState(false);
 
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null) as React.RefObject<HTMLInputElement>;
     const hasShownSuccessRef = useRef(false);
     const hasLoadedProfile = useRef(false);
     const hasSyncedRef = useRef(false);
