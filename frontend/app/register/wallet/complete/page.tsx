@@ -21,6 +21,12 @@ export default function CompleteWalletProfilePage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
+    
+    // Farcaster state
+    const [checkingFarcaster, setCheckingFarcaster] = useState(true);
+    const [farcasterProfile, setFarcasterProfile] = useState<any>(null);
+    const [showFarcasterOption, setShowFarcasterOption] = useState(false);
+    const [usedFarcaster, setUsedFarcaster] = useState(false); // NEW: Track if user used Farcaster
 
     // Generate avatar based on wallet address
     useEffect(() => {
@@ -30,6 +36,63 @@ export default function CompleteWalletProfilePage() {
             setAvatarUrl(generatedAvatarUrl);
         }
     }, [address]);
+
+    // Check for Farcaster profile when wallet connects
+    useEffect(() => {
+        if (!address) {
+            setCheckingFarcaster(false);
+            return;
+        }
+
+        const checkFarcaster = async () => {
+            setCheckingFarcaster(true);
+            try {
+                const response = await fetch('/api/check-farcaster', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address }),
+                });
+
+                const data = await response.json();
+
+                if (data.exists && data.profile) {
+                    console.log('✅ Farcaster profile found:', data.profile);
+                    setFarcasterProfile(data.profile);
+                    setShowFarcasterOption(true);
+                } else {
+                    console.log('ℹ️ No Farcaster profile found');
+                    setFarcasterProfile(null);
+                    setShowFarcasterOption(false);
+                }
+            } catch (err) {
+                console.error('Error checking Farcaster:', err);
+                // Silently fail - just continue with manual entry
+            } finally {
+                setCheckingFarcaster(false);
+            }
+        };
+
+        checkFarcaster();
+    }, [address]);
+
+    // Function to auto-fill from Farcaster
+    const useFarcasterProfile = () => {
+        if (!farcasterProfile) return;
+
+        setFormData({
+            ...formData,
+            name: farcasterProfile.displayName || farcasterProfile.username || '',
+            interests: farcasterProfile.bio || '',
+        });
+
+        // Update avatar to use Farcaster pfp if available
+        if (farcasterProfile.pfp) {
+            setAvatarUrl(farcasterProfile.pfp);
+        }
+
+        setUsedFarcaster(true); // NEW: Mark that user used Farcaster
+        setShowFarcasterOption(false);
+    };
 
     // Show wallet connection screen if not connected
     if (!isConnected) {
@@ -56,7 +119,7 @@ export default function CompleteWalletProfilePage() {
                     </h1>
                     <p className="text-gray-700 mb-6 font-semibold">Connect Your Wallet</p>
                     <p className="text-gray-600 mb-6">
-                        Connect your wallet to create your profile
+                        You need this to create your profile
                     </p>
                     <div className="flex justify-center mb-6">
                         <ConnectButton />
@@ -110,6 +173,7 @@ export default function CompleteWalletProfilePage() {
                     interests: formData.interests,
                     email: formData.email,
                     photoUrl: avatarUrl,
+                    farcasterVerified: usedFarcaster, // NEW: Send Farcaster verification status
                 }),
             });
 
@@ -181,6 +245,55 @@ export default function CompleteWalletProfilePage() {
                     </p>
                 )}
 
+                {/* Checking Farcaster Loader */}
+                {checkingFarcaster && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <div className="flex items-center space-x-3">
+                            <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span className="text-blue-700 text-sm">Checking for Farcaster profile...</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Farcaster Profile Found Option */}
+                {showFarcasterOption && farcasterProfile && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+                        <div className="flex items-start space-x-3">
+                            {farcasterProfile.pfp && (
+                                <img
+                                    src={farcasterProfile.pfp}
+                                    alt="Farcaster profile"
+                                    className="w-12 h-12 rounded-full"
+                                />
+                            )}
+                            <div className="flex-1">
+                                <p className="text-purple-900 font-semibold">Farcaster Profile Found! </p>
+                                <p className="text-purple-700 text-sm">
+                                    @{farcasterProfile.username} - {farcasterProfile.displayName}
+                                </p>
+                                <p className="text-purple-600 text-xs mt-1">
+                                    {farcasterProfile.followerCount} followers
+                                </p>
+                                <button
+                                    onClick={useFarcasterProfile}
+                                    className="mt-3 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition-colors"
+                                >
+                                    Use Farcaster Info
+                                </button>
+                                <button
+                                    onClick={() => setShowFarcasterOption(false)}
+                                    className="mt-3 ml-2 text-purple-600 px-4 py-2 text-sm hover:text-purple-800"
+                                >
+                                    No thanks
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {error && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
@@ -197,7 +310,7 @@ export default function CompleteWalletProfilePage() {
                                     alt="Your avatar"
                                     className="w-24 h-24 rounded-full border-4 border-purple-200 mb-2"
                                 />
-                                <p className="text-xs text-gray-500">Your auto-generated profile avatar</p>
+                                <p className="text-xs text-gray-500">Your profile avatar</p>
                             </div>
                         )}
                     </div>
@@ -215,7 +328,7 @@ export default function CompleteWalletProfilePage() {
                         />
                     </div>
 
-                    {/* Birth Year - FIXED */}
+                    {/* Birth Year */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Birth Year *</label>
                         <select
@@ -228,7 +341,6 @@ export default function CompleteWalletProfilePage() {
                             {(() => {
                                 const currentYear = new Date().getFullYear();
                                 const options = [];
-                                // Generate years for ages 18 to 100
                                 for (let age = 18; age <= 100; age++) {
                                     const year = currentYear - age;
                                     options.push(
