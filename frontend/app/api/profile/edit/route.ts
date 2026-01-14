@@ -39,20 +39,20 @@ export async function GET(request: NextRequest) {
       args: [normalizedAddress as `0x${string}`],
     });
 
-  const blockchainProfile = {
-  tokenId: (profileData as any).tokenId?.toString() || '0',
-  name: (profileData as any).name || '',
-  birthYear: Number((profileData as any).birthYear) || 0, // ✅ Convert BigInt to Number
-  gender: (profileData as any).gender || '',
-  interests: (profileData as any).interests || '',
-  photoUrl: (profileData as any).photoUrl || '',
-  exists: (profileData as any).exists || false,
-};
+    const blockchainProfile = {
+      tokenId: (profileData as any).tokenId?.toString() || '0',
+      name: (profileData as any).name || '',
+      birthYear: Number((profileData as any).birthYear) || 0,
+      gender: (profileData as any).gender || '',
+      interests: (profileData as any).interests || '',
+      photoUrl: (profileData as any).photoUrl || '',
+      exists: (profileData as any).exists || false,
+    };
     
-    // Fetch database profile
+    // Fetch database profile - UPDATED: Include farcaster_verified
     const { data: dbProfile, error: dbError } = await supabaseService
       .from('profiles')
-      .select('email, email_verified, updated_at')
+      .select('email, email_verified, farcaster_verified, updated_at')
       .eq('wallet_address', normalizedAddress)
       .maybeSingle();
 
@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
       ...blockchainProfile,
       email: dbProfile?.email || '',
       email_verified: dbProfile?.email_verified || false,
+      farcaster_verified: dbProfile?.farcaster_verified || false, // NEW: Include Farcaster status
       wallet_address: normalizedAddress,
     };
 
