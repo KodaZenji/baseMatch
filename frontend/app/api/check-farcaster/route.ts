@@ -18,10 +18,10 @@ export async function POST(request: Request) {
       apiKey: process.env.NEYNAR_API_KEY 
     });
 
-    // Use the correct method name: fetchBulkUsersByEthOrSolAddress
-    const result = await neynarClient.fetchBulkUsersByEthOrSolAddress([
-      address.toLowerCase() as `0x${string}`
-    ]);
+    // Fix: Pass an object with addresses property
+    const result = await neynarClient.fetchBulkUsersByEthOrSolAddress({
+      addresses: [address.toLowerCase()]
+    });
 
     const users = result[address.toLowerCase()];
 
