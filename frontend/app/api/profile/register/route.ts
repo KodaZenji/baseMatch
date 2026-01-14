@@ -8,7 +8,7 @@ const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { address, name, birthYear, gender, interests, email, photoUrl } = body;
+    const { address, name, birthYear, gender, interests, email, photoUrl, farcasterVerified } = body;
 
     console.log('📥 Registration request');
 
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
         .from('profiles')
         .update({
           wallet_verified: true,
+          farcaster_verified: farcasterVerified || false,
           name,
           birthYear,
           gender,
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
         .eq('id', existingProfile.id);
 
       profileId = existingProfile.id;
-      console.log('✅ Profile updated');
+      console.log('✅ Profile updated with Farcaster status:', farcasterVerified);
     } else {
       // Create new
       const { data: newProfile } = await supabaseService
@@ -61,6 +62,7 @@ export async function POST(request: NextRequest) {
           wallet_address: normalizedAddress,
           wallet_verified: true,
           email_verified: false,
+          farcaster_verified: farcasterVerified || false,
           name,
           birthYear,
           gender,
@@ -74,7 +76,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       profileId = newProfile!.id;
-      console.log('✅ Profile created');
+      console.log('✅ Profile created with Farcaster status:', farcasterVerified);
     }
 
     return NextResponse.json({
@@ -86,6 +88,7 @@ export async function POST(request: NextRequest) {
         profileId,
         email: normalizedEmail,
         walletAddress: normalizedAddress,
+        farcasterVerified: farcasterVerified || false,
       },
     });
   } catch (error) {
