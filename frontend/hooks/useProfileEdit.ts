@@ -5,7 +5,60 @@ import { generateAvatar } from '@/lib/avatarUtils';
 import { handleProfileTextUpdate } from '@/lib/profileMinting';
 import { useProfile } from '@/hooks/useProfile';
 
-export function useProfileEdit() {
+interface UseProfileEditReturn {
+    // State
+    address: `0x${string}` | undefined;
+    isConnected: boolean;
+    profile: any;
+    profileLoading: boolean;
+    userEmail: string;
+    hasWallet: boolean;
+    avatarUrl: string;
+    formData: {
+        name: string;
+        birthYear: string;
+        gender: string;
+        interests: string;
+        photoUrl: string;
+        email: string;
+    };
+    setFormData: React.Dispatch<React.SetStateAction<{
+        name: string;
+        birthYear: string;
+        gender: string;
+        interests: string;
+        photoUrl: string;
+        email: string;
+    }>>;
+    newPhotoUrl: string;
+    notification: { message: string; type: 'success' | 'error' } | null;
+    isSendingVerification: boolean;
+    showDeleteConfirm: boolean;
+    setShowDeleteConfirm: React.Dispatch<React.SetStateAction<boolean>>;
+    showDeleteFinalConfirm: boolean;
+    setShowDeleteFinalConfirm: React.Dispatch<React.SetStateAction<boolean>>;
+    isDeleting: boolean;
+    farcasterVerified: boolean;
+    isCheckingFarcaster: boolean;
+    farcasterProfile: any;
+    showFarcasterOptions: boolean;
+    setShowFarcasterOptions: React.Dispatch<React.SetStateAction<boolean>>;
+    fileInputRef: React.RefObject<HTMLInputElement>;
+    isPending: boolean;
+    isConfirming: boolean;
+    isFullyVerified: boolean | undefined;
+
+    // Handlers
+    handlePhotoChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+    handleSendVerification: () => Promise<void>;
+    handleCheckFarcaster: () => Promise<void>;
+    handleVerifyFarcaster: (usePhoto: boolean) => Promise<void>;
+    handleUpdateProfile: (e: React.FormEvent) => Promise<void>;
+    handleDeleteProfile: () => Promise<void>;
+    handleWalletLinked: () => void;
+}
+
+export function useProfileEdit(): UseProfileEditReturn {
     const { address, isConnected } = useAccount();
     const { profile, isLoading: profileLoading, refreshProfile } = useProfile(address);
 
