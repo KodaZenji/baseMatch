@@ -257,11 +257,23 @@ export default function ProfileCard({
 
                     {profile.wallet_verified && (
                         <span
-                            className="bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1"
+                            className="bg-slate-100 dark:bg-slate-700/70 text-slate-800 dark:text-slate-300 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1"
                             title="Wallet Linked & Verified"
                         >
                             <Link2 size={12} />
                             Wallet
+                        </span>
+                    )}
+
+                    {profile.farcaster_verified && (
+                        <span
+                            className="bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1"
+                            title="Farcaster Verified"
+                        >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Farcaster
                         </span>
                     )}
 
@@ -271,7 +283,7 @@ export default function ProfileCard({
                         </span>
                     )}
                 </div>
-
+                
                 <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base mb-4 line-clamp-2">{profile.interests}</p>
 
                 <div className="flex space-x-3">
