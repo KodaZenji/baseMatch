@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
-import { MessageSquare, CheckCircle, AlertTriangle, Loader } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Loader } from 'lucide-react';
+import { FaDiscord } from 'react-icons/fa';
 
 export default function DiscordVerificationButton() {
   const { address } = useAccount();
@@ -19,7 +20,6 @@ export default function DiscordVerificationButton() {
     setStatus('idle');
 
     try {
-      // Generate secure state token from server
       const stateResponse = await fetch('/api/discord/generate-state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -33,13 +33,12 @@ export default function DiscordVerificationButton() {
 
       const { state } = await stateResponse.json();
 
-      // Redirect to Discord OAuth
       const discordClientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
       const redirectUri = encodeURIComponent(
         `${process.env.NEXT_PUBLIC_APP_URL}/api/discord/callback`
       );
       const scopes = 'identify guilds.join';
-      
+
       const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=${state}`;
 
       window.location.href = discordAuthUrl;
@@ -66,7 +65,7 @@ export default function DiscordVerificationButton() {
           </>
         ) : (
           <>
-            <MessageSquare className="w-5 h-5" />
+            <FaDiscord className="w-5 h-5" />
             <span>Verify with Discord</span>
           </>
         )}
@@ -74,7 +73,7 @@ export default function DiscordVerificationButton() {
 
       {message && (
         <div className={`flex items-start gap-2 p-4 rounded-lg ${
-          status === 'success' 
+          status === 'success'
             ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
             : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
         }`}>
@@ -99,11 +98,7 @@ export default function DiscordVerificationButton() {
           </li>
           <li className="flex items-start gap-2">
             <span className="text-blue-500 mt-1">✓</span>
-            <span>Farcaster account verified</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-blue-500 mt-1">✓</span>
-            <span>Cryptographically verified token</span>
+            <span>Farcaster account Linked</span>
           </li>
         </ul>
       </div>
