@@ -32,7 +32,6 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    
     const headersList = await headers(); 
     const isInternalRequest = headersList.get('x-internal-request') === 'true';
     
@@ -82,7 +81,7 @@ export async function POST(request: Request) {
 
     const farcasterFid = String(profile.farcaster_fid);
 
-    // 🎯 NEW: Check if THIS FID already verified (regardless of wallet)
+    // 🎯 NEW: Check if THIS FID already verified Discord (regardless of wallet)
     const { data: existingFidVerification } = await supabaseService
       .from('discord_verification_attempts')
       .select('*')
@@ -158,7 +157,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 🎯 NEW: Record attempt with FID
+    // 🎯 Record attempt with FID
     const attemptData: Partial<DiscordVerificationAttempt> = {
       wallet_address: normalizedAddress,
       discord_user_id: discordUserId,
@@ -181,9 +180,10 @@ export async function POST(request: Request) {
       await supabaseService
         .from('discord_verification_attempts')
         .upsert(attemptData, { 
-          onConflict: 'farcaster_fid,discord_user_id' // ← Use FID in conflict resolution
+          onConflict: 'farcaster_fid,discord_user_id'
         });
 
+      // Update profile
       await supabaseService
         .from('profiles')
         .update({ discord_verified: true, discord_user_id: discordUserId })
