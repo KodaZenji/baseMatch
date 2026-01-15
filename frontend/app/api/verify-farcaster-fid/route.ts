@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       );
     }
 
-    
+    // Initialize Neynar client correctly
     if (!process.env.NEYNAR_API_KEY) {
       return NextResponse.json(
         { error: 'Verification service unavailable' },
@@ -56,7 +56,8 @@ export async function POST(request: Request) {
 
     let fidUser;
     try {
-      const result = await neynarClient.fetchBulkUsers([parseInt(fid)]);
+      // fetchBulkUsers expects an object with `fids` array
+      const result = await neynarClient.fetchBulkUsers({ fids: [parseInt(fid)] });
       fidUser = result.users?.[0];
     } catch (error) {
       console.error('Neynar error:', error);
