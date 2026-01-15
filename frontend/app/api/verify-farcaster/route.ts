@@ -1,4 +1,3 @@
-// frontend/app/api/verify-farcaster/route.ts
 import { NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
 
@@ -30,10 +29,10 @@ export async function POST(request: Request) {
       });
     }
 
-    // 🎯 NEW: Store FID!
+    // 🎯 NEW: Store FID in database
     const updateData: any = {
       farcaster_verified: true,
-      farcaster_fid: String(farcasterData.profile.fid), // ← Store FID
+      farcaster_fid: String(farcasterData.profile.fid), // ← Store FID as TEXT
       updated_at: new Date().toISOString(),
     };
 
