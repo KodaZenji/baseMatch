@@ -1,4 +1,60 @@
-export function useProfileEdit(): Omit<UseProfileEditReturn, 'isCheckingFarcaster' | 'farcasterProfile' | 'showFarcasterOptions' | 'setShowFarcasterOptions' | 'handleCheckFarcaster' | 'handleVerifyFarcaster'> & {
+import { useState, useEffect, useRef } from 'react';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
+import { generateAvatar } from '@/lib/avatarUtils';
+import { handleProfileTextUpdate } from '@/lib/profileMinting';
+import { useProfile } from '@/hooks/useProfile';
+
+interface UseProfileEditReturn {
+    address: string | undefined;
+    isConnected: boolean;
+    profile: any;
+    profileLoading: boolean;
+    userEmail: string;
+    hasWallet: boolean;
+    avatarUrl: string;
+    formData: {
+        name: string;
+        birthYear: string;
+        gender: string;
+        interests: string;
+        photoUrl: string;
+        email: string;
+    };
+    setFormData: React.Dispatch<React.SetStateAction<any>>;
+    newPhotoUrl: string;
+    notification: { message: string; type: 'success' | 'error' } | null;
+    isSendingVerification: boolean;
+    showDeleteConfirm: boolean;
+    setShowDeleteConfirm: React.Dispatch<React.SetStateAction<boolean>>;
+    showDeleteFinalConfirm: boolean;
+    setShowDeleteFinalConfirm: React.Dispatch<React.SetStateAction<boolean>>;
+    isDeleting: boolean;
+    farcasterVerified: boolean;
+    setFarcasterVerified: React.Dispatch<React.SetStateAction<boolean>>;
+    fileInputRef: React.RefObject<HTMLInputElement>;
+    isPending: boolean;
+    isConfirming: boolean;
+    isFullyVerified: boolean;
+    handlePhotoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    handleSendVerification: () => void;
+    handleUpdateProfile: (e: React.FormEvent) => void;
+    handleDeleteProfile: () => void;
+    handleWalletLinked: () => void;
+
+    // Farcaster-specific
+    isCheckingFarcaster: boolean;
+    farcasterProfile: any;
+    showFarcasterOptions: boolean;
+    setShowFarcasterOptions: React.Dispatch<React.SetStateAction<boolean>>;
+    handleCheckFarcaster: () => void;
+    handleVerifyFarcaster: () => void;
+}
+
+export function useProfileEdit(): Omit<
+    UseProfileEditReturn,
+    'isCheckingFarcaster' | 'farcasterProfile' | 'showFarcasterOptions' | 'setShowFarcasterOptions' | 'handleCheckFarcaster' | 'handleVerifyFarcaster'
+> & {
     farcasterVerified: boolean;
     setFarcasterVerified: React.Dispatch<React.SetStateAction<boolean>>;
 } {
@@ -145,6 +201,7 @@ export function useProfileEdit(): Omit<UseProfileEditReturn, 'isCheckingFarcaste
         setTimeout(() => setNotification(null), 3000);
     };
 
+    // Photo upload handler
     const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -169,6 +226,7 @@ export function useProfileEdit(): Omit<UseProfileEditReturn, 'isCheckingFarcaste
         }
     };
 
+    // Email verification
     const handleSendVerification = async () => {
         if (!formData.email || !formData.email.includes('@'))
             return showNotification('Please enter a valid email address', 'error');
@@ -193,6 +251,7 @@ export function useProfileEdit(): Omit<UseProfileEditReturn, 'isCheckingFarcaste
         }
     };
 
+    // Update profile handler
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
         hasShownSuccessRef.current = false;
@@ -277,6 +336,7 @@ export function useProfileEdit(): Omit<UseProfileEditReturn, 'isCheckingFarcaste
         }
     };
 
+    // Delete profile
     const handleDeleteProfile = async () => {
         if (!profile?.exists) return showNotification('Profile does not exist', 'error');
 
