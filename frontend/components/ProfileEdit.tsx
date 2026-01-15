@@ -31,11 +31,6 @@ export default function ProfileEdit() {
         setShowDeleteFinalConfirm,
         isDeleting,
         farcasterVerified,
-        isCheckingFarcaster,
-        farcasterProfile,
-        showFarcasterOptions,
-        setShowFarcasterOptions,
-        fileInputRef,
         isPending,
         isConfirming,
         isFullyVerified,
@@ -43,8 +38,6 @@ export default function ProfileEdit() {
         // Handlers
         handlePhotoChange,
         handleSendVerification,
-        handleCheckFarcaster,
-        handleVerifyFarcaster,
         handleUpdateProfile,
         handleDeleteProfile,
         handleWalletLinked,
@@ -89,9 +82,9 @@ export default function ProfileEdit() {
                     <ProfilePhotoSection
                         newPhotoUrl={newPhotoUrl}
                         avatarUrl={avatarUrl}
-                        fileInputRef={fileInputRef}
+                        fileInputRef={null}
                         onPhotoChange={handlePhotoChange}
-                        onTriggerFileInput={() => fileInputRef.current?.click()}
+                        onTriggerFileInput={() => {}}
                     />
 
                     {/* Wallet Connection */}
@@ -116,16 +109,14 @@ export default function ProfileEdit() {
                         onSendVerification={handleSendVerification}
                     />
 
-                    {/* Farcaster Verification */}
+                    {/* Farcaster Verification (NEW STYLE) */}
                     <FarcasterVerificationSection
                         hasWallet={hasWallet}
                         farcasterVerified={farcasterVerified}
-                        isCheckingFarcaster={isCheckingFarcaster}
-                        farcasterProfile={farcasterProfile}
-                        showFarcasterOptions={showFarcasterOptions}
-                        onCheckFarcaster={handleCheckFarcaster}
-                        onVerifyFarcaster={handleVerifyFarcaster}
-                        onCancel={() => setShowFarcasterOptions(false)}
+                        walletAddress={address || ''}
+                        onVerificationComplete={() => {
+                            console.log('Farcaster verified!');
+                        }}
                     />
 
                     {/* Form Fields */}
