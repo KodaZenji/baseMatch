@@ -11,6 +11,7 @@ const EARLY_OG_ROLE_ID = process.env.DISCORD_EARLY_OG_ROLE_ID;
 interface DiscordVerificationAttempt {
   wallet_address: string;
   discord_user_id: string;
+  farcaster_fid: string;
   attempt_count: number;
   first_attempt_at: string;
   last_attempt_at: string;
@@ -22,7 +23,7 @@ interface DiscordVerificationAttempt {
 
 export async function POST(request: Request) {
   try {
-    const { walletAddress, discordUserId, token } = await request.json();
+    const { walletAddress, discordUserId } = await request.json();
 
     if (!walletAddress || !discordUserId) {
       return NextResponse.json({ 
@@ -31,9 +32,9 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // 🔐 SECURITY: Only accept requests from our own callback route
-    const headersList = await headers();
-const isInternalRequest = headersList.get('x-internal-request') === 'true';
+    // 🔐 SECURITY: Only accept requests from callback
+    const headersList = headers();
+    const isInternalRequest = headersList.get('x-internal-request') === 'true';
     
     if (!isInternalRequest && process.env.NODE_ENV === 'production') {
       console.error('🚨 SECURITY: Direct API call blocked');
@@ -50,7 +51,7 @@ const isInternalRequest = headersList.get('x-internal-request') === 'true';
 
     const normalizedAddress = walletAddress.toLowerCase();
 
-    // Verify user has Farcaster verification
+    // Get user profile with FID
     const { data: profile, error: profileError } = await supabaseService
       .from('profiles')
       .select('*')
@@ -71,14 +72,55 @@ const isInternalRequest = headersList.get('x-internal-request') === 'true';
       }, { status: 403 });
     }
 
-    // Check existing attempts
+    // 🎯 CHECK: Must have FID
+    if (!profile.farcaster_fid) {
+      return NextResponse.json({ 
+        error: 'Farcaster FID not found. Please re-verify your Farcaster.',
+        success: false 
+      }, { status: 403 });
+    }
+
+    const farcasterFid = String(profile.farcaster_fid);
+
+    // 🎯 NEW: Check if THIS FID already verified (regardless of wallet)
+    const { data: existingFidVerification } = await supabaseService
+      .from('discord_verification_attempts')
+      .select('*')
+      .eq('farcaster_fid', farcasterFid)
+      .eq('verified', true)
+      .eq('role_granted', true)
+      .single();
+
+    if (existingFidVerification) {
+      console.warn('🚨 SYBIL ATTEMPT: FID already verified with different wallet', {
+        fid: farcasterFid,
+        previousWallet: existingFidVerification.wallet_address,
+        attemptedWallet: normalizedAddress,
+        discordUserId: existingFidVerification.discord_user_id
+      });
+
+      await logSuspiciousActivity(
+        normalizedAddress,
+        discordUserId,
+        ipAddress,
+        `FID_ALREADY_VERIFIED:${farcasterFid}:previous_wallet:${existingFidVerification.wallet_address}`
+      );
+
+      return NextResponse.json({ 
+        error: 'This Farcaster account already verified Discord with a different wallet. Only 1 verification per Farcaster account allowed.',
+        success: false,
+        alreadyVerified: true
+      }, { status: 403 });
+    }
+
+    // Check attempts for this wallet
     const { data: existingAttempts } = await supabaseService
       .from('discord_verification_attempts')
       .select('*')
       .eq('wallet_address', normalizedAddress)
       .order('last_attempt_at', { ascending: false });
 
-    // Check if already verified
+    // Check if already verified with this exact wallet
     const previouslyVerified = existingAttempts?.find(a => a.verified && a.role_granted);
     
     if (previouslyVerified) {
@@ -92,7 +134,7 @@ const isInternalRequest = headersList.get('x-internal-request') === 'true';
         }) || [];
 
         if (recentAttempts.length >= 3) {
-          console.warn('🚨 SYBIL DETECTED - Revoking role');
+          console.warn('🚨 SYBIL DETECTED - Multiple attempts');
           await revokeDiscordRole(discordUserId);
           await logSuspiciousActivity(normalizedAddress, discordUserId, ipAddress, 'MULTIPLE_ATTEMPTS');
           
@@ -116,23 +158,11 @@ const isInternalRequest = headersList.get('x-internal-request') === 'true';
       }
     }
 
-    // Check wallet reuse
-    const sameWalletDifferentDiscord = existingAttempts?.find(
-      a => a.discord_user_id !== discordUserId && a.verified
-    );
-
-    if (sameWalletDifferentDiscord) {
-      await logSuspiciousActivity(normalizedAddress, discordUserId, ipAddress, 'WALLET_REUSE');
-      return NextResponse.json({ 
-        error: 'Wallet already linked to another Discord',
-        success: false 
-      }, { status: 403 });
-    }
-
-    // Record attempt
+    // 🎯 NEW: Record attempt with FID
     const attemptData: Partial<DiscordVerificationAttempt> = {
       wallet_address: normalizedAddress,
       discord_user_id: discordUserId,
+      farcaster_fid: farcasterFid, // ← Store FID
       attempt_count: (existingAttempts?.length || 0) + 1,
       first_attempt_at: existingAttempts?.[0]?.first_attempt_at || new Date().toISOString(),
       last_attempt_at: new Date().toISOString(),
@@ -150,12 +180,16 @@ const isInternalRequest = headersList.get('x-internal-request') === 'true';
 
       await supabaseService
         .from('discord_verification_attempts')
-        .upsert(attemptData, { onConflict: 'wallet_address,discord_user_id' });
+        .upsert(attemptData, { 
+          onConflict: 'farcaster_fid,discord_user_id' // ← Use FID in conflict resolution
+        });
 
       await supabaseService
         .from('profiles')
         .update({ discord_verified: true, discord_user_id: discordUserId })
         .eq('wallet_address', normalizedAddress);
+
+      console.log('✅ Discord verified for FID:', farcasterFid, 'Wallet:', normalizedAddress);
 
       return NextResponse.json({ 
         success: true,
@@ -232,7 +266,13 @@ async function logSuspiciousActivity(wallet: string, discord: string, ip: string
   try {
     await supabaseService
       .from('suspicious_activity_log')
-      .insert({ wallet_address: wallet, discord_user_id: discord, ip_address: ip, reason, timestamp: new Date().toISOString() });
+      .insert({ 
+        wallet_address: wallet, 
+        discord_user_id: discord, 
+        ip_address: ip, 
+        reason, 
+        timestamp: new Date().toISOString() 
+      });
   } catch (error) {
     console.error('Error logging:', error);
   }
