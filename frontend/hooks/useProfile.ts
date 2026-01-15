@@ -1,33 +1,68 @@
-// hooks/useProfile.ts
-
 import { useAccount, useReadContract } from 'wagmi';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 import { useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+
+interface DatabaseProfile {
+  farcaster_verified?: boolean;
+  farcaster_fid?: string;
+  discord_verified?: boolean;
+  discord_user_id?: string;
+}
 
 export function useProfile(address?: string) {
-    // If no address provided, use the connected wallet address
     const { address: connectedAddress, isConnected } = useAccount();
     const effectiveAddress = address || connectedAddress;
     const queryClient = useQueryClient();
+    const [dbProfile, setDbProfile] = useState<DatabaseProfile | null>(null);
 
+    // Fetch blockchain profile
     const { data: profileData, error, isLoading, refetch } = useReadContract({
         address: CONTRACTS.PROFILE_NFT as `0x${string}`,
         abi: PROFILE_NFT_ABI,
         functionName: 'getProfile',
-        args: effectiveAddress ? [effectiveAddress as `0x${string}`] : undefined, // Only call if address exists
+        args: effectiveAddress ? [effectiveAddress as `0x${string}`] : undefined,
         query: {
-            enabled: isConnected && !!effectiveAddress, // Only run query if connected and has address
-            refetchOnMount: true, // Always refetch when component mounts
-            refetchOnWindowFocus: true, // Refetch when window regains focus
+            enabled: isConnected && !!effectiveAddress,
+            refetchOnMount: true,
+            refetchOnWindowFocus: true,
         }
     });
 
-    // Log errors
+    // Fetch database profile for verification statuses
+    useEffect(() => {
+        if (!effectiveAddress) return;
+
+        const fetchDbProfile = async () => {
+            try {
+                const response = await fetch('/api/profile/get', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address: effectiveAddress }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setDbProfile({
+                        farcaster_verified: data.profile?.farcaster_verified,
+                        farcaster_fid: data.profile?.farcaster_fid,
+                        discord_verified: data.profile?.discord_verified,
+                        discord_user_id: data.profile?.discord_user_id,
+                    });
+                }
+            } catch (err) {
+                console.error('Error fetching DB profile:', err);
+            }
+        };
+
+        fetchDbProfile();
+    }, [effectiveAddress]);
+
     if (error) {
         console.error('Error fetching profile:', error);
     }
 
-    // Parse profile data - it returns as a tuple/struct
+    // Merge blockchain + database data
     const profile = profileData ? {
         tokenId: (profileData as any).tokenId,
         name: (profileData as any).name,
@@ -38,24 +73,35 @@ export function useProfile(address?: string) {
         email: (profileData as any).email,
         wallet_address: (profileData as any).walletAddress || effectiveAddress,
         exists: (profileData as any).exists,
+        // Add database fields
+        farcaster_verified: dbProfile?.farcaster_verified,
+        farcaster_fid: dbProfile?.farcaster_fid,
+        discord_verified: dbProfile?.discord_verified,
+        discord_user_id: dbProfile?.discord_user_id,
     } : null;
 
-    // Log profile data with BigInt handling
-    if (profileData) {
-        // Use a custom replacer to handle BigInt values
-        const profileString = JSON.stringify(profileData, (key, value) =>
-            typeof value === 'bigint' ? value.toString() : value
-        );
-        console.log('Profile data received:', profileString);
-    }
-
-    // Function to manually refetch profile
     const refreshProfile = async () => {
         await queryClient.invalidateQueries({ queryKey: ['readContract'] });
         await refetch();
+        // Refresh DB profile too
+        if (effectiveAddress) {
+            const response = await fetch('/api/profile/get', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address: effectiveAddress }),
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setDbProfile({
+                    farcaster_verified: data.profile?.farcaster_verified,
+                    farcaster_fid: data.profile?.farcaster_fid,
+                    discord_verified: data.profile?.discord_verified,
+                    discord_user_id: data.profile?.discord_user_id,
+                });
+            }
+        }
     };
 
-    // Check if error is related to ABI mismatch
     const isAbiMismatchError = error && (
         error.message.includes('InvalidBytesBooleanError') ||
         error.message.includes('Bytes value') ||
