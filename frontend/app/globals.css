@@ -363,3 +363,18 @@ body {
 .dark .shadow {
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5) !important;
 }
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+}
