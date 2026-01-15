@@ -32,8 +32,8 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // 🔐 SECURITY: Only accept requests from callback
-    const headersList = headers();
+    
+    const headersList = await headers(); 
     const isInternalRequest = headersList.get('x-internal-request') === 'true';
     
     if (!isInternalRequest && process.env.NODE_ENV === 'production') {
