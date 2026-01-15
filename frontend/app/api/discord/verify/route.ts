@@ -32,8 +32,8 @@ export async function POST(request: Request) {
     }
 
     // 🔐 SECURITY: Only accept requests from our own callback route
-    const headersList = headers();
-    const isInternalRequest = headersList.get('x-internal-request') === 'true';
+    const headersList = await headers();
+const isInternalRequest = headersList.get('x-internal-request') === 'true';
     
     if (!isInternalRequest && process.env.NODE_ENV === 'production') {
       console.error('🚨 SECURITY: Direct API call blocked');
