@@ -9,7 +9,9 @@ import Dashboard from '@/components/Dashboard';
 import Notifications from '@/components/Notifications';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
-import { Heart, Menu, Moon, Sun, X, MessageCircle, Users, LayoutDashboard, Twitter, MessageSquare } from 'lucide-react';
+import { Heart, Menu, Moon, Sun, X, MessageCircle, Users, LayoutDashboard, } from 'lucide-react';
+import { FaDiscord } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6'; 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BaseAppAutoConnect } from '@/components/BaseAppAutoConnect';
@@ -156,7 +158,7 @@ function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
               rel="noopener noreferrer"
               className="flex items-center gap-3 p-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700"
             >
-              <Twitter className="w-6 h-6" />
+              <FaXTwitter className="w-5 h-5" />
               <div>
                 <div className="font-semibold">Follow us on X</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">@basematch_</div>
