@@ -176,9 +176,7 @@ function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
     <div className="text-xs text-gray-500 dark:text-gray-400">BaseMatch Discord</div>
   </div>
 </a>
-              </div>
-            </a>
-            
+                 
           </nav>
         </div>
       </div>
