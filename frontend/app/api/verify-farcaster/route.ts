@@ -1,3 +1,4 @@
+// frontend/app/api/verify-farcaster/route.ts
 import { NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
 
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
 
     const normalizedAddress = address.toLowerCase();
 
-    // Step 1: Check if wallet has Farcaster account
+    // Check Farcaster account
     const farcasterResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/check-farcaster`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -29,13 +30,13 @@ export async function POST(request: Request) {
       });
     }
 
-    // Step 2: Farcaster found - Update database
+    // 🎯 NEW: Store FID!
     const updateData: any = {
       farcaster_verified: true,
+      farcaster_fid: String(farcasterData.profile.fid), // ← Store FID
       updated_at: new Date().toISOString(),
     };
 
-    // If user wants to use Farcaster photo, update it
     if (updatePhoto && farcasterData.profile?.pfp) {
       updateData.photoUrl = farcasterData.profile.pfp;
     }
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to verify' }, { status: 500 });
     }
 
-    console.log('✅ Farcaster verified for:', normalizedAddress, updatePhoto ? '(with photo update)' : '(no photo update)');
+    console.log('✅ Farcaster verified for:', normalizedAddress, 'FID:', farcasterData.profile.fid);
 
     return NextResponse.json({
       verified: true,
