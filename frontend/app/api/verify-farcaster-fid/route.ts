@@ -1,5 +1,3 @@
-// app/api/verify-farcaster-fid/route.ts 
-
 import { NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
 import { NeynarAPIClient } from '@neynar/nodejs-sdk';
@@ -26,12 +24,9 @@ export async function POST(request: Request) {
       .gte('attempted_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
       .order('attempted_at', { ascending: false });
 
-    if (attemptsError) {
-      console.error('Error checking attempts:', attemptsError);
-    }
+    if (attemptsError) console.error('Error checking attempts:', attemptsError);
 
     const attemptCount = attempts?.length || 0;
-
     if (attemptCount >= 3) {
       const oldestAttempt = attempts?.[attempts.length - 1];
       const timeUntilReset = oldestAttempt 
@@ -47,7 +42,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify FID via Neynar
+    
     if (!process.env.NEYNAR_API_KEY) {
       return NextResponse.json(
         { error: 'Verification service unavailable' },
@@ -55,7 +50,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const neynarClient = new NeynarAPIClient(process.env.NEYNAR_API_KEY);
+    const neynarClient = new NeynarAPIClient({
+      apiKey: process.env.NEYNAR_API_KEY
+    });
 
     let fidUser;
     try {
@@ -63,7 +60,7 @@ export async function POST(request: Request) {
       fidUser = result.users?.[0];
     } catch (error) {
       console.error('Neynar error:', error);
-      
+
       // Log failed attempt
       await supabaseService
         .from('farcaster_verification_attempts')
@@ -86,9 +83,7 @@ export async function POST(request: Request) {
 
     // Compare username
     const actualUsername = fidUser.username.toLowerCase();
-
     if (actualUsername !== normalizedUsername) {
-      // Log failed attempt
       await supabaseService
         .from('farcaster_verification_attempts')
         .insert({
@@ -108,7 +103,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Success! Log successful attempt
+    // Success! Log success
     await supabaseService
       .from('farcaster_verification_attempts')
       .insert({
