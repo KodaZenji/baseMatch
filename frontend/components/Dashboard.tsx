@@ -14,6 +14,7 @@ import DateConfirmationModal from './DateConfirmationModal';
 import RatingModal from './RatingModal';
 import { Star, Calendar, ThumbsUp, AlertCircle, Clock, Trophy, Zap, Flame, Sparkles, Heart, X, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import DiscordVerificationButton from '@/components/DiscordVerificationButton';
 
 interface PendingStake {
     stakeId: string;
@@ -269,6 +270,7 @@ export default function Dashboard() {
                 )}
             </div>
 
+
             {/* Reputation Stats */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -470,6 +472,16 @@ export default function Dashboard() {
                     </div>
                 </div>
             )}
+
+            
+            {/* Discord Verification Section */}
+<div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg">
+  <h2 className="text-xl font-bold mb-2">Discord Verification</h2>
+  <p className="text-gray-600 dark:text-gray-300 mb-4">
+    Connect your Discord and get the "Early OG" role
+  </p>
+  <DiscordVerificationButton />
+</div>
 
             {/* Date Confirmation Modal */}
             {showDateConfirmation && selectedStake && (
