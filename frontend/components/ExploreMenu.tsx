@@ -1,4 +1,6 @@
-import { X, MessageCircle, Users, LayoutDashboard, Twitter, MessageSquare } from 'lucide-react';
+import { X, MessageCircle, Users, LayoutDashboard } from 'lucide-react';
+import { FaDiscord } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 
 interface ExploreMenuProps {
   isOpen: boolean;
@@ -65,23 +67,25 @@ export function ExploreMenu({ isOpen, onClose, setActiveTab }: ExploreMenuProps)
 
             <div className="my-4 border-t border-gray-200 dark:border-gray-700"></div>
 
+            {/* Twitter / X */}
             <a
               href="https://x.com/basematch_"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
             >
-              <Twitter className="w-5 h-5" />
+              <FaXTwitter className="w-5 h-5" />
               <span className="font-medium">X.com</span>
             </a>
 
+            {/* Discord */}
             <a
               href="https://discord.gg/basematch"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
             >
-              <MessageSquare className="w-5 h-5" />
+              <FaDiscord className="w-5 h-5" />
               <span className="font-medium">Discord</span>
             </a>
           </nav>
