@@ -1,5 +1,5 @@
 // frontend/components/Dashboard.tsx
-// FIXED: Added auto-refresh after date confirmation to show updated stats
+// FIXED: Added auto-refresh 
 
 'use client';
 
@@ -7,14 +7,15 @@ import { useAccount } from 'wagmi';
 import { useProfile } from '@/hooks/useProfile';
 import { useReputation } from '@/hooks/useReputation';
 import { useAchievements } from '@/hooks/useAchievements';
+import { useDiscordVerification } from '@/hooks/useDiscordVerification';
 import { generateAvatar } from '@/lib/avatarUtils';
 import Link from 'next/link';
 import StakeReminderBanner from './StakeReminderBanner';
 import DateConfirmationModal from './DateConfirmationModal';
 import RatingModal from './RatingModal';
+import DiscordVerificationButton from '@/components/DiscordVerificationButton';
 import { Star, Calendar, ThumbsUp, AlertCircle, Clock, Trophy, Zap, Flame, Sparkles, Heart, X, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import DiscordVerificationButton from '@/components/DiscordVerificationButton';
 
 interface PendingStake {
     stakeId: string;
@@ -42,7 +43,10 @@ export default function Dashboard() {
     const { address } = useAccount();
     const { profile } = useProfile(address);
     
-    // ✅ NEW: Add refresh key to force re-fetch from blockchain
+    // Discord verification hook
+    const { isVerified: isDiscordVerified, showSuccess: showDiscordSuccess } = useDiscordVerification();
+    
+    // Refresh key to force re-fetch from blockchain
     const [refreshKey, setRefreshKey] = useState(0);
     const { reputation, loading: reputationLoading } = useReputation(address, refreshKey);
     const { achievements, loading: achievementsLoading } = useAchievements(address, refreshKey);
@@ -57,7 +61,7 @@ export default function Dashboard() {
     const [selectedStake, setSelectedStake] = useState<PendingStake | null>(null);
     const [countdown, setCountdown] = useState<number | null>(null);
     
-    // ✅ NEW: Pending state to show when blockchain updates are in progress
+    // Pending state to show when blockchain updates are in progress
     const [isPendingBlockchainUpdate, setIsPendingBlockchainUpdate] = useState(false);
 
     // Generate avatar based on wallet address
@@ -87,7 +91,7 @@ export default function Dashboard() {
         setShowDateConfirmation(true);
     };
 
-    // ✅ IMPROVED: Handle date confirmation success with blockchain update tracking
+    // Handle date confirmation success with blockchain update tracking
     const handleDateConfirmed = async () => {
         try {
             console.log('Date confirmed successfully');
@@ -95,10 +99,10 @@ export default function Dashboard() {
             // Close the confirmation modal
             setShowDateConfirmation(false);
 
-            // ✅ NEW: Show pending state
+            // Show pending state
             setIsPendingBlockchainUpdate(true);
 
-            // ✅ NEW: Wait 10 seconds for blockchain to confirm, then refresh
+            // Wait 10 seconds for blockchain to confirm, then refresh
             setTimeout(() => {
                 console.log('🔄 Refreshing reputation and achievements from blockchain...');
                 setRefreshKey(prev => prev + 1);
@@ -114,7 +118,7 @@ export default function Dashboard() {
         }
     };
 
-    // ✅ NEW: Handle rating submission with blockchain refresh
+    // Handle rating submission with blockchain refresh
     const handleRatingSubmitted = () => {
         console.log('🔄 Rating submitted, refreshing stats...');
         setIsPendingBlockchainUpdate(true);
@@ -188,7 +192,7 @@ export default function Dashboard() {
             {/* Stake Reminder Banner */}
             <StakeReminderBanner onConfirmClick={handleConfirmClick} />
 
-            {/* ✅ NEW: Pending blockchain update indicator */}
+            {/* Pending blockchain update indicator */}
             {isPendingBlockchainUpdate && (
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-4">
                     <div className="flex items-center gap-3">
@@ -270,12 +274,11 @@ export default function Dashboard() {
                 )}
             </div>
 
-
             {/* Reputation Stats */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-bold text-gray-800">Reputation</h3>
-                    {/* ✅ NEW: Manual refresh button */}
+                    {/* Manual refresh button */}
                     <button
                         onClick={() => {
                             console.log('🔄 Manual refresh triggered');
@@ -473,15 +476,18 @@ export default function Dashboard() {
                 </div>
             )}
 
-            
-            {/* Discord Verification Section */}
-<div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg">
-  <h2 className="text-xl font-bold mb-2">Discord Verification</h2>
-  <p className="text-gray-600 dark:text-gray-300 mb-4">
-    Connect your Discord and get the "Early OG" role
-  </p>
-  <DiscordVerificationButton />
-</div>
+            {/* Discord Verification Section - Auto-hides when verified */}
+            {!isDiscordVerified && (
+                <div className={`bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg transition-all duration-500 ${
+                    showDiscordSuccess ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+                }`}>
+                    <h2 className="text-xl font-bold mb-2">Discord Verification</h2>
+                    <p className="text-gray-600 dark:text-gray-300 mb-4">
+                        Connect your Discord and get the "Early OG" role
+                    </p>
+                    <DiscordVerificationButton />
+                </div>
+            )}
 
             {/* Date Confirmation Modal */}
             {showDateConfirmation && selectedStake && (
