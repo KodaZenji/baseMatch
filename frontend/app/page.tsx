@@ -101,7 +101,7 @@ function ExploreMenu({ isOpen, onClose, setActiveTab }: {
               rel="noopener noreferrer"
               className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200"
             >
-              <Twitter className="w-5 h-5" />
+              <FaXTwitter className="w-5 h-5" />
               <span className="font-medium">X.com</span>
             </a>
 
@@ -111,7 +111,7 @@ function ExploreMenu({ isOpen, onClose, setActiveTab }: {
               rel="noopener noreferrer"
               className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200"
             >
-              <MessageSquare className="w-5 h-5" />
+              <FaDiscord className="w-5 h-5" />
               <span className="font-medium">Discord</span>
             </a>
           </nav>
@@ -165,6 +165,15 @@ function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
               </div>
             </a>
 
+          <a
+              href="https://discord.gg/vF7bZWhJ85"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200"
+            >
+              <FaDiscord className="w-5 h-5" />
+              <span className="font-medium">Discord</span>
+            </a>
             
           </nav>
         </div>
