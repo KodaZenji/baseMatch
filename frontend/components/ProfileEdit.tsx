@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useProfileEdit } from '@/hooks/useProfileEdit';
 import FarcasterVerificationSection from './ProfileEdit/FarcasterVerificationSection';
 
@@ -22,12 +21,9 @@ export default function ProfileEdit() {
     setShowDeleteFinalConfirm,
     isDeleting,
     farcasterVerified,
-    showFarcasterOptions,
-    farcasterProfile,
+    setFarcasterVerified,
     handlePhotoChange,
     handleSendVerification,
-    handleCheckFarcaster,
-    handleVerifyFarcaster,
     handleUpdateProfile,
     handleDeleteProfile,
     handleWalletLinked,
@@ -81,7 +77,7 @@ export default function ProfileEdit() {
             type="text"
             value={formData.name}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, name: e.target.value }))
+              setFormData((prev: typeof formData) => ({ ...prev, name: e.target.value }))
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
           />
@@ -96,7 +92,7 @@ export default function ProfileEdit() {
             type="email"
             value={formData.email}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, email: e.target.value }))
+              setFormData((prev: typeof formData) => ({ ...prev, email: e.target.value }))
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
           />
@@ -111,7 +107,7 @@ export default function ProfileEdit() {
             type="number"
             value={formData.birthYear}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, birthYear: e.target.value }))
+              setFormData((prev: typeof formData) => ({ ...prev, birthYear: e.target.value }))
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
           />
@@ -126,7 +122,7 @@ export default function ProfileEdit() {
             type="text"
             value={formData.gender}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, gender: e.target.value }))
+              setFormData((prev: typeof formData) => ({ ...prev, gender: e.target.value }))
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
           />
@@ -141,7 +137,7 @@ export default function ProfileEdit() {
             type="text"
             value={formData.interests}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, interests: e.target.value }))
+              setFormData((prev: typeof formData) => ({ ...prev, interests: e.target.value }))
             }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
           />
