@@ -17,7 +17,7 @@ export function useDiscordVerification() {
       }
 
       try {
-        // Check if already verified in profile
+        // 🎯 Check database verification status
         if (profile?.discord_verified) {
           setIsVerified(true);
           setIsLoading(false);
@@ -26,14 +26,19 @@ export function useDiscordVerification() {
 
         // Check URL for fresh verification
         const urlParams = new URLSearchParams(window.location.search);
-        const verified = urlParams.get('discord_verified');
+        const success = urlParams.get('discord_success');
         
-        if (verified === 'true') {
+        if (success === 'true') {
           setIsVerified(true);
           setShowSuccess(true);
           
           // Clean URL
           window.history.replaceState({}, '', window.location.pathname);
+          
+          // Refresh profile to get latest verification status
+          if (profile) {
+            await profile.refreshProfile?.();
+          }
           
           // Hide success after 5 seconds
           setTimeout(() => {
@@ -49,10 +54,15 @@ export function useDiscordVerification() {
     };
 
     checkAndHandleVerification();
-  }, [address, profile]);
+  }, [address, profile?.discord_verified]);
 
-  // Check if user can verify (needs Farcaster verification)
-  const canVerify = profile?.farcaster_verified || false;
+  // 🎯 User can verify if they have Farcaster AND not already verified
+  const canVerify = Boolean(profile?.farcaster_verified && !profile?.discord_verified);
 
-  return { isVerified, showSuccess, isLoading, canVerify };
+  return { 
+    isVerified: profile?.discord_verified || false, 
+    showSuccess, 
+    isLoading, 
+    canVerify 
+  };
 }
