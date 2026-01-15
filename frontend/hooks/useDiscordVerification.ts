@@ -1,10 +1,11 @@
+// frontend/hooks/useDiscordVerification.ts
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useProfile } from '@/hooks/useProfile';
 
 export function useDiscordVerification() {
   const { address } = useAccount();
-  const { profile } = useProfile(address);
+  const { profile, refreshProfile } = useProfile(address); // ← Get refreshProfile separately
   const [isVerified, setIsVerified] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -17,7 +18,7 @@ export function useDiscordVerification() {
       }
 
       try {
-        // 🎯 Check database verification status
+        // Check if already verified in profile
         if (profile?.discord_verified) {
           setIsVerified(true);
           setIsLoading(false);
@@ -36,8 +37,8 @@ export function useDiscordVerification() {
           window.history.replaceState({}, '', window.location.pathname);
           
           // Refresh profile to get latest verification status
-          if (profile) {
-            await profile.refreshProfile?.();
+          if (refreshProfile) {
+            await refreshProfile();
           }
           
           // Hide success after 5 seconds
@@ -54,9 +55,9 @@ export function useDiscordVerification() {
     };
 
     checkAndHandleVerification();
-  }, [address, profile?.discord_verified]);
+  }, [address, profile?.discord_verified, refreshProfile]);
 
-  // 🎯 User can verify if they have Farcaster AND not already verified
+  // Check if user can verify (needs Farcaster verification)
   const canVerify = Boolean(profile?.farcaster_verified && !profile?.discord_verified);
 
   return { 
