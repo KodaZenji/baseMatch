@@ -1,515 +1,129 @@
-// frontend/components/Dashboard.tsx
-// FIXED: Added auto-refresh 
+// frontend/components/DiscordVerificationButton.tsx
 
-'use client';
-
+import { useState } from 'react';
 import { useAccount } from 'wagmi';
-import { useProfile } from '@/hooks/useProfile';
-import { useReputation } from '@/hooks/useReputation';
-import { useAchievements } from '@/hooks/useAchievements';
+import { CheckCircle, AlertTriangle, Loader, AlertCircle as AlertIcon } from 'lucide-react';
+import { FaDiscord } from 'react-icons/fa';
 import { useDiscordVerification } from '@/hooks/useDiscordVerification';
-import { generateAvatar } from '@/lib/avatarUtils';
-import Link from 'next/link';
-import StakeReminderBanner from './StakeReminderBanner';
-import DateConfirmationModal from './DateConfirmationModal';
-import RatingModal from './RatingModal';
-import DiscordVerificationButton from '@/components/DiscordVerificationButton';
-import { Star, Calendar, ThumbsUp, AlertCircle, Clock, Trophy, Zap, Flame, Sparkles, Heart, X, RefreshCw } from 'lucide-react';
-import { useState, useEffect } from 'react';
 
-interface PendingStake {
-    stakeId: string;
-    matchAddress: string;
-    matchName: string;
-    meetingTime: number;
-    stakeAmount: string;
-    deadline?: number;
-    timeRemaining?: number;
-    timeWaiting?: number;
-    timeUntilMeeting?: number;
-    hasMeetingPassed?: boolean;
-    canCancel?: boolean;
-    role?: 'creator' | 'acceptor';
-}
+export default function DiscordVerificationButton() {
+  const { address } = useAccount();
+  const { showSuccess, canVerify } = useDiscordVerification();
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [error, setError] = useState('');
 
-interface AchievementWithImage {
-    tokenId: number;
-    type: string;
-    description: string;
-    imageUrl?: string;
-}
+  const handleVerify = async () => {
+    if (!address) {
+      setError('Please connect your wallet first');
+      return;
+    }
 
-export default function Dashboard() {
-    const { address } = useAccount();
-    const { profile } = useProfile(address);
-    
-    // Discord verification hook
-    const { isVerified: isDiscordVerified, showSuccess: showDiscordSuccess } = useDiscordVerification();
-    
-    // Refresh key to force re-fetch from blockchain
-    const [refreshKey, setRefreshKey] = useState(0);
-    const { reputation, loading: reputationLoading } = useReputation(address, refreshKey);
-    const { achievements, loading: achievementsLoading } = useAchievements(address, refreshKey);
-    
-    const [avatarUrl, setAvatarUrl] = useState('');
-    const [achievementsWithImages, setAchievementsWithImages] = useState<AchievementWithImage[]>([]);
-    const [selectedAchievementImage, setSelectedAchievementImage] = useState<{ imageUrl: string; type: string } | null>(null);
+    if (!canVerify) {
+      setError('Please verify your Farcaster account first');
+      return;
+    }
 
-    // Modal states
-    const [showDateConfirmation, setShowDateConfirmation] = useState(false);
-    const [showRatingModal, setShowRatingModal] = useState(false);
-    const [selectedStake, setSelectedStake] = useState<PendingStake | null>(null);
-    const [countdown, setCountdown] = useState<number | null>(null);
-    
-    // Pending state to show when blockchain updates are in progress
-    const [isPendingBlockchainUpdate, setIsPendingBlockchainUpdate] = useState(false);
+    setIsVerifying(true);
+    setError('');
 
-    // Generate avatar based on wallet address
-    useEffect(() => {
-        if (address) {
-            const avatarUrl = generateAvatar(address);
-            setAvatarUrl(avatarUrl);
-        }
-    }, [address]);
+    try {
+      const response = await fetch('/api/discord/generate-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address })
+      });
 
-    // Handle countdown timer for rating modal (10 seconds after confirmation)
-    useEffect(() => {
-        if (countdown !== null && countdown > 0) {
-            const timer = setTimeout(() => {
-                setCountdown(countdown - 1);
-            }, 1000);
-            return () => clearTimeout(timer);
-        } else if (countdown === 0) {
-            setShowRatingModal(true);
-            setCountdown(null);
-        }
-    }, [countdown]);
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to generate token');
+      }
 
-    // Handle when user clicks "Confirm Now" from StakeReminderBanner
-    const handleConfirmClick = (stake: PendingStake) => {
-        setSelectedStake(stake);
-        setShowDateConfirmation(true);
-    };
+      const { state } = await response.json();
+      const discordClientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+      const redirectUri = encodeURIComponent(
+        `${process.env.NEXT_PUBLIC_APP_URL}/api/discord/callback`
+      );
+      const scopes = 'identify guilds.join';
 
-    // Handle date confirmation success with blockchain update tracking
-    const handleDateConfirmed = async () => {
-        try {
-            console.log('Date confirmed successfully');
+      window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=${state}`;
+    } catch (error: any) {
+      setError(error.message || 'Verification failed');
+      setIsVerifying(false);
+    }
+  };
 
-            // Close the confirmation modal
-            setShowDateConfirmation(false);
-
-            // Show pending state
-            setIsPendingBlockchainUpdate(true);
-
-            // Wait 10 seconds for blockchain to confirm, then refresh
-            setTimeout(() => {
-                console.log('🔄 Refreshing reputation and achievements from blockchain...');
-                setRefreshKey(prev => prev + 1);
-                setIsPendingBlockchainUpdate(false);
-            }, 10000); // 10 seconds should be enough for blockchain confirmation
-
-            // Start countdown to rating modal
-            setCountdown(10);
-
-        } catch (error) {
-            console.error('Error after confirmation:', error);
-            setIsPendingBlockchainUpdate(false);
-        }
-    };
-
-    // Handle rating submission with blockchain refresh
-    const handleRatingSubmitted = () => {
-        console.log('🔄 Rating submitted, refreshing stats...');
-        setIsPendingBlockchainUpdate(true);
-        
-        // Wait for blockchain confirmation, then refresh
-        setTimeout(() => {
-            setRefreshKey(prev => prev + 1);
-            setIsPendingBlockchainUpdate(false);
-        }, 10000);
-    };
-
-    // Handle rating modal close
-    const handleRatingClose = () => {
-        setShowRatingModal(false);
-        setSelectedStake(null);
-    };
-
-    // Fetch achievement images from IPFS metadata
-    useEffect(() => {
-        const fetchAchievementImages = async () => {
-            const withImages = await Promise.all(
-                achievements.map(async (achievement) => {
-                    try {
-                        const typeMap: { [key: string]: string } = {
-                            'First Date': 'first-date',
-                            '5 Dates': '5 dates',
-                            '10 Dates': '10-dates',
-                            '5-Star Rating': '5 star',
-                            'Perfect Week': 'perfect-week',
-                            'Match Maker': 'match-maker'
-                        };
-
-                        const filename = typeMap[achievement.type] || achievement.type.toLowerCase().replace(/\s+/g, '-');
-                        const metadataUrl = `https://ipfs.io/ipfs/QmUaKVFosUfGagYmuE9fTqkw19LKJ9F3Job7QEtrnUZJdW/${filename}.json`;
-                        const response = await fetch(metadataUrl);
-                        if (!response.ok) throw new Error(`Failed to fetch metadata: ${response.status}`);
-                        const metadata = await response.json();
-                        return {
-                            ...achievement,
-                            imageUrl: metadata.image
-                        };
-                    } catch (error) {
-                        console.error(`Failed to fetch metadata for ${achievement.type}:`, error);
-                        return achievement;
-                    }
-                })
-            );
-            setAchievementsWithImages(withImages);
-        };
-
-        if (achievements.length > 0) {
-            fetchAchievementImages();
-        }
-    }, [achievements]);
-
-    // Get achievement icon based on type (fallback)
-    const getAchievementIcon = (type: string) => {
-        if (type.includes('First Date')) return <Zap className="text-yellow-500" size={28} />;
-        if (type.includes('5 Dates')) return <Flame className="text-orange-500" size={28} />;
-        if (type.includes('10 Dates')) return <Sparkles className="text-blue-500" size={28} />;
-        if (type.includes('5 Star')) return <Star className="text-yellow-500" size={28} />;
-        if (type.includes('Perfect Week')) return <Calendar className="text-purple-500" size={28} />;
-        if (type.includes('Match Maker')) return <Heart className="text-pink-500" size={28} />;
-        return <Trophy className="text-amber-600" size={28} />;
-    };
-
+  // Show success message
+  if (showSuccess) {
     return (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-800">Your Dashboard</h2>
-
-            {/* Stake Reminder Banner */}
-            <StakeReminderBanner onConfirmClick={handleConfirmClick} />
-
-            {/* Pending blockchain update indicator */}
-            {isPendingBlockchainUpdate && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-4">
-                    <div className="flex items-center gap-3">
-                        <RefreshCw className="animate-spin text-blue-600" size={24} />
-                        <div>
-                            <p className="font-semibold text-blue-900">Updating Your Stats...</p>
-                            <p className="text-sm text-blue-700">
-                                Your blockchain transaction is being confirmed. Stats will update shortly.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Countdown indicator */}
-            {countdown !== null && countdown > 0 && (
-                <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-2 border-pink-300 rounded-xl p-4 text-center animate-pulse">
-                    <div className="flex items-center justify-center gap-2 text-pink-700 font-bold text-lg">
-                        <Clock size={24} />
-                        Rating modal opening in {countdown} second{countdown !== 1 ? 's' : ''}...
-                    </div>
-                </div>
-            )}
-
-            {/* Profile Card */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-                <div className="flex justify-between items-start mb-6">
-                    <h3 className="text-xl font-bold text-gray-800">Profile</h3>
-                    <Link
-                        href="/profile/edit"
-                        className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                        Edit Profile
-                    </Link>
-                </div>
-                {profile && (
-                    <div className="space-y-4">
-                        <div className="flex items-center space-x-4">
-                            {profile.photoUrl ? (
-                                <img
-                                    src={profile.photoUrl}
-                                    alt="Your avatar"
-                                    className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
-                                />
-                            ) : avatarUrl ? (
-                                <img
-                                    src={avatarUrl}
-                                    alt="Your avatar"
-                                    className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
-                                />
-                            ) : (
-                                <div className="bg-gray-200 border-2 border-dashed rounded-full w-24 h-24" />
-                            )}
-                            <div>
-                                <h4 className="text-2xl text-gray-900 font-bold">{profile.name}, {profile.birthYear}</h4>
-                                <p className="text-gray-600 mt-2">{profile.interests}</p>
-                                <p className="text-xs text-gray-500 mt-2">
-                                    PROFILE ID: #{profile.tokenId.toString()}
-                                </p>
-                                {profile.email && (
-                                    <div className="flex items-center mt-3">
-                                        <span className="text-xs text-gray-600">{profile.email}</span>
-                                        <span className="ml-2 px-2 py-0.5 bg-green-500 text-white text-xs font-semibold rounded">
-                                            Verified
-                                        </span>
-                                    </div>
-                                )}
-                                {profile.wallet_address && (
-                                    <div className="flex items-center mt-2">
-                                        <span className="text-xs text-gray-600">{profile.wallet_address.slice(0, 6)}...{profile.wallet_address.slice(-4)}</span>
-                                        <span className="ml-2 px-2 py-0.5 bg-blue-500 text-white text-xs font-semibold rounded">
-                                            Wallet Verified
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Reputation Stats */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-                <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-bold text-gray-800">Reputation</h3>
-                    {/* Manual refresh button */}
-                    <button
-                        onClick={() => {
-                            console.log('🔄 Manual refresh triggered');
-                            setRefreshKey(prev => prev + 1);
-                        }}
-                        className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                        disabled={reputationLoading}
-                    >
-                        <RefreshCw className={reputationLoading ? 'animate-spin' : ''} size={16} />
-                        Refresh
-                    </button>
-                </div>
-                {reputationLoading ? (
-                    <div className="flex justify-center items-center h-32">
-                        <div className="text-gray-500">Loading reputation...</div>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-                            <div className="flex justify-center mb-2">
-                                <Star className="text-blue-600" size={32} />
-                            </div>
-                            <div className="text-3xl font-bold text-blue-600">
-                                {reputation ? reputation.averageRating.toFixed(1) : '0.0'}
-                            </div>
-                            <div className="text-sm text-gray-700 font-medium mt-2">Avg Rating</div>
-                        </div>
-                        <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
-                            <div className="flex justify-center mb-2">
-                                <Calendar className="text-purple-600" size={32} />
-                            </div>
-                            <div className="text-3xl font-bold text-purple-600">
-                                {reputation ? reputation.totalDates : 0}
-                            </div>
-                            <div className="text-sm text-gray-700 font-medium mt-2">Total Dates</div>
-                        </div>
-                        <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
-                            <div className="flex justify-center mb-2">
-                                <ThumbsUp className="text-green-600" size={32} />
-                            </div>
-                            <div className="text-3xl font-bold text-green-600">
-                                {reputation ? reputation.ratingCount : 0}
-                            </div>
-                            <div className="text-sm text-gray-700 font-medium mt-2">Ratings</div>
-                        </div>
-                        <div className="text-center p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-xl">
-                            <div className="flex justify-center mb-2">
-                                <AlertCircle className="text-red-600" size={32} />
-                            </div>
-                            <div className="text-3xl font-bold text-red-600">
-                                {reputation ? reputation.noShows : 0}
-                            </div>
-                            <div className="text-sm text-gray-700 font-medium mt-2">No-Shows</div>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Achievement NFTs */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-                <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-2">
-                        <Trophy className="text-amber-600" size={24} />
-                        <h3 className="text-xl font-bold text-gray-900">Achievement NFTs</h3>
-                    </div>
-                    {!achievementsLoading && achievements.length > 0 && (
-                        <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded-full">
-                            {achievements.length} {achievements.length === 1 ? 'Badge' : 'Badges'}
-                        </span>
-                    )}
-                </div>
-
-                {achievementsLoading ? (
-                    <div className="flex justify-center items-center h-32">
-                        <div className="flex items-center space-x-2">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-                            <span className="text-gray-500">Loading achievements from blockchain...</span>
-                        </div>
-                    </div>
-                ) : achievementsWithImages.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {achievementsWithImages.map((achievement) => (
-                            <div
-                                key={achievement.tokenId}
-                                className="group relative border-2 border-purple-200 rounded-lg bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 hover:shadow-md transition-all duration-300 hover:scale-105 overflow-hidden cursor-pointer"
-                                onClick={() => {
-                                    if (achievement.imageUrl) {
-                                        setSelectedAchievementImage({
-                                            imageUrl: achievement.imageUrl,
-                                            type: achievement.type
-                                        });
-                                    }
-                                }}
-                            >
-                                {achievement.imageUrl ? (
-                                    <>
-                                        <img
-                                            src={achievement.imageUrl.replace('ipfs://', 'https://ipfs.io/ipfs/')}
-                                            alt={achievement.type}
-                                            className="w-full h-32 object-cover"
-                                        />
-                                        <div className="p-3">
-                                            <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-purple-600 text-white text-xs font-bold rounded-full">
-                                                NFT
-                                            </div>
-                                            <h4 className="font-bold text-xs text-gray-900 mb-1 line-clamp-2">{achievement.type}</h4>
-                                            <div className="flex items-center text-xs text-purple-600">
-                                                <svg className="w-2.5 h-2.5 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                                </svg>
-                                                <span className="font-medium">Verified</span>
-                                            </div>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="p-3 flex flex-col items-center justify-center h-32">
-                                        <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-purple-600 text-white text-xs font-bold rounded-full">
-                                            NFT
-                                        </div>
-                                        <div className="mb-1 text-2xl">{getAchievementIcon(achievement.type)}</div>
-                                        <h4 className="font-bold text-xs text-gray-900 mb-1 text-center line-clamp-2">{achievement.type}</h4>
-                                        <div className="flex items-center text-xs text-purple-600">
-                                            <svg className="w-2.5 h-2.5 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                            </svg>
-                                            <span className="font-medium">Verified</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-12 space-y-3">
-                        <p className="text-gray-400 font-medium">No achievement yet</p>
-                        <p className="text-sm text-gray-500">
-                            Go on dates and earn badges!
-                        </p>
-                    </div>
-                )}
-            </div>
-
-            {/* Achievement Image Preview Modal */}
-            {selectedAchievementImage && (
-                <div
-                    className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4"
-                    onMouseDown={(e) => {
-                        if (e.target === e.currentTarget) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setSelectedAchievementImage(null);
-                        }
-                    }}
-                    onTouchStart={(e) => {
-                        if (e.target === e.currentTarget) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setSelectedAchievementImage(null);
-                        }
-                    }}
-                >
-                    <div
-                        className="relative bg-black rounded-3xl overflow-hidden max-w-md w-full shadow-2xl"
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <button
-                            onMouseDown={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setSelectedAchievementImage(null);
-                            }}
-                            onTouchStart={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setSelectedAchievementImage(null);
-                            }}
-                            className="absolute top-3 right-3 text-white bg-black bg-opacity-60 rounded-full w-10 h-10 flex items-center justify-center z-10 shadow-lg hover:bg-opacity-80 transition-all"
-                        >
-                            <X size={20} />
-                        </button>
-
-                        <img
-                            src={selectedAchievementImage.imageUrl.replace('ipfs://', 'https://ipfs.io/ipfs/')}
-                            alt={selectedAchievementImage.type}
-                            className="w-full h-auto object-contain pointer-events-none"
-                        />
-
-                        <div className="bg-black py-4 text-center border-t border-gray-800">
-                            <p className="text-white text-lg font-medium">{selectedAchievementImage.type}</p>
-                            <p className="text-gray-400 text-xs mt-1">Tap anywhere to close</p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Discord Verification Section - Auto-hides when verified */}
-            {!isDiscordVerified && (
-                <div className={`bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg transition-all duration-500 ${
-                    showDiscordSuccess ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-                }`}>
-                    <h2 className="text-xl font-bold mb-2">Discord Verification</h2>
-                    <p className="text-gray-600 dark:text-gray-300 mb-4">
-                        Connect your Discord and get the "Early OG" role
-                    </p>
-                    <DiscordVerificationButton />
-                </div>
-            )}
-
-            {/* Date Confirmation Modal */}
-            {showDateConfirmation && selectedStake && (
-                <DateConfirmationModal
-                    stakeId={selectedStake.stakeId}
-                    matchAddress={selectedStake.matchAddress}
-                    matchName={selectedStake.matchName}
-                    meetingTime={selectedStake.meetingTime}
-                    stakeAmount={selectedStake.stakeAmount}
-                    onClose={() => setShowDateConfirmation(false)}
-                    onSuccess={handleDateConfirmed}
-                />
-            )}
-
-            {/* Rating Modal - Opens 10 seconds after date confirmation */}
-            {showRatingModal && selectedStake && (
-                <RatingModal
-                    matchAddress={selectedStake.matchAddress}
-                    onClose={handleRatingClose}
-                    onSuccess={handleRatingSubmitted}
-                />
-            )}
+      <div className="flex items-start gap-3 p-6 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 shadow-lg animate-fade-in">
+        <CheckCircle className="w-8 h-8 text-green-600 animate-bounce" />
+        <div>
+          <p className="font-bold text-lg text-green-800">Discord Verified!</p>
+          <p className="text-sm text-green-700 mt-1">
+            You now have the "Early OG" role
+          </p>
         </div>
+      </div>
     );
+  }
+
+  return (
+    <div className="space-y-4">
+      <button
+        onClick={handleVerify}
+        disabled={isVerifying || !address || !canVerify}
+        className="w-full flex items-center justify-center gap-3 bg-[#5865F2] hover:bg-[#4752C4] text-white px-6 py-3 rounded-xl font-semibold transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isVerifying ? (
+          <>
+            <Loader className="w-5 h-5 animate-spin" />
+            <span>Verifying...</span>
+          </>
+        ) : (
+          <>
+            <FaDiscord className="w-5 h-5" />
+            <span>Verify with Discord</span>
+          </>
+        )}
+      </button>
+
+      {error && (
+        <div className="flex items-start gap-2 p-4 rounded-lg bg-red-50 text-red-700">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
+
+      {!canVerify && !error && (
+        <div className="flex items-start gap-2 p-4 rounded-lg bg-amber-50 border border-amber-200">
+          <AlertIcon className="w-5 h-5 flex-shrink-0 text-amber-600" />
+          <div className="text-sm text-amber-800">
+            <p className="font-semibold mb-1">Farcaster Required</p>
+            <p>Missing a step, kindly go to "Edit Profile" and link a farcaster account</p>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+          <CheckCircle className="w-4 h-4" />
+          Requirements for "Early OG" Role
+        </h3>
+        <ul className="space-y-2 text-sm text-blue-800">
+          <li className="flex items-start gap-2">
+            <span className="text-blue-500">✓</span>
+            <span>BaseMatch profile created</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className={canVerify ? "text-green-500" : "text-blue-500"}>
+              {canVerify ? "✓" : "○"}
+            </span>
+            <span className={canVerify ? "font-semibold" : ""}>
+              Farcaster account linked {!canVerify && "(Required)"}
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
 }
