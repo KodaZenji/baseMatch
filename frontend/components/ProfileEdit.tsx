@@ -2,6 +2,10 @@
 
 import { useProfileEdit } from '@/hooks/useProfileEdit';
 import FarcasterVerificationSection from './ProfileEdit/FarcasterVerificationSection';
+import EmailVerificationSection from './ProfileEdit/EmailVerificationSection';
+import ProfilePhotoSection from './ProfileEdit/ProfilePhotoSection';
+import ProfileFormFields from './ProfileEdit/ProfileFormFields';
+import DeleteAccountSection from './ProfileEdit/DeleteAccountSection';
 
 export default function ProfileEdit() {
   const {
@@ -27,11 +31,12 @@ export default function ProfileEdit() {
     handleUpdateProfile,
     handleDeleteProfile,
     handleWalletLinked,
+    isPending,
+    isConfirming,
   } = useProfileEdit();
 
   return (
     <div className="max-w-xl mx-auto p-6 space-y-6">
-      {/* Notification */}
       {notification && (
         <div
           className={`p-3 rounded-lg ${
@@ -44,105 +49,23 @@ export default function ProfileEdit() {
         </div>
       )}
 
-      {/* Avatar & Photo Upload */}
-      <div className="flex items-center gap-4">
-        <img
-          src={newPhotoUrl || avatarUrl}
-          alt="Profile Avatar"
-          className="w-20 h-20 rounded-full border"
-        />
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handlePhotoChange}
-          className="hidden"
-          accept="image/*"
-        />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm"
-        >
-          Change Photo
-        </button>
-      </div>
+      {/* Profile Photo */}
+      <ProfilePhotoSection
+        newPhotoUrl={newPhotoUrl}
+        avatarUrl={avatarUrl}
+        fileInputRef={fileInputRef}
+        onPhotoChange={handlePhotoChange}
+        onTriggerFileInput={() => fileInputRef.current?.click()}
+      />
 
       {/* Profile Form */}
       <form onSubmit={handleUpdateProfile} className="space-y-4">
-        {/* Name */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Name
-          </label>
-          <input
-            type="text"
-            value={formData.name}
-            onChange={(e) =>
-              setFormData((prev: typeof formData) => ({ ...prev, name: e.target.value }))
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
-          />
-        </div>
-
-        {/* Email */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Email
-          </label>
-          <input
-            type="email"
-            value={formData.email}
-            onChange={(e) =>
-              setFormData((prev: typeof formData) => ({ ...prev, email: e.target.value }))
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
-          />
-        </div>
-
-        {/* Birth Year */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Birth Year
-          </label>
-          <input
-            type="number"
-            value={formData.birthYear}
-            onChange={(e) =>
-              setFormData((prev: typeof formData) => ({ ...prev, birthYear: e.target.value }))
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
-          />
-        </div>
-
-        {/* Gender */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Gender
-          </label>
-          <input
-            type="text"
-            value={formData.gender}
-            onChange={(e) =>
-              setFormData((prev: typeof formData) => ({ ...prev, gender: e.target.value }))
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
-          />
-        </div>
-
-        {/* Interests */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Interests
-          </label>
-          <input
-            type="text"
-            value={formData.interests}
-            onChange={(e) =>
-              setFormData((prev: typeof formData) => ({ ...prev, interests: e.target.value }))
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
-          />
-        </div>
-
+        <ProfileFormFields
+          formData={formData}
+          onChange={(field, value) =>
+            setFormData((prev: typeof formData) => ({ ...prev, [field]: value }))
+          }
+        />
         <button
           type="submit"
           className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 text-sm font-medium"
@@ -153,60 +76,40 @@ export default function ProfileEdit() {
 
       {/* Email Verification */}
       {!hasWallet && (
-        <button
-          onClick={handleSendVerification}
-          disabled={isSendingVerification}
-          className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
-        >
-          {isSendingVerification ? 'Sending...' : 'Send Verification Code'}
-        </button>
+        <EmailVerificationSection
+          email={formData.email}
+          isVerified={false} // optional: connect to blockchain verification state
+          isSending={isSendingVerification}
+          onEmailChange={(email) =>
+            setFormData((prev: typeof formData) => ({ ...prev, email }))
+          }
+          onSendVerification={handleSendVerification}
+        />
       )}
 
-      {/* Farcaster Verification Section */}
+      {/* Farcaster Verification */}
       {hasWallet && (
         <FarcasterVerificationSection
           hasWallet={hasWallet}
           farcasterVerified={farcasterVerified}
           walletAddress={address || ''}
-          onVerificationComplete={() => {
-            console.log('Farcaster verified!');
-          }}
+          onVerificationComplete={() => setFarcasterVerified(true)}
         />
       )}
 
       {/* Delete Profile */}
-      {hasWallet && (
-        <div className="mt-4 space-y-2">
-          {showDeleteConfirm ? (
-            <div className="space-y-2">
-              <p className="text-sm text-red-700">
-                Are you sure you want to delete your profile?
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowDeleteFinalConfirm(true)}
-                  className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
-                >
-                  Yes, Delete
-                </button>
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="bg-gray-200 px-4 py-2 rounded-lg text-sm"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
-            >
-              Delete Profile
-            </button>
-          )}
-        </div>
-      )}
+      <DeleteAccountSection
+        hasWallet={hasWallet}
+        profileExists={!!address}
+        showDeleteConfirm={showDeleteConfirm}
+        showDeleteFinalConfirm={showDeleteFinalConfirm}
+        isDeleting={isDeleting}
+        isPending={isPending}
+        isConfirming={isConfirming}
+        onShowConfirm={setShowDeleteConfirm}
+        onShowFinalConfirm={setShowDeleteFinalConfirm}
+        onDelete={handleDeleteProfile}
+      />
     </div>
   );
 }
