@@ -474,9 +474,8 @@ export default function Dashboard() {
             )}
 
             
-            {/* Discord Verification Section */}
-<div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg">
-  <h2 className="text-xl font-bold mb-2">Discord Verification</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700">
+  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Discord Verification</h2>
   <p className="text-gray-600 dark:text-gray-300 mb-4">
     Connect your Discord and get the "Early OG" role
   </p>
