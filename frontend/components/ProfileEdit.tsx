@@ -80,20 +80,18 @@ export default function ProfileEdit() {
             onTriggerFileInput={() => fileInputRef.current?.click()}
           />
 
-          {/* Email Verification - ABOVE form fields */}
-          {!hasWallet && (
-            <EmailVerificationSection
-              email={formData.email}
-              isVerified={profile?.email && formData.email === profile.email && profile?.exists}
-              isSending={isSendingVerification}
-              onEmailChange={(email) =>
-                setFormData((prev: typeof formData) => ({ ...prev, email }))
-              }
-              onSendVerification={handleSendVerification}
-            />
-          )}
+          {/* Email Verification - Show for all users */}
+          <EmailVerificationSection
+            email={formData.email}
+            isVerified={profile?.email && formData.email === profile.email && profile?.exists}
+            isSending={isSendingVerification}
+            onEmailChange={(email) =>
+              setFormData((prev: typeof formData) => ({ ...prev, email }))
+            }
+            onSendVerification={handleSendVerification}
+          />
 
-          {/* Farcaster Verification - ABOVE form fields */}
+          {/* Farcaster Verification - Only for wallet users */}
           {hasWallet && (
             <FarcasterVerificationSection
               hasWallet={hasWallet}
