@@ -1,4 +1,4 @@
-// app/register/wallet/choice/page.tsx - WITH REACT ICONS
+// app/register/wallet/choice/page.tsx 
 
 'use client';
 
