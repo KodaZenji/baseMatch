@@ -532,8 +532,8 @@ export default function Home() {
         : 'text-gray-500 dark:text-gray-400'
     }`}
   >
-    <Users className="w-6 h-6" />
-    <span className="text-xs font-medium">Browse</span>
+    <Users className="w-4 h-4" />
+    <span className="text-xs font-sm">Browse</span>
   </button>
   
   <button
@@ -544,8 +544,8 @@ export default function Home() {
         : 'text-gray-500 dark:text-gray-400'
     }`}
   >
-    <Heart className="w-6 h-6" />
-    <span className="text-xs font-medium">Matches</span>
+    <Heart className="w-4 h-4" />
+    <span className="text-xs font-sm">Matches</span>
   </button>
   
   <button
@@ -556,8 +556,8 @@ export default function Home() {
         : 'text-gray-500 dark:text-gray-400'
     }`}
   >
-    <MessageCircle className="w-6 h-6" />
-    <span className="text-xs font-medium">Messages</span>
+    <MessageCircle className="w-4 h-4" />
+    <span className="text-xs font-sm">Messages</span>
     {unreadCount > 0 && (
       <span className="absolute top-1 right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
         {unreadCount > 9 ? '9+' : unreadCount}
@@ -573,8 +573,8 @@ export default function Home() {
         : 'text-gray-500 dark:text-gray-400'
     }`}
   >
-    <LayoutDashboard className="w-6 h-6" />
-    <span className="text-xs font-medium">Profile</span>
+    <LayoutDashboard className="w-4 h-4" />
+    <span className="text-xs font-sm">Profile</span>
   </button>
 </nav>
 
