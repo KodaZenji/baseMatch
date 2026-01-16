@@ -138,14 +138,17 @@ export default function FarcasterVerificationSection({
             <button
               onClick={() => handlePhotoChoice(true)}
               disabled={isVerifying}
-              className="w-full py-2 text-white rounded-lg text-sm font-medium transition-all bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 disabled:opacity-50"
+              className="w-full py-2 text-white rounded-lg text-sm font-medium transition-all 
+                         bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
             >
               {isVerifying ? 'Updating...' : 'Yes, use Farcaster photo'}
             </button>
             <button
               onClick={() => handlePhotoChoice(false)}
               disabled={isVerifying}
-              className="w-full py-2 text-purple-700 dark:text-purple-200 bg-white dark:bg-purple-700 border border-purple-300 dark:border-purple-600 rounded-lg text-sm font-medium hover:bg-purple-50 dark:hover:bg-purple-600 disabled:opacity-50 transition-all"
+              className="w-full py-2 text-purple-700 dark:text-white bg-white dark:bg-purple-700 
+                         border border-purple-300 dark:border-purple-600 rounded-lg text-sm font-medium 
+                         hover:bg-purple-50 dark:hover:bg-purple-600 disabled:opacity-50 transition-all"
             >
               {isVerifying ? 'Updating...' : 'No, keep current photo'}
             </button>
@@ -159,11 +162,11 @@ export default function FarcasterVerificationSection({
   return (
     <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-700 rounded-xl p-4">
       <label className="block text-sm font-medium text-purple-900 dark:text-purple-200 mb-2">
-        Got a Farcaster account? Verify with FID
+        Got a Farcaster account? 
       </label>
 
       <p className="text-sm text-purple-700 dark:text-purple-300 mb-4">
-        Enter your FID and username to verify your Farcaster account
+        Enter your FID and username to verify your Farcaster account 
       </p>
 
       {error && (
@@ -208,7 +211,8 @@ export default function FarcasterVerificationSection({
         <button
           onClick={handleVerify}
           disabled={isVerifying || !fid || !username}
-          className="w-full py-2 text-white rounded-lg text-sm font-medium transition-all bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 disabled:opacity-50"
+          className="w-full py-2 text-white rounded-lg text-sm font-medium transition-all 
+                     bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
         >
           {isVerifying ? 'Verifying...' : 'Verify Farcaster'}
         </button>
