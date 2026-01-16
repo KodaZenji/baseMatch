@@ -9,8 +9,9 @@ import Dashboard from '@/components/Dashboard';
 import Notifications from '@/components/Notifications';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
-import { Heart, Menu, Moon, Sun, X, Bell, Users, LayoutDashboard, } from 'lucide-react';
+import { Heart, Menu, Moon, Sun, X, MessageCircle, Users, LayoutDashboard, } from 'lucide-react';
 import { FaDiscord } from 'react-icons/fa';
+import { GrNotification } from "react-icons/gr";
 import { FaXTwitter } from 'react-icons/fa6'; 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -556,7 +557,7 @@ export default function Home() {
         : 'text-gray-500 dark:text-gray-400'
     }`}
   >
-    <Bell className="w-5 h-5" />
+ <GrNotification className="w-5 h-5" />
   {unreadCount > 0 && (
     <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
   )}
