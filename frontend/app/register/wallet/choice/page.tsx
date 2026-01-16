@@ -1,11 +1,12 @@
-// app/register/wallet/choice/page.tsx - NEW FILE
+// app/register/wallet/choice/page.tsx - WITH REACT ICONS
 
 'use client';
 
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
-import { Heart, Loader2 } from 'lucide-react';
+import { Heart, Loader2, Edit3 } from 'lucide-react';
+import { SiFarcaster } from 'react-icons/si';
 
 export default function SignupChoicePage() {
   const router = useRouter();
@@ -115,7 +116,7 @@ export default function SignupChoicePage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                  <span className="text-2xl">🟪</span>
+                  <SiFarcaster className="w-7 h-7 text-white" />
                 </div>
                 <div className="text-left">
                   <h3 className="font-bold text-lg">Use Farcaster</h3>
@@ -163,7 +164,7 @@ export default function SignupChoicePage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
-                  <span className="text-2xl"></span>
+                  <Edit3 className="w-6 h-6 text-gray-600" />
                 </div>
                 <div className="text-left">
                   <h3 className="font-bold text-lg">Sign Up Manually</h3>
