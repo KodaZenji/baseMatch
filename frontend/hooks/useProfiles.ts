@@ -1,6 +1,5 @@
 // frontend/hooks/useProfiles.ts
 
-
 import { useState, useEffect, useCallback } from 'react';
 import { useReadContract } from 'wagmi';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
@@ -85,8 +84,22 @@ export function useProfiles() {
             console.log('📸 Sample profiles:', fetchedProfiles.slice(0, 3).map(p => ({
                 name: p.name,
                 photoUrl: p.photoUrl,
-                farcaster_verified: p.farcaster_verified // ✅ Debug log
+                farcaster_verified: p.farcaster_verified
             })));
+
+            // ✅ DEBUG: Check Aurio's profile specifically
+            const aurioProfile = fetchedProfiles.find(p => 
+                p.wallet_address.toLowerCase() === '0xebf64265bdbce2de0deaed58e44409605bf7704d'
+            );
+            console.log('🔍 Aurio profile found:', aurioProfile);
+            if (aurioProfile) {
+                console.log('🎯 Aurio verification status:', {
+                    email_verified: aurioProfile.email_verified,
+                    wallet_verified: aurioProfile.wallet_verified,
+                    farcaster_verified: aurioProfile.farcaster_verified,
+                    farcaster_type: typeof aurioProfile.farcaster_verified
+                });
+            }
 
             setProfiles(fetchedProfiles);
             setLastFetchTime(now);
