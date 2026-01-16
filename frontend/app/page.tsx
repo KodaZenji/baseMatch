@@ -366,7 +366,7 @@ export default function Home() {
               {isConnected ? (
                 <>
                   <button
-                    onClick={() => router.push('/register/wallet/complete')}
+                    onClick={() => router.push('/register/wallet/choice')}
                     className="w-full bg-gradient-to-r from-pink-600 to-purple-600 text-white py-3 rounded-xl font-semibold 
                       transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/50 hover:scale-[1.02]
                       active:scale-[0.98] active:shadow-md"
