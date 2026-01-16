@@ -31,8 +31,8 @@ export default function FarcasterVerificationSection({
 
     if (farcasterVerified) {
         return (
-            <div className="bg-purple-50 dark:bg-purple-200 border border-purple-200 dark:border-purple-600 rounded-xl p-4">
-                <div className="flex items-center gap-2 text-purple-900 dark:text-purple-300">
+            <div className="bg-purple-50 dark:bg-purple-200/50 border border-purple-200 dark:border-purple-600 rounded-xl p-4">
+                <div className="flex items-center gap-2 text-purple-900 dark:text-purple-600">
                     <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
@@ -161,12 +161,12 @@ export default function FarcasterVerificationSection({
     }
 
     return (
-        <div className="bg-purple-50 dark:bg-purple-200 border border-purple-200 dark:border-purple-600 rounded-xl p-4">
-            <label className="block text-sm font-medium text-purple-900 dark:text-purple-200 mb-3">
+        <div className="bg-purple-50 dark:bg-purple-200/50 border border-purple-200 dark:border-purple-600 rounded-xl p-4">
+            <label className="block text-sm font-medium text-purple-900 dark:text-purple-500 mb-3">
              Got a Farcaster account? Verify with FID
             </label>
             
-            <p className="text-sm text-purple-700 dark:text-purple-300 mb-4">
+            <p className="text-sm text-purple-700 dark:text-purple-500 mb-4">
                 Enter your FID and username to verify your Farcaster account
             </p>
 
@@ -181,7 +181,7 @@ export default function FarcasterVerificationSection({
 
             <div className="space-y-3">
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-500 mb-1">
                         Your Farcaster FID
                     </label>
                     <input
@@ -205,7 +205,7 @@ export default function FarcasterVerificationSection({
                         className="w-full px-3 py-2 text-gray-800 dark:text-gray-200 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 text-sm"
                     />
                     {/*  FIX: Better dark mode text */}
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Enter without the @ symbol</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-500 mt-1">Enter without the @ symbol</p>
                 </div>
 
                 <button
