@@ -465,9 +465,10 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Glassmorphic Navigation */}
-      <nav className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+     
+{/* Glassmorphic Navigation  */}
+<nav className="desktop-nav bg-white/60 dark:bg-gray-900/60 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 transition-colors">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8">
             <button
               onClick={() => setActiveTab('browse')}
@@ -520,6 +521,62 @@ export default function Home() {
         {activeTab === 'profile' && <Dashboard />}
         {activeTab === 'notifications' && <Notifications />}
       </main>
+
+      {/* Mobile Bottom Navigation */}
+<nav className="mobile-bottom-nav">
+  <button
+    onClick={() => setActiveTab('browse')}
+    className={`mobile-nav-btn ${
+      activeTab === 'browse' 
+        ? 'text-pink-500 dark:text-pink-400' 
+        : 'text-gray-500 dark:text-gray-400'
+    }`}
+  >
+    <Users className="w-6 h-6" />
+    <span className="text-xs font-medium">Browse</span>
+  </button>
+  
+  <button
+    onClick={() => setActiveTab('matches')}
+    className={`mobile-nav-btn ${
+      activeTab === 'matches' 
+        ? 'text-pink-500 dark:text-pink-400' 
+        : 'text-gray-500 dark:text-gray-400'
+    }`}
+  >
+    <Heart className="w-6 h-6" />
+    <span className="text-xs font-medium">Matches</span>
+  </button>
+  
+  <button
+    onClick={() => setActiveTab('notifications')}
+    className={`mobile-nav-btn ${
+      activeTab === 'notifications' 
+        ? 'text-pink-500 dark:text-pink-400' 
+        : 'text-gray-500 dark:text-gray-400'
+    }`}
+  >
+    <MessageCircle className="w-6 h-6" />
+    <span className="text-xs font-medium">Messages</span>
+    {unreadCount > 0 && (
+      <span className="absolute top-1 right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
+        {unreadCount > 9 ? '9+' : unreadCount}
+      </span>
+    )}
+  </button>
+  
+  <button
+    onClick={() => setActiveTab('profile')}
+    className={`mobile-nav-btn ${
+      activeTab === 'profile' 
+        ? 'text-pink-500 dark:text-pink-400' 
+        : 'text-gray-500 dark:text-gray-400'
+    }`}
+  >
+    <LayoutDashboard className="w-6 h-6" />
+    <span className="text-xs font-medium">Profile</span>
+  </button>
+</nav>
 
       <ExploreMenu 
         isOpen={isMenuOpen} 
