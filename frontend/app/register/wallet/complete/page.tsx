@@ -32,70 +32,91 @@ export default function CompleteWalletProfilePage() {
         if (source === 'farcaster') {
             const stored = localStorage.getItem('farcasterProfile');
             if (stored) {
-                const profile = JSON.parse(stored);
-                setFormData(prev => ({
-                    ...prev,
-                    name: profile.displayName || '',
-                    interests: profile.bio || '',
-                }));
-                setAvatarUrl(profile.pfp || '');
-                setProfileSource('farcaster');
-                localStorage.removeItem('farcasterProfile');
+                try {
+                    const profile = JSON.parse(stored);
+                    console.log('📸 Farcaster profile loaded:', profile);
+                    
+                    setFormData(prev => ({
+                        ...prev,
+                        name: profile.displayName || profile.display_name || '',
+                        interests: profile.bio || '',
+                    }));
+                    
+                    // FIX: Use photoUrl consistently (from your updated choice page)
+                    const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
+                    if (photoUrl) {
+                        setAvatarUrl(photoUrl);
+                        setProfileSource('farcaster');
+                        console.log('✅ Farcaster avatar URL set:', photoUrl);
+                    }
+                } catch (e) {
+                    console.error('❌ Failed to parse Farcaster profile:', e);
+                }
             }
         } else if (source === 'baseapp') {
             const stored = localStorage.getItem('baseAppProfile');
             if (stored) {
-                const profile = JSON.parse(stored);
-                setFormData(prev => ({
-                    ...prev,
-                    name: profile.displayName || '',
-                    interests: profile.bio || '',
-                }));
-                setAvatarUrl(profile.pfp || '');
-                setProfileSource('baseapp');
-                localStorage.removeItem('baseAppProfile');
+                try {
+                    const profile = JSON.parse(stored);
+                    console.log('📸 Base App profile loaded:', profile);
+                    
+                    setFormData(prev => ({
+                        ...prev,
+                        name: profile.displayName || profile.name || '',
+                        interests: profile.bio || profile.description || '',
+                    }));
+                    
+                    // FIX: Use photoUrl consistently (from your updated choice page)
+                    const photoUrl = profile.photoUrl || profile.avatar || profile.pfp || '';
+                    if (photoUrl) {
+                        setAvatarUrl(photoUrl);
+                        setProfileSource('baseapp');
+                        console.log('✅ Base App avatar URL set:', photoUrl);
+                    }
+                } catch (e) {
+                    console.error('❌ Failed to parse Base App profile:', e);
+                }
             }
         }
     }, [source]);
 
-    // Generate avatar based on wallet address if no profile photo
+    // FALLBACK: Generate Dicebear avatar if no profile photo found
     useEffect(() => {
         if (address && !avatarUrl) {
             const seed = address.substring(2, 10);
             const generatedAvatarUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
             setAvatarUrl(generatedAvatarUrl);
+            console.log('🎲 Generated Dicebear avatar (fallback):', generatedAvatarUrl);
         }
     }, [address, avatarUrl]);
 
     if (!isConnected) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
-                <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+            <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
+                <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border border-gray-200 dark:border-gray-700">
                     <div className="flex justify-center mb-6">
-                        <div className="relative">
-                            <div className="bg-white rounded-full p-3 shadow-lg">
-                                <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
-                                <svg width="0" height="0">
-                                    <defs>
-                                        <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" stopColor="#ec4899" />
-                                            <stop offset="100%" stopColor="#a855f7" />
-                                        </linearGradient>
-                                    </defs>
-                                </svg>
-                            </div>
+                        <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
+                            <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
+                            <svg width="0" height="0">
+                                <defs>
+                                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#ec4899" />
+                                        <stop offset="100%" stopColor="#a855f7" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
                         </div>
                     </div>
                     <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
                         BaseMatch
                     </h1>
-                    <p className="text-gray-700 mb-6 font-semibold">Connect Your Wallet</p>
+                    <p className="text-gray-700 dark:text-gray-300 mb-6 font-semibold">Connect Your Wallet</p>
                     <div className="flex justify-center mb-6">
                         <ConnectButton />
                     </div>
                     <button
                         onClick={() => router.push('/')}
-                        className="text-gray-600 hover:text-gray-800 text-sm"
+                        className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 text-sm"
                     >
                         ← Back to home
                     </button>
@@ -128,6 +149,12 @@ export default function CompleteWalletProfilePage() {
                 throw new Error('Please enter a valid email address');
             }
 
+            console.log('📤 Submitting profile:', {
+                source: profileSource || 'manual',
+                hasPhoto: !!avatarUrl,
+                photoUrl: avatarUrl
+            });
+
             const response = await fetch('/api/profile/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -139,7 +166,7 @@ export default function CompleteWalletProfilePage() {
                     interests: formData.interests,
                     email: formData.email,
                     photoUrl: avatarUrl,
-                    profileSource: profileSource || 'manual',
+                    profileSource: profileSource || 'manual', // Track the source
                 }),
             });
 
@@ -149,12 +176,15 @@ export default function CompleteWalletProfilePage() {
                 throw new Error(data.error || 'Registration failed');
             }
 
-            localStorage.setItem('walletRegistration', JSON.stringify({
+            console.log('✅ Profile registered successfully');
+
+            // Store for minting - use walletFirstMint to match wallet mint page
+            localStorage.setItem('walletFirstMint', JSON.stringify({
                 profile_id: data.userInfo?.profileId,
                 id: data.userInfo?.profileId,
                 address: address,
                 email: formData.email,
-                createProfilePayload: {
+                registerWithWalletPayload: {
                     name: formData.name,
                     birthYear: birthYear,
                     gender: formData.gender,
@@ -164,7 +194,11 @@ export default function CompleteWalletProfilePage() {
                 contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS,
             }));
 
-            router.push('/mint');
+            // Clean up localStorage after successful registration
+            localStorage.removeItem('farcasterProfile');
+            localStorage.removeItem('baseAppProfile');
+
+            router.push('/register/wallet/mint');
         } catch (err) {
             console.error('❌ Error:', err);
             setError(err instanceof Error ? err.message : 'Failed to complete profile');
@@ -174,21 +208,19 @@ export default function CompleteWalletProfilePage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
+            <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-2xl w-full border border-gray-200 dark:border-gray-700">
                 <div className="flex justify-center mb-6">
-                    <div className="relative">
-                        <div className="bg-white rounded-full p-3 shadow-lg">
-                            <Heart className="w-12 h-12" fill="url(#brandGradient2)" stroke="none" />
-                            <svg width="0" height="0">
-                                <defs>
-                                    <linearGradient id="brandGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stopColor="#ec4899" />
-                                        <stop offset="100%" stopColor="#a855f7" />
-                                    </linearGradient>
-                                </defs>
-                            </svg>
-                        </div>
+                    <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
+                        <Heart className="w-12 h-12" fill="url(#brandGradient2)" stroke="none" />
+                        <svg width="0" height="0">
+                            <defs>
+                                <linearGradient id="brandGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#ec4899" />
+                                    <stop offset="100%" stopColor="#a855f7" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
                     </div>
                 </div>
 
@@ -198,53 +230,64 @@ export default function CompleteWalletProfilePage() {
                 
                 {profileSource && (
                     <div className="text-center mb-4">
-                        <span className="inline-block bg-purple-100 text-purple-700 text-sm px-3 py-1 rounded-full">
-                            {profileSource === 'farcaster' ? ' Imported from Farcaster' : ' Imported from Base App'}
+                        <span className="inline-block bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm px-3 py-1 rounded-full border border-purple-200 dark:border-purple-700">
+                            {profileSource === 'farcaster' ? '🟣 Imported from Farcaster' : '🟦 Imported from Base App'}
                         </span>
                     </div>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {error && (
-                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                        <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
                             {error}
                         </div>
                     )}
 
+                    {/* Avatar Display */}
                     <div className="flex justify-center">
                         {avatarUrl && (
                             <div className="text-center">
                                 <img
                                     src={avatarUrl}
                                     alt="Profile"
-                                    className="w-24 h-24 rounded-full border-4 border-purple-200 mb-2"
+                                    className="w-24 h-24 rounded-full border-4 border-purple-200 dark:border-purple-700 mb-2 object-cover"
+                                    onError={(e) => {
+                                        console.error('❌ Image failed to load:', avatarUrl);
+                                        // Fallback to Dicebear if image fails
+                                        if (address) {
+                                            const seed = address.substring(2, 10);
+                                            e.currentTarget.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
+                                        }
+                                    }}
                                 />
-                                <p className="text-xs text-gray-500">
-                                    {profileSource ? 'Your profile photo' : 'Auto-generated avatar'}
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {profileSource 
+                                        ? `From ${profileSource === 'farcaster' ? 'Farcaster' : 'Base App'}` 
+                                        : 'Auto-generated avatar'}
                                 </p>
                             </div>
                         )}
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name *</label>
                         <input
                             type="text"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             required
-                            className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                             placeholder="Your name"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Birth Year *</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Birth Year *</label>
                         <select
                             value={formData.birthYear}
                             onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
                             required
-                            className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="">Select birth year</option>
                             {Array.from({ length: 83 }, (_, i) => {
@@ -261,12 +304,12 @@ export default function CompleteWalletProfilePage() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Gender *</label>
                         <select
                             value={formData.gender}
                             onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                             required
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-600"
+                            className="w-full px-4 py-2 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="">Select gender</option>
                             <option value="Female">Female</option>
@@ -276,25 +319,25 @@ export default function CompleteWalletProfilePage() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Interests *</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Interests *</label>
                         <textarea
                             value={formData.interests}
                             onChange={(e) => setFormData({ ...formData, interests: e.target.value })}
                             required
                             rows={3}
-                            className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg"
+                            className="w-full px-4 py-2 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                             placeholder="Hiking, Photography, Crypto..."
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email *</label>
                         <input
                             type="email"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             required
-                            className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg"
+                            className="w-full px-4 py-2 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500"
                             placeholder="your@email.com"
                         />
                     </div>
@@ -302,7 +345,7 @@ export default function CompleteWalletProfilePage() {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                     >
                         {isLoading ? 'Processing...' : 'Continue to Mint →'}
                     </button>
@@ -311,7 +354,7 @@ export default function CompleteWalletProfilePage() {
                 <div className="mt-6 text-center">
                     <button
                         onClick={() => router.push('/')}
-                        className="text-gray-600 hover:text-gray-800 text-sm"
+                        className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 text-sm"
                     >
                         ← Back to home
                     </button>
