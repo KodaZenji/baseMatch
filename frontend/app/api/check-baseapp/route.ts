@@ -1,7 +1,7 @@
-// app/api/check-baseapp/route.ts - REPLACE PREVIOUS VERSION
+// app/api/check-baseapp/route.ts - 
 
 import { NextResponse } from 'next/server';
-import { createPublicClient, http, namehash, normalize } from 'viem';
+import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 
 // Base Name Resolver contract address
