@@ -5,18 +5,42 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagm
 import { useRouter } from 'next/navigation';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Heart } from 'lucide-react';
+import { Heart, Loader2, CheckCircle } from 'lucide-react';
 
 export default function WalletMintPage() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
-  const { writeContract, data: hash, isPending } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess, error: confirmError } = useWaitForTransactionReceipt({ 
+    hash,
+    pollingInterval: 1_000, // Poll every 1 second - KEY OPTIMIZATION
+  });
 
   const [mintData, setMintData] = useState<any>(null);
   const [error, setError] = useState('');
   const [isMinting, setIsMinting] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+  const [mintStep, setMintStep] = useState<'idle' | 'signing' | 'confirming' | 'success'>('idle');
+
+  // Track minting progress
+  useEffect(() => {
+    if (isPending) {
+      setMintStep('signing');
+    } else if (isConfirming) {
+      setMintStep('confirming');
+    } else if (isSuccess) {
+      setMintStep('success');
+    }
+  }, [isPending, isConfirming, isSuccess]);
+
+  // Handle errors
+  useEffect(() => {
+    if (writeError || confirmError) {
+      setError((writeError || confirmError)?.message || 'Transaction failed');
+      setIsMinting(false);
+      setMintStep('idle');
+    }
+  }, [writeError, confirmError]);
 
   // --- EFFECT: Check Profile Status and Load Data ---
   useEffect(() => {
@@ -121,126 +145,74 @@ export default function WalletMintPage() {
     }
   };
 
+  // --- RENDER HELPERS ---
+  const MintStepIndicator = () => (
+    <div className="bg-gradient-to-br from-blue-50/50 to-purple-50/50 dark:from-blue-900/10 dark:to-purple-900/10 rounded-2xl p-6 mb-6 border border-blue-200/30 dark:border-blue-500/20">
+      <div className="space-y-4">
+        {/* Step 1: Sign Transaction */}
+        <div className="flex items-center gap-3">
+          {mintStep === 'signing' ? (
+            <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin" />
+          ) : mintStep === 'confirming' || mintStep === 'success' ? (
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+          ) : (
+            <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600" />
+          )}
+          <span className={`font-medium ${mintStep === 'signing' ? 'text-blue-600 dark:text-blue-400' : mintStep === 'confirming' || mintStep === 'success' ? 'text-gray-600 dark:text-gray-400' : 'text-gray-500 dark:text-gray-500'}`}>
+            Sign transaction in wallet
+          </span>
+        </div>
+
+        {/* Step 2: Confirming on blockchain */}
+        <div className="flex items-center gap-3">
+          {mintStep === 'confirming' ? (
+            <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin" />
+          ) : mintStep === 'success' ? (
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+          ) : (
+            <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600" />
+          )}
+          <span className={`font-medium ${mintStep === 'confirming' ? 'text-blue-600 dark:text-blue-400' : mintStep === 'success' ? 'text-gray-600 dark:text-gray-400' : 'text-gray-500 dark:text-gray-500'}`}>
+            Confirming on blockchain
+          </span>
+        </div>
+
+        {/* Step 3: Success */}
+        <div className="flex items-center gap-3">
+          {mintStep === 'success' ? (
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+          ) : (
+            <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600" />
+          )}
+          <span className={`font-medium ${mintStep === 'success' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-500'}`}>
+            Profile created!
+          </span>
+        </div>
+      </div>
+
+      {hash && (
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <a
+            href={`https://basescan.org/tx/${hash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+          >
+            View on BaseScan →
+          </a>
+        </div>
+      )}
+    </div>
+  );
+
   // --- RENDER LOGIC ---
 
   if (isCheckingStatus) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border border-gray-200 dark:border-gray-700">
           <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="bg-white rounded-full p-3 shadow-lg">
-                <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
-                <svg width="0" height="0">
-                  <defs>
-                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#ec4899" />
-                      <stop offset="100%" stopColor="#a855f7" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
-            BaseMatch
-          </h1>
-
-          <div className="flex flex-col items-center justify-center">
-            <svg className="animate-spin h-8 w-8 text-indigo-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p className="text-gray-700 text-lg">Checking profile status...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="bg-white rounded-full p-3 shadow-lg">
-                <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
-                <svg width="0" height="0">
-                  <defs>
-                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#ec4899" />
-                      <stop offset="100%" stopColor="#a855f7" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
-            BaseMatch
-          </h1>
-
-          <p className="text-gray-700 mb-6">Please connect your wallet to mint your profile</p>
-          <div className="mb-4">
-            <ConnectButton />
-          </div>
-          <button
-            onClick={() => router.push('/')}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90"
-          >
-            Go Back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!mintData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="bg-white rounded-full p-3 shadow-lg">
-                <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
-                <svg width="0" height="0">
-                  <defs>
-                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#ec4899" />
-                      <stop offset="100%" stopColor="#a855f7" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
-            BaseMatch
-          </h1>
-
-          <p className="text-gray-700 mb-6">{error || 'No registration data found'}</p>
-          <button
-            onClick={() => router.push('/register/wallet/complete')}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90"
-          >
-            Back to Registration
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Main mint screen
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full text-center">
-        <div className="flex justify-center mb-6">
-          <div className="relative">
-            <div className="bg-white rounded-full p-3 shadow-lg">
+            <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
               <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
               <svg width="0" height="0">
                 <defs>
@@ -252,6 +224,107 @@ export default function WalletMintPage() {
               </svg>
             </div>
           </div>
+
+          <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+            BaseMatch
+          </h1>
+
+          <div className="flex flex-col items-center justify-center">
+            <Loader2 className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-spin mb-4" />
+            <p className="text-gray-700 dark:text-gray-300 text-lg">Checking profile status...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border border-gray-200 dark:border-gray-700">
+          <div className="flex justify-center mb-6">
+            <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
+              <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
+              <svg width="0" height="0">
+                <defs>
+                  <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ec4899" />
+                    <stop offset="100%" stopColor="#a855f7" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+          </div>
+
+          <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+            BaseMatch
+          </h1>
+
+          <p className="text-gray-700 dark:text-gray-300 mb-6">Please connect your wallet to mint your profile</p>
+          <div className="mb-4">
+            <ConnectButton />
+          </div>
+          <button
+            onClick={() => router.push('/')}
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!mintData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border border-gray-200 dark:border-gray-700">
+          <div className="flex justify-center mb-6">
+            <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
+              <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
+              <svg width="0" height="0">
+                <defs>
+                  <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ec4899" />
+                    <stop offset="100%" stopColor="#a855f7" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+          </div>
+
+          <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+            BaseMatch
+          </h1>
+
+          <p className="text-gray-700 dark:text-gray-300 mb-6">{error || 'No registration data found'}</p>
+          <button
+            onClick={() => router.push('/register/wallet/complete')}
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+          >
+            Back to Registration
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Main mint screen
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
+      <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-2xl w-full text-center border border-gray-200 dark:border-gray-700">
+        <div className="flex justify-center mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
+            <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
+            <svg width="0" height="0">
+              <defs>
+                <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#ec4899" />
+                  <stop offset="100%" stopColor="#a855f7" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
         </div>
 
         <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
@@ -259,7 +332,7 @@ export default function WalletMintPage() {
         </h1>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
+          <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-6">
             {error}
           </div>
         )}
@@ -267,19 +340,35 @@ export default function WalletMintPage() {
         {isSuccess ? (
           <div className="text-center py-8">
             <p className="text-4xl mb-4">🎉</p>
-            <p className="text-gray-700 text-lg font-semibold mb-2">Profile minted successfully!</p>
-            <p className="text-gray-500 text-sm">Redirecting to dashboard...</p>
+            <p className="text-gray-700 dark:text-gray-300 text-lg font-semibold mb-2">Profile minted successfully!</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Redirecting to dashboard...</p>
+            {hash && (
+              <a
+                href={`https://basescan.org/tx/${hash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 dark:text-blue-400 hover:underline text-sm mt-4 inline-block"
+              >
+                View transaction ↗
+              </a>
+            )}
           </div>
         ) : (
           <div>
-            <p className="text-gray-700 mb-2">Ready to mint your BaseMatch profile NFT?</p>
-            <p className="text-gray-500 text-sm mb-6">This will create your on-chain profile.</p>
+            {mintStep !== 'idle' ? (
+              <MintStepIndicator />
+            ) : (
+              <>
+                <p className="text-gray-700 dark:text-gray-300 mb-2">Ready to mint your BaseMatch profile NFT?</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">This will create your on-chain profile.</p>
+              </>
+            )}
 
             {/* Show preview of data being minted */}
-            {mintData?.registerWithWalletPayload && (
-              <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-                <p className="text-xs text-gray-500 mb-2">Profile Preview:</p>
-                <div className="space-y-1 text-sm text-gray-700">
+            {mintData?.registerWithWalletPayload && mintStep === 'idle' && (
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 mb-6 text-left border border-gray-200 dark:border-gray-700">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Profile Preview:</p>
+                <div className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
                   <p><span className="font-medium">Name:</span> {mintData.registerWithWalletPayload.name}</p>
                   <p><span className="font-medium">Age:</span> {new Date().getFullYear() - mintData.registerWithWalletPayload.birthYear}</p>
                   <p><span className="font-medium">Gender:</span> {mintData.registerWithWalletPayload.gender}</p>
@@ -292,15 +381,17 @@ export default function WalletMintPage() {
               disabled={isPending || isConfirming || isMinting}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
-              {isPending || isConfirming || isMinting ? 'Minting...' : '✨ Mint Profile NFT'}
+              {isPending ? 'Waiting for signature...' : isConfirming ? 'Confirming on blockchain...' : isMinting ? 'Minting...' : '✨ Mint Profile NFT'}
             </button>
 
-            <button
-              onClick={() => router.push('/register/wallet/complete')}
-              className="w-full mt-4 bg-gray-300 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-400"
-            >
-              ← Back to Edit
-            </button>
+            {!isMinting && (
+              <button
+                onClick={() => router.push('/register/wallet/complete')}
+                className="w-full mt-4 bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-semibold hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
+              >
+                ← Back to Edit
+              </button>
+            )}
           </div>
         )}
       </div>
