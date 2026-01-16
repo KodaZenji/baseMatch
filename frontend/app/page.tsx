@@ -9,7 +9,7 @@ import Dashboard from '@/components/Dashboard';
 import Notifications from '@/components/Notifications';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
-import { Heart, Menu, Moon, Sun, X, MessageCircle, Users, LayoutDashboard, } from 'lucide-react';
+import { Heart, Menu, Moon, Sun, X, Bell, Users, LayoutDashboard, } from 'lucide-react';
 import { FaDiscord } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6'; 
 import Link from 'next/link';
