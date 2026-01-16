@@ -3,16 +3,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Heart, Loader2, Edit3, Moon, Sun } from 'lucide-react';
+import { useAccount } from 'wagmi';
+import { useRouter } from 'next/navigation';
+import { Heart, Loader2, Edit3 } from 'lucide-react';
 import { SiFarcaster } from 'react-icons/si';
 
 export default function SignupChoicePage() {
+  const router = useRouter();
+  const { address, isConnected } = useAccount();
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState('');
-  
-  // Mock data for preview
-  const address = '0x1234...5678';
-  const isConnected = true;
 
   // Dark mode initialization (read-only, set from landing page)
   useEffect(() => {
@@ -25,28 +25,67 @@ export default function SignupChoicePage() {
     }
   }, []);
 
+  if (!isConnected) {
+    router.push('/');
+    return null;
+  }
+
   const handleFarcasterSignup = async () => {
     setChecking(true);
     setError('');
-    // Simulate API call
-    setTimeout(() => {
-      setChecking(false);
-      alert('Farcaster signup selected!');
-    }, 1500);
+
+    try {
+      const response = await fetch('/api/check-farcaster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address }),
+      });
+
+      const data = await response.json();
+
+      if (data.exists && data.profile) {
+        // Found Farcaster - store and redirect
+        localStorage.setItem('farcasterProfile', JSON.stringify(data.profile));
+        router.push('/register/wallet/complete?source=farcaster');
+      } else {
+        // No Farcaster found - silently revert to manual
+        router.push('/register/wallet/complete');
+      }
+    } catch (error) {
+      console.error('Error checking Farcaster:', error);
+      router.push('/register/wallet/complete');
+    }
   };
 
   const handleBaseAppSignup = async () => {
     setChecking(true);
     setError('');
-    // Simulate API call
-    setTimeout(() => {
-      setChecking(false);
-      alert('Basename signup selected!');
-    }, 1500);
+
+    try {
+      const response = await fetch('/api/check-baseapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address }),
+      });
+
+      const data = await response.json();
+
+      if (data.exists && data.profile) {
+        // Found Base App profile
+        localStorage.setItem('baseAppProfile', JSON.stringify(data.profile));
+        router.push('/register/wallet/complete?source=baseapp');
+      } else {
+        // No Base App profile - silently revert to manual
+        router.push('/register/wallet/complete');
+      }
+    } catch (error) {
+      console.error('Error checking Base App:', error);
+      router.push('/register/wallet/complete');
+    }
   };
 
   const handleManualSignup = () => {
-    alert('Manual signup selected!');
+    router.push('/register/wallet/complete');
   };
 
   return (
@@ -100,22 +139,22 @@ export default function SignupChoicePage() {
           <button
             onClick={handleFarcasterSignup}
             disabled={checking}
-            className="w-full bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-500 dark:to-purple-600 text-white p-6 rounded-2xl hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+            className="w-full bg-white/10 dark:bg-white/5 backdrop-blur-lg border border-purple-300/30 dark:border-purple-500/20 text-gray-800 dark:text-gray-100 p-6 rounded-2xl hover:bg-white/20 dark:hover:bg-white/10 hover:border-purple-400/40 dark:hover:border-purple-400/30 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/20 dark:bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                  <SiFarcaster className="w-7 h-7 text-white" />
+                <div className="w-12 h-12 bg-purple-500/20 dark:bg-purple-500/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <SiFarcaster className="w-7 h-7 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div className="text-left">
                   <h3 className="font-bold text-lg">Use Farcaster</h3>
-                  <p className="text-sm text-purple-100 dark:text-purple-200">Import your Farcaster profile</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Import your Farcaster profile</p>
                 </div>
               </div>
               {checking ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
+                <Loader2 className="w-6 h-6 animate-spin text-purple-600 dark:text-purple-400" />
               ) : (
-                <span className="text-2xl group-hover:translate-x-1 transition-transform">→</span>
+                <span className="text-2xl text-gray-600 dark:text-gray-300 group-hover:translate-x-1 transition-transform">→</span>
               )}
             </div>
           </button>
@@ -124,35 +163,35 @@ export default function SignupChoicePage() {
           <button
             onClick={handleBaseAppSignup}
             disabled={checking}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white p-6 rounded-2xl hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+            className="w-full bg-white/10 dark:bg-white/5 backdrop-blur-lg border border-blue-300/30 dark:border-blue-500/20 text-gray-800 dark:text-gray-100 p-6 rounded-2xl hover:bg-white/20 dark:hover:bg-white/10 hover:border-blue-400/40 dark:hover:border-blue-400/30 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/20 dark:bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <div className="w-12 h-12 bg-blue-500/20 dark:bg-blue-500/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
                   <span className="text-2xl">🟦</span>
                 </div>
                 <div className="text-left">
                   <h3 className="font-bold text-lg">Use Basename</h3>
-                  <p className="text-sm text-blue-100 dark:text-blue-200">Have a .base.eth name? Import it</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Have a .base.eth name? Import it</p>
                 </div>
               </div>
               {checking ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
+                <Loader2 className="w-6 h-6 animate-spin text-blue-600 dark:text-blue-400" />
               ) : (
-                <span className="text-2xl group-hover:translate-x-1 transition-transform">→</span>
+                <span className="text-2xl text-gray-600 dark:text-gray-300 group-hover:translate-x-1 transition-transform">→</span>
               )}
             </div>
           </button>
 
-          {/* Manual Option - Now professionally clean */}
+          {/* Manual Option - Minimalist glass */}
           <button
             onClick={handleManualSignup}
             disabled={checking}
-            className="w-full bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 p-6 rounded-2xl hover:border-gray-400 dark:hover:border-gray-500 hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+            className="w-full bg-white/10 dark:bg-white/5 backdrop-blur-lg border border-gray-300/30 dark:border-gray-500/20 text-gray-800 dark:text-gray-100 p-6 rounded-2xl hover:bg-white/20 dark:hover:bg-white/10 hover:border-gray-400/40 dark:hover:border-gray-400/30 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white dark:bg-gray-900 rounded-xl flex items-center justify-center shadow-sm">
+                <div className="w-12 h-12 bg-gray-500/20 dark:bg-gray-500/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
                   <Edit3 className="w-6 h-6 text-gray-600 dark:text-gray-300" />
                 </div>
                 <div className="text-left">
@@ -160,16 +199,16 @@ export default function SignupChoicePage() {
                   <p className="text-sm text-gray-600 dark:text-gray-400">Fill out the form yourself</p>
                 </div>
               </div>
-              <span className="text-2xl text-gray-400 dark:text-gray-500 group-hover:translate-x-1 transition-transform">→</span>
+              <span className="text-2xl text-gray-600 dark:text-gray-300 group-hover:translate-x-1 transition-transform">→</span>
             </div>
           </button>
         </div>
 
         {/* Connected Wallet Info */}
-        {address && isConnected && (
+        {address && (
           <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 text-center">
             <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-              Connected: {address}
+              Connected: {address.slice(0, 6)}...{address.slice(-4)}
             </p>
           </div>
         )}
