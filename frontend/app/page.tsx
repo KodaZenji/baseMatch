@@ -571,8 +571,8 @@ export default function Home() {
         : 'text-gray-500 dark:text-gray-400'
     }`}
   >
-    <LayoutDashboard className="w-4 h-4" />
-    <span className="text-xs font-sm">Profile</span>
+    <LayoutDashboard className="w-5 h-5" />
+    
   </button>
 </nav>
 
