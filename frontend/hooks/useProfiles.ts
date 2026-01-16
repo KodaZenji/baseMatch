@@ -1,5 +1,5 @@
 // frontend/hooks/useProfiles.ts
-// Enhanced version with cache-busting and periodic refresh
+
 
 import { useState, useEffect, useCallback } from 'react';
 import { useReadContract } from 'wagmi';
@@ -14,6 +14,7 @@ interface Profile {
     photoUrl: string;
     email_verified?: boolean;
     wallet_verified?: boolean;
+    farcaster_verified?: boolean; 
     reputation?: {
         totalDates: number;
         noShows: number;
@@ -66,21 +67,25 @@ export function useProfiles() {
             }
 
             const data = await response.json();
+            
+            
             const fetchedProfiles: Profile[] = (data.profiles || []).map((profile: any) => ({
                 wallet_address: profile.wallet_address,
                 name: profile.name || '',
                 birthYear: profile.birthYear || 0,
                 gender: profile.gender || '',
                 interests: profile.interests || '',
-                photoUrl: profile.photoUrl || '', // ✅ This will now get fresh data
+                photoUrl: profile.photoUrl || '',
                 email_verified: profile.email_verified || false,
                 wallet_verified: profile.wallet_verified || false,
+                farcaster_verified: profile.farcaster_verified || false, 
             }));
 
             console.log(`✅ Fetched ${fetchedProfiles.length} profiles`);
-            console.log('📸 Sample photoUrls:', fetchedProfiles.slice(0, 3).map(p => ({
+            console.log('📸 Sample profiles:', fetchedProfiles.slice(0, 3).map(p => ({
                 name: p.name,
-                photoUrl: p.photoUrl
+                photoUrl: p.photoUrl,
+                farcaster_verified: p.farcaster_verified // ✅ Debug log
             })));
 
             setProfiles(fetchedProfiles);
@@ -100,7 +105,6 @@ export function useProfiles() {
     }, [isContractDeployed]);
 
     // ✅ AUTO-REFRESH: Fetch fresh data every 30 seconds
-    // This ensures users see updated profile pictures without manual refresh
     useEffect(() => {
         if (!isContractDeployed) return;
 
@@ -113,7 +117,6 @@ export function useProfiles() {
     }, [isContractDeployed, fetchProfiles]);
 
     // ✅ VISIBILITY CHANGE: Refresh when user returns to tab
-    // This catches profile updates that happened while user was away
     useEffect(() => {
         if (!isContractDeployed) return;
 
@@ -131,6 +134,6 @@ export function useProfiles() {
     return {
         profiles,
         loading,
-        refresh: () => fetchProfiles(true) // ✅ Expose manual refresh function
+        refresh: () => fetchProfiles(true)
     };
 }
