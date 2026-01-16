@@ -1,4 +1,4 @@
-// app/register/wallet/complete/page.tsx - REPLACE EXISTING
+// app/register/wallet/complete/page.tsx 
 
 'use client';
 
