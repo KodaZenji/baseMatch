@@ -24,9 +24,12 @@ export default function FarcasterVerificationSection({
   const [farcasterProfile, setFarcasterProfile] = useState<any>(null);
   const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
 
+  // NEW
+  const [lockedOut, setLockedOut] = useState(false);
+  const [lockMessage, setLockMessage] = useState('');
+
   if (!hasWallet) return null;
 
-  // ✅ Verified badge
   if (farcasterVerified) {
     return (
       <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-700 rounded-xl p-4">
@@ -41,14 +44,47 @@ export default function FarcasterVerificationSection({
     );
   }
 
+  // NEW — Pre-check before verify
+  const checkRateLimit = async () => {
+    try {
+      const res = await fetch('/api/check-farcaster-attempts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: walletAddress }),
+      });
+
+      const data = await res.json();
+
+      if (!data.allowed) {
+        setLockMessage(data.reason || 'Too many attempts. Try again later.');
+        setLockedOut(true);
+        return false;
+      }
+
+      if (data.attemptsLeft !== undefined) {
+        setAttemptsLeft(data.attemptsLeft);
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Rate limit check failed:', err);
+      return true; // allow if check fails
+    }
+  };
+
   const handleVerify = async () => {
     if (!fid || !username) {
       setError('Please enter both FID and username');
       return;
     }
 
-    setIsVerifying(true);
     setError('');
+
+    // NEW check
+    const allowed = await checkRateLimit();
+    if (!allowed) return;
+
+    setIsVerifying(true);
 
     try {
       const response = await fetch('/api/verify-farcaster-fid', {
@@ -65,7 +101,16 @@ export default function FarcasterVerificationSection({
 
       if (!response.ok) {
         setError(data.error || 'Verification failed');
-        if (data.attemptsLeft !== undefined) setAttemptsLeft(data.attemptsLeft);
+
+        if (data.attemptsLeft !== undefined) {
+          setAttemptsLeft(data.attemptsLeft);
+        }
+
+        if (data.lockedOut) {
+          setLockMessage(data.reason || 'Too many attempts.');
+          setLockedOut(true);
+        }
+
         setIsVerifying(false);
         return;
       }
@@ -105,7 +150,25 @@ export default function FarcasterVerificationSection({
     }
   };
 
-  // ✅ Confirm photo step
+  // NEW LOCK MODAL
+  if (lockedOut) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/40 z-50">
+        <div className="bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100 rounded-xl p-6 w-80 border border-neutral-300 dark:border-neutral-700">
+          <h3 className="font-semibold text-lg mb-2">Verification Paused</h3>
+          <p className="text-sm mb-4">{lockMessage}</p>
+          <button
+            onClick={() => setLockedOut(false)}
+            className="w-full py-2 rounded-lg text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 transition"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Confirm photo step
   if (step === 'confirm' && farcasterProfile) {
     return (
       <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-700 rounded-xl p-4">
@@ -158,7 +221,7 @@ export default function FarcasterVerificationSection({
     );
   }
 
-  // ✅ Default verification form
+  // Default entry form
   return (
     <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-700 rounded-xl p-4">
       <label className="block text-sm font-medium text-purple-900 dark:text-purple-200 mb-2">
