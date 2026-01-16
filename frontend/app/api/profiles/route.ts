@@ -46,7 +46,7 @@ export async function GET() {
 
         // ✅ Log sample photoUrls for debugging (first 3 profiles)
         if (profiles && profiles.length > 0) {
-            console.log('📸 Sample verified profiles:', profiles.slice(0, 3).map(p => ({
+            console.log('📸 Sample verified profiles:', profiles.slice(0, 0).map(p => ({
                 name: p.name,
                 photoUrl: p.photoUrl,
                 wallet_verified: p.wallet_verified,
