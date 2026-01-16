@@ -42,13 +42,11 @@ export function useProfiles() {
         // Prevent too frequent fetches (debounce)
         const now = Date.now();
         if (!forceRefresh && now - lastFetchTime < 2000) {
-            console.log('⏱️ Skipping fetch - too soon since last fetch');
             return;
         }
 
         try {
             setLoading(true);
-            console.log('🔄 Fetching profiles from database...');
 
             // Add cache-busting timestamp to ensure fresh data
             const cacheBuster = `?t=${Date.now()}`;
@@ -67,7 +65,6 @@ export function useProfiles() {
 
             const data = await response.json();
             
-            
             const fetchedProfiles: Profile[] = (data.profiles || []).map((profile: any) => ({
                 wallet_address: profile.wallet_address,
                 name: profile.name || '',
@@ -80,31 +77,10 @@ export function useProfiles() {
                 farcaster_verified: profile.farcaster_verified || false, 
             }));
 
-            console.log(`✅ Fetched ${fetchedProfiles.length} profiles`);
-            console.log('📸 Sample profiles:', fetchedProfiles.slice(0, 3).map(p => ({
-                name: p.name,
-                photoUrl: p.photoUrl,
-                farcaster_verified: p.farcaster_verified
-            })));
-
-            // ✅ DEBUG: Check Aurio's profile specifically
-            const aurioProfile = fetchedProfiles.find(p => 
-                p.wallet_address.toLowerCase() === '0xebf64265bdbce2de0deaed58e44409605bf7704d'
-            );
-            console.log('🔍 Aurio profile found:', aurioProfile);
-            if (aurioProfile) {
-                console.log('🎯 Aurio verification status:', {
-                    email_verified: aurioProfile.email_verified,
-                    wallet_verified: aurioProfile.wallet_verified,
-                    farcaster_verified: aurioProfile.farcaster_verified,
-                    farcaster_type: typeof aurioProfile.farcaster_verified
-                });
-            }
-
             setProfiles(fetchedProfiles);
             setLastFetchTime(now);
         } catch (error) {
-            console.error('❌ Error fetching profiles:', error);
+            console.error('Error fetching profiles:', error);
             setProfiles([]);
         } finally {
             setLoading(false);
@@ -117,25 +93,23 @@ export function useProfiles() {
         return () => clearTimeout(timer);
     }, [isContractDeployed]);
 
-    // ✅ AUTO-REFRESH: Fetch fresh data every 30 seconds
+    // Auto-refresh: Fetch fresh data every 30 seconds
     useEffect(() => {
         if (!isContractDeployed) return;
 
         const refreshInterval = setInterval(() => {
-            console.log('🔄 Auto-refreshing profiles...');
             fetchProfiles(true);
-        }, 30000); // Refresh every 30 seconds
+        }, 30000);
 
         return () => clearInterval(refreshInterval);
     }, [isContractDeployed, fetchProfiles]);
 
-    // ✅ VISIBILITY CHANGE: Refresh when user returns to tab
+    // Refresh when user returns to tab
     useEffect(() => {
         if (!isContractDeployed) return;
 
         const handleVisibilityChange = () => {
             if (!document.hidden) {
-                console.log('👀 Tab became visible - refreshing profiles');
                 fetchProfiles(true);
             }
         };
