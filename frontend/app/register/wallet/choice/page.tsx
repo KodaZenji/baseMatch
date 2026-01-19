@@ -78,8 +78,8 @@ export default function SignupChoicePage() {
           pfp: context.user.pfpUrl || '',
           pfp_url: context.user.pfpUrl || '',
           avatar: context.user.pfpUrl || '',
-          bio: context.user.bio || '',
-          description: context.user.bio || '',
+          bio: '', // Mini App SDK doesn't provide bio
+          description: '', // Mini App SDK doesn't provide bio
           fid: context.user.fid,
           address,
         };
@@ -188,7 +188,7 @@ export default function SignupChoicePage() {
                 </div>
                 <div className="text-left">
                   <h3 className="font-bold text-lg">Use Base Profile</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Import from Baseapp</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Import from BaseApp</p>
                 </div>
               </div>
               {checking ? (
