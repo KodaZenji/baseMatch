@@ -12,11 +12,11 @@ export async function POST(request: Request) {
     }
 
     try {
-      
+      // Use OnchainKit to get the basename
       const basename = await getName({ address: address as `0x${string}`, chain: base });
 
       if (basename) {
-        
+        // Fetch profile data from base.app
         let profileData: any = null;
         try {
           const username = basename.replace('.base.eth', '');
@@ -51,3 +51,14 @@ export async function POST(request: Request) {
           },
         });
       }
+
+      return NextResponse.json({ exists: false });
+    } catch (contractError) {
+      console.error('Basename lookup error:', contractError);
+      return NextResponse.json({ exists: false });
+    }
+  } catch (error) {
+    console.error('Error checking Base App:', error);
+    return NextResponse.json({ exists: false });
+  }
+}
