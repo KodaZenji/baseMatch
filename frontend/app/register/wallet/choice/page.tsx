@@ -123,7 +123,7 @@ export default function SignupChoicePage() {
           isBaseAccount: true,
           isSmartWallet: true,
           displayName: 'Base Account User',
-          username: address.slice(0, 8),
+          username: address?.slice(0, 8) || 'user',
           address,
           needsBasename: true,
           prioritySource: true,
