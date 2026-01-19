@@ -1,20 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
-
-// Base Name Resolver contract address
-const L2_RESOLVER_ADDRESS = '0xC6d566A56A1aFf6508b41f6c90ff131615583BCD';
-
-// ABI for reverse lookup (address to basename)
-const REVERSE_RESOLVER_ABI = [
-  {
-    inputs: [{ name: 'addr', type: 'address' }],
-    name: 'getNames',
-    outputs: [{ name: '', type: 'string[]' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-] as const;
+import { getName } from '@coinbase/onchainkit/identity';
 
 export async function POST(request: Request) {
   try {
@@ -24,33 +11,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ exists: false, error: 'Address required' }, { status: 400 });
     }
 
-    // Use the ALCHEMY_RPC_URL safely, fallback to a default if not found
-    const RPC_URL = process.env.ALCHEMY_RPC_URL;
-    if (!RPC_URL) {
-      console.warn('ALCHEMY_RPC_URL not configured');
-      return NextResponse.json({ exists: false, error: 'RPC URL not configured' }, { status: 500 });
-    }
-
-    const publicClient = createPublicClient({
-      chain: base,
-      transport: http(RPC_URL),
-    });
-
     try {
-      const names = await publicClient.readContract({
-        address: L2_RESOLVER_ADDRESS,
-        abi: REVERSE_RESOLVER_ABI,
-        functionName: 'getNames',
-        args: [address as `0x${string}`],
-      });
+      
+      const basename = await getName({ address: address as `0x${string}`, chain: base });
 
-      if (names && names.length > 0) {
-        const primaryName = names[0];
-
-        // Fetch profile data from base.app (if available)
+      if (basename) {
+        
         let profileData: any = null;
         try {
-          const username = primaryName.replace('.base.eth', '');
+          const username = basename.replace('.base.eth', '');
           const profileResponse = await fetch(`https://base.app/api/profile/${username}`, {
             headers: { 'Accept': 'application/json' },
           });
@@ -62,8 +31,6 @@ export async function POST(request: Request) {
           console.log('Could not fetch Base App profile data:', error);
         }
 
-        // ===== Apply photoUrl Logic =====
-        // Support multiple field names just in case (pfpUrl, avatar, pfp, pfp.url)
         const photoUrl =
           profileData?.pfpUrl ||
           profileData?.avatar ||
@@ -73,27 +40,14 @@ export async function POST(request: Request) {
         return NextResponse.json({
           exists: true,
           profile: {
-            basename: primaryName,
-            username: primaryName.replace('.base.eth', ''),
-            displayName: profileData?.displayName || primaryName.replace('.base.eth', ''),
+            basename: basename,
+            username: basename.replace('.base.eth', ''),
+            displayName: profileData?.displayName || basename.replace('.base.eth', ''),
             bio: profileData?.bio || '',
             address,
-
-            // backward compatibility fields:
             pfp: photoUrl,
             pfp_url: photoUrl,
             photoUrl,
           },
         });
       }
-
-      return NextResponse.json({ exists: false });
-    } catch (contractError) {
-      console.error('Contract read error:', contractError);
-      return NextResponse.json({ exists: false });
-    }
-  } catch (error) {
-    console.error('Error checking Base App:', error);
-    return NextResponse.json({ exists: false });
-  }
-}
