@@ -1,5 +1,3 @@
-// app/api/check-baseapp/route.ts
-
 import { NextResponse } from 'next/server';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
@@ -26,14 +24,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ exists: false, error: 'Address required' }, { status: 400 });
     }
 
-    if (!process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL) {
+    // Use the ALCHEMY_RPC_URL safely, fallback to a default if not found
+    const RPC_URL = process.env.ALCHEMY_RPC_URL;
+    if (!RPC_URL) {
       console.warn('ALCHEMY_RPC_URL not configured');
-      return NextResponse.json({ exists: false });
+      return NextResponse.json({ exists: false, error: 'RPC URL not configured' }, { status: 500 });
     }
 
     const publicClient = createPublicClient({
       chain: base,
-      transport: http(process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL),
+      transport: http(RPC_URL),
     });
 
     try {
