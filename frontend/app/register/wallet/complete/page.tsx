@@ -28,7 +28,7 @@ export default function CompleteWalletProfilePage() {
     const [profileSource, setProfileSource] = useState<string | null>(null);
     const [baseAccountInfo, setBaseAccountInfo] = useState<any>(null);
 
-    // FIXED: Load profile - handle BOTH 'baseapp' and 'baseaccount' sources
+    // Load profile data (Base Account or Farcaster)
     useEffect(() => {
         console.log('🔍 Complete page loaded with source:', source);
         
@@ -58,7 +58,6 @@ export default function CompleteWalletProfilePage() {
                 }
             }
         } 
-        // CRITICAL FIX: Handle both 'baseaccount' AND 'baseapp' source names
         else if (source === 'baseaccount' || source === 'baseapp') {
             const stored = localStorage.getItem('baseAppProfile');
             if (stored) {
@@ -66,7 +65,6 @@ export default function CompleteWalletProfilePage() {
                     const profile = JSON.parse(stored);
                     console.log('📦 Loading Base Account profile:', profile);
                     
-                    // Extract Base Account information
                     const baseInfo = {
                         basename: profile.basename || profile.name,
                         isSmartWallet: profile.isSmartWallet,
@@ -77,18 +75,20 @@ export default function CompleteWalletProfilePage() {
                     setFormData(prev => ({
                         ...prev,
                         name: profile.displayName || profile.username || profile.basename || '',
+                        // CRITICAL: bio maps to interests for Base Account
                         interests: profile.bio || profile.description || '',
                     }));
                     
-                    const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || profile.avatar || '';
+                    // CRITICAL: Priority order for Base Account avatar
+                    const photoUrl = profile.avatar || profile.photoUrl || profile.pfp_url || profile.pfp || '';
                     if (photoUrl) {
                         setAvatarUrl(photoUrl);
                         console.log('✅ Base Account avatar loaded:', photoUrl);
+                    } else {
+                        console.log('⚠️ No Base Account avatar found, will use dicebear fallback');
                     }
                     
                     setProfileSource('baseaccount');
-                    // Keep in localStorage in case we need to reference it
-                    // localStorage.removeItem('baseAppProfile');
                 } catch (error) {
                     console.error('❌ Error parsing Base Account profile:', error);
                 }
@@ -98,13 +98,13 @@ export default function CompleteWalletProfilePage() {
         }
     }, [source]);
 
-    // Generate fallback avatar if none exists
+    // Generate dicebear fallback ONLY if no avatar exists
     useEffect(() => {
         if (address && !avatarUrl) {
             const seed = address.substring(2, 10);
-            const generatedAvatarUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
-            setAvatarUrl(generatedAvatarUrl);
-            console.log('🎨 Generated fallback avatar for address:', address.substring(0, 10) + '...');
+            const dicebearUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
+            setAvatarUrl(dicebearUrl);
+            console.log('🎨 Using dicebear fallback (no Base Account avatar found)');
         }
     }, [address, avatarUrl]);
 
@@ -184,7 +184,7 @@ export default function CompleteWalletProfilePage() {
                 address,
                 name: formData.name,
                 hasAvatar: !!avatarUrl,
-                avatarUrl: avatarUrl?.substring(0, 50) + '...',
+                avatarSource: avatarUrl?.includes('dicebear') ? 'dicebear fallback' : 'Base Account',
                 profileSource: profileSource || 'manual',
                 baseAccountInfo,
             });
@@ -201,7 +201,7 @@ export default function CompleteWalletProfilePage() {
                     email: formData.email,
                     photoUrl: avatarUrl,
                     profileSource: profileSource || 'manual',
-                    baseAccountInfo, // Include Base Account metadata
+                    baseAccountInfo,
                 }),
             });
 
@@ -308,7 +308,7 @@ export default function CompleteWalletProfilePage() {
                                     alt="Profile"
                                     className="w-24 h-24 rounded-full border-4 border-purple-200 dark:border-purple-800 mb-2 shadow-lg"
                                     onError={(e) => {
-                                        console.error('❌ Avatar failed to load:', avatarUrl);
+                                        console.error('❌ Avatar failed to load, using dicebear fallback');
                                         if (address) {
                                             const seed = address.substring(2, 10);
                                             e.currentTarget.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
@@ -316,7 +316,11 @@ export default function CompleteWalletProfilePage() {
                                     }}
                                 />
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {profileSource ? 'Your profile photo' : 'Auto-generated avatar'}
+                                    {avatarUrl.includes('dicebear') 
+                                        ? 'Generated avatar' 
+                                        : profileSource === 'baseaccount' 
+                                            ? 'Base Account avatar' 
+                                            : 'Your profile photo'}
                                 </p>
                             </div>
                         )}
