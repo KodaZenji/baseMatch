@@ -53,6 +53,14 @@ export default function SignupChoicePage() {
           
           if (data.exists && data.profile) {
             console.log('✅ Base Account profile auto-detected!');
+            console.log('🔍 AUTO-CHECK AVATAR DEBUG:', {
+              avatar: data.profile.avatar,
+              photoUrl: data.profile.photoUrl,
+              pfp: data.profile.pfp,
+              pfp_url: data.profile.pfp_url,
+              _rawAvatarUrl: data.profile._rawAvatarUrl,
+            });
+            
             setBaseAccountProfile(data.profile);
             
             // Show brief notification that we found their account
@@ -103,16 +111,29 @@ export default function SignupChoicePage() {
 
       if (data.exists && data.profile) {
         console.log('✅ Base Account profile found:', data.profile);
+        
+        // 🔍 CRITICAL DEBUG: Check what avatar URLs we got
+        console.log('🔍 AVATAR DEBUG BEFORE STORAGE:', {
+          avatar: data.profile.avatar,
+          photoUrl: data.profile.photoUrl,
+          pfp: data.profile.pfp,
+          pfp_url: data.profile.pfp_url,
+          _rawAvatarUrl: data.profile._rawAvatarUrl,
+          hasAvatar: !!(data.profile.avatar || data.profile.photoUrl),
+        });
 
         // Store Base Account profile with priority flag
-        localStorage.setItem('baseAppProfile', JSON.stringify({
+        const profileToStore = {
           ...data.profile,
           isBaseAccount: true,
           isSmartWallet: data.accountType === 'smart-wallet',
-          prioritySource: true, // Mark as priority source
-        }));
-
+          prioritySource: true,
+        };
+        
+        localStorage.setItem('baseAppProfile', JSON.stringify(profileToStore));
+        
         console.log('✅ Stored Base Account profile to localStorage');
+        console.log('📦 Stored data:', profileToStore);
         
         router.push('/register/wallet/complete?source=baseaccount');
       } else if (isBaseApp || isSmartWallet) {
@@ -396,4 +417,3 @@ export default function SignupChoicePage() {
     </div>
   );
 }
-        
