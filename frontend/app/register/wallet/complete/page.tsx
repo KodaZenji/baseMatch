@@ -73,56 +73,57 @@ export default function CompleteWalletProfilePage() {
 
     // ✅ Load profile from Farcaster, Base App, or Mini App
     useEffect(() => {
-        if (isCheckingExisting || avatarUrl) return;
+  // Wait for existing profile check to complete
+  if (isCheckingExisting || avatarUrl) return;
 
-        if (source === 'farcaster') {
-            const stored = localStorage.getItem('farcasterProfile');
-            if (stored) {
-                try {
-                    const profile = JSON.parse(stored);
-                    console.log('📸 Farcaster profile loaded:', profile);
-                    
-                    setFormData(prev => ({
-                        ...prev,
-                        name: profile.displayName || profile.display_name || '',
-                        interests: profile.bio || '',
-                    }));
-
-                    const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
-                    if (photoUrl) {
-                        setAvatarUrl(photoUrl);
-                        setProfileSource('farcaster');
-                        console.log('✅ Farcaster avatar URL set:', photoUrl);
-                    }
-                } catch (e) {
-                    console.error('❌ Failed to parse Farcaster profile:', e);
-                }
-            }
-        } else if (source === 'baseapp' || source === 'miniapp') {
-            const stored = localStorage.getItem('baseAppProfile');
-            if (stored) {
-                try {
-                    const profile = JSON.parse(stored);
-                    console.log('📸 Base App/Mini App profile loaded:', profile);
-
-                    setFormData(prev => ({
-                        ...prev,
-                        name: profile.displayName || profile.name || '',
-                        interests: profile.bio || profile.description || '',
-                    }));
-
-                    const photoUrl = profile.photoUrl || profile.pfp || profile.avatar || profile.pfp_url || '';
-                    if (photoUrl) {
-                        setAvatarUrl(photoUrl);
-                        setProfileSource(source === 'miniapp' ? 'miniapp' : 'baseapp');
-                        console.log('✅ Base App/Mini App avatar URL set:', photoUrl);
-                    }
-                } catch (e) {
-                    console.error('❌ Failed to parse Base App profile:', e);
-                }
-            }
+  if (source === 'farcaster') {
+    const stored = localStorage.getItem('farcasterProfile');
+    if (stored) {
+      try {
+        const profile = JSON.parse(stored);
+        console.log('📸 Farcaster profile loaded:', profile);
+        
+        setFormData(prev => ({
+          ...prev,
+          name: profile.displayName || profile.display_name || '',
+          interests: profile.bio || '',
+        }));
+        
+        const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
+        if (photoUrl) {
+          setAvatarUrl(photoUrl);
+          setProfileSource('farcaster');
+          console.log('✅ Farcaster avatar URL set:', photoUrl);
         }
-    }, [source, isCheckingExisting, avatarUrl]);
+      } catch (e) {
+        console.error('❌ Failed to parse Farcaster profile:', e);
+      }
+    }
+  } else if (source === 'miniapp') {
+    const stored = localStorage.getItem('baseAppProfile');
+    if (stored) {
+      try {
+        const profile = JSON.parse(stored);
+        console.log('📸 Base Mini App profile loaded:', profile);
+        
+        setFormData(prev => ({
+          ...prev,
+          name: profile.displayName || profile.name || '',
+          interests: profile.bio || profile.description || '',
+        }));
+        
+        const photoUrl = profile.photoUrl || profile.pfp || profile.avatar || profile.pfp_url || '';
+        if (photoUrl) {
+          setAvatarUrl(photoUrl);
+          setProfileSource('miniapp');
+          console.log('✅ Mini App avatar URL set:', photoUrl);
+        }
+      } catch (e) {
+        console.error('❌ Failed to parse Base Mini App profile:', e);
+      }
+    }
+  }
+}, [source, isCheckingExisting, avatarUrl]);
 
     // ✅ Generate fallback Dicebear avatar if none exists
     useEffect(() => {
@@ -271,17 +272,16 @@ export default function CompleteWalletProfilePage() {
                 </h1>
                 
                 {/* ✅ Profile Source Badge */}
-                {profileSource && profileSource !== 'manual' && (
-                    <div className="text-center mb-4">
-                        <span className="inline-block bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm px-3 py-1 rounded-full border border-purple-200 dark:border-purple-700">
-                            {profileSource === 'farcaster' ? '🟣 Imported from Farcaster' : 
-                             profileSource === 'miniapp' ? '🟦 Imported from Base Mini App' :
-                             profileSource === 'baseapp' ? '🟦 Imported from Basename' :
-                             profileSource === 'existing' ? '✅ Existing Profile Found' :
-                             'Manual Entry'}
-                        </span>
-                    </div>
-                )}
+            {profileSource && profileSource !== 'manual' && (
+  <div className="text-center mb-4">
+    <span className="inline-block bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm px-3 py-1 rounded-full border border-purple-200 dark:border-purple-700">
+      {profileSource === 'farcaster' ? '🟣 Imported from Farcaster' : 
+       profileSource === 'miniapp' ? '🟦 Imported from Base Mini App' :
+       profileSource === 'existing' ? '✅ Existing Profile Found' :
+       'Manual Entry'}
+    </span>
+  </div>
+)}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {error && (
@@ -307,12 +307,11 @@ export default function CompleteWalletProfilePage() {
                                     }}
                                 />
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {profileSource === 'farcaster' ? 'From Farcaster' :
-                                     profileSource === 'miniapp' ? 'From Base Mini App' :
-                                     profileSource === 'baseapp' ? 'From Basename' :
-                                     profileSource === 'existing' ? 'Existing Photo' :
-                                     'Auto-generated avatar'}
-                                </p>
+  {profileSource === 'farcaster' ? 'From Farcaster' :
+   profileSource === 'miniapp' ? 'From Base Mini App' :
+   profileSource === 'existing' ? 'Existing Photo' :
+   'Auto-generated avatar'}
+</p>
                             </div>
                         )}
                     </div>
