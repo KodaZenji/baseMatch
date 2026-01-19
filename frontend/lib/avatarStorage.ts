@@ -1,10 +1,3 @@
-// /frontend/lib/avatarStorage.ts
-
-/**
- * Avatar storage utilities using Supabase Storage
- * Downloads IPFS avatars and caches them in Supabase bucket for faster loading
- */
-
 import { supabaseService } from '@/lib/supabase.server';
 
 const SUPABASE_BUCKET = 'profile-images'; // ✅ Using your existing bucket!
