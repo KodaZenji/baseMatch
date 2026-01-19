@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Heart } from 'lucide-react';
+import { Heart, User, CheckCircle2 } from 'lucide-react';
 
-export default function CompleteWalletProfilePage() {
+function CompleteProfileContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { address, isConnected } = useAccount();
@@ -24,319 +24,190 @@ export default function CompleteWalletProfilePage() {
     const [error, setError] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
     const [profileSource, setProfileSource] = useState<string | null>(null);
-    const [isCheckingExisting, setIsCheckingExisting] = useState(true);
 
-    // ✅ Check existing profile from backend
     useEffect(() => {
-        if (!address) {
-            setIsCheckingExisting(false);
-            return;
-        }
-
-        const checkExistingProfile = async () => {
-            try {
-                const response = await fetch('/api/profile/get', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ address }),
-                });
-
-                if (response.ok) {
-                    const { profile } = await response.json();
-                    if (profile) {
-                        console.log('✅ Found existing profile:', profile);
-                        
-                        if (profile.photoUrl) {
-                            setAvatarUrl(profile.photoUrl);
-                            setProfileSource(profile.profile_source || 'existing');
-                            console.log('📸 Using existing photo:', profile.photoUrl);
-                        }
-
-                        setFormData({
-                            name: profile.name || '',
-                            birthYear: profile.birthYear?.toString() || '',
-                            gender: profile.gender || '',
-                            interests: profile.interests || '',
-                            email: profile.email || '',
-                        });
-                    }
-                }
-            } catch (err) {
-                console.error('Error checking existing profile:', err);
-            } finally {
-                setIsCheckingExisting(false);
+        let profileData = null;
+        
+        if (source === 'farcaster') {
+            const stored = localStorage.getItem('farcasterProfile');
+            if (stored) {
+                profileData = JSON.parse(stored);
+                setProfileSource('farcaster');
             }
-        };
-
-        checkExistingProfile();
-    }, [address]);
-
-    // ✅ Load profile from Farcaster, Base App, or Mini App
-    useEffect(() => {
-  // Wait for existing profile check to complete
-  if (isCheckingExisting || avatarUrl) return;
-
-  if (source === 'farcaster') {
-    const stored = localStorage.getItem('farcasterProfile');
-    if (stored) {
-      try {
-        const profile = JSON.parse(stored);
-        console.log('📸 Farcaster profile loaded:', profile);
-        
-        setFormData(prev => ({
-          ...prev,
-          name: profile.displayName || profile.display_name || '',
-          interests: profile.bio || '',
-        }));
-        
-        const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
-        if (photoUrl) {
-          setAvatarUrl(photoUrl);
-          setProfileSource('farcaster');
-          console.log('✅ Farcaster avatar URL set:', photoUrl);
+        } else if (source === 'baseapp') {
+            const stored = localStorage.getItem('baseAppProfile');
+            if (stored) {
+                profileData = JSON.parse(stored);
+                setProfileSource('baseapp');
+            }
         }
-      } catch (e) {
-        console.error('❌ Failed to parse Farcaster profile:', e);
-      }
-    }
-  } else if (source === 'miniapp') {
-    const stored = localStorage.getItem('baseAppProfile');
-    if (stored) {
-      try {
-        const profile = JSON.parse(stored);
-        console.log('📸 Base Mini App profile loaded:', profile);
-        
-        setFormData(prev => ({
-          ...prev,
-          name: profile.displayName || profile.name || '',
-          interests: profile.bio || profile.description || '',
-        }));
-        
-        const photoUrl = profile.photoUrl || profile.pfp || profile.avatar || profile.pfp_url || '';
-        if (photoUrl) {
-          setAvatarUrl(photoUrl);
-          setProfileSource('miniapp');
-          console.log('✅ Mini App avatar URL set:', photoUrl);
+
+        if (profileData) {
+            setFormData(prev => ({
+                ...prev,
+                name: profileData.displayName || '',
+                interests: profileData.bio || '',
+            }));
+            setAvatarUrl(profileData.pfp || '');
+            // We keep it in storage until they actually submit to be safe
         }
-      } catch (e) {
-        console.error('❌ Failed to parse Base Mini App profile:', e);
-      }
-    }
-  }
-}, [source, isCheckingExisting, avatarUrl]);
+    }, [source]);
 
-    // ✅ Generate fallback Dicebear avatar if none exists
     useEffect(() => {
-        if (isCheckingExisting || avatarUrl || !address) return;
-
-        console.log('🎲 No existing photo found, generating Dicebear avatar');
-        const seed = address.substring(2, 10);
-        const generatedAvatarUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
-        setAvatarUrl(generatedAvatarUrl);
-        setProfileSource(prev => prev || 'manual');
-    }, [address, avatarUrl, isCheckingExisting]);
-
-    if (!isConnected) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
-                <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border border-gray-200 dark:border-gray-700">
-                    <div className="flex justify-center mb-6">
-                        <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
-                            <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
-                            <svg width="0" height="0">
-                                <defs>
-                                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stopColor="#ec4899" />
-                                        <stop offset="100%" stopColor="#a855f7" />
-                                    </linearGradient>
-                                </defs>
-                            </svg>
-                        </div>
-                    </div>
-                    <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
-                        BaseMatch
-                    </h1>
-                    <p className="text-gray-700 dark:text-gray-300 mb-6 font-semibold">Connect Your Wallet</p>
-                    <div className="flex justify-center mb-6">
-                        <ConnectButton />
-                    </div>
-                    <button
-                        onClick={() => router.push('/')}
-                        className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 text-sm"
-                    >
-                        ← Back to home
-                    </button>
-                </div>
-            </div>
-        );
-    }
+        if (address && !avatarUrl) {
+            setAvatarUrl(`https://api.dicebear.com/7.x/pixel-art/svg?seed=${address.substring(2, 10)}`);
+        }
+    }, [address, avatarUrl]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
         setIsLoading(true);
-
         try {
-            if (!address) throw new Error('Wallet not connected');
-
-            if (!formData.name || !formData.birthYear || !formData.gender || !formData.interests || !formData.email) {
-                throw new Error('Please fill in all required fields');
-            }
-
-            const birthYear = parseInt(formData.birthYear);
-            const currentYear = new Date().getFullYear();
-            const calculatedAge = currentYear - birthYear;
-            if (isNaN(birthYear) || calculatedAge < 18 || calculatedAge > 120) {
-                throw new Error('Birth year must correspond to an age between 18 and 120');
-            }
-
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(formData.email)) {
-                throw new Error('Please enter a valid email address');
-            }
-
-            console.log('📤 Submitting profile:', {
-                source: profileSource,
-                hasPhoto: !!avatarUrl,
-                photoUrl: avatarUrl
-            });
-
             const response = await fetch('/api/profile/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     address,
-                    name: formData.name,
-                    birthYear: birthYear,
-                    gender: formData.gender,
-                    interests: formData.interests,
-                    email: formData.email,
+                    ...formData,
                     photoUrl: avatarUrl,
-                    profileSource: profileSource,
+                    profileSource: profileSource || 'manual',
                 }),
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Registration failed');
-            }
-
-            localStorage.setItem('walletFirstMint', JSON.stringify({
-                profile_id: data.userInfo?.profileId,
-                id: data.userInfo?.profileId,
-                address: address,
-                email: formData.email,
-                registerWithWalletPayload: {
-                    name: formData.name,
-                    birthYear: birthYear,
-                    gender: formData.gender,
-                    interests: formData.interests,
-                    photoUrl: avatarUrl,
-                },
-                contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS,
-            }));
-
+            if (!response.ok) throw new Error('Registration failed');
+            
+            // Clean up
             localStorage.removeItem('farcasterProfile');
             localStorage.removeItem('baseAppProfile');
-
-            router.push('/register/wallet/mint');
-        } catch (err) {
-            console.error('❌ Error:', err);
-            setError(err instanceof Error ? err.message : 'Failed to complete profile');
+            router.push('/mint');
+        } catch (err: any) {
+            setError(err.message);
         } finally {
             setIsLoading(false);
         }
     };
 
+    if (!isConnected) return (
+        <div className="min-h-screen bg-indigo-600 flex items-center justify-center">
+            <div className="bg-white p-8 rounded-3xl text-center shadow-2xl">
+                <Heart className="w-12 h-12 text-pink-500 mx-auto mb-4" fill="currentColor" />
+                <h2 className="text-xl font-bold mb-4">Connect Wallet to Continue</h2>
+                <ConnectButton />
+            </div>
+        </div>
+    );
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
-            <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-2xl w-full border border-gray-200 dark:border-gray-700">
-                
-                <div className="flex justify-center mb-6">
-                    <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
-                        <Heart className="w-12 h-12" fill="url(#brandGradient2)" stroke="none" />
-                        <svg width="0" height="0">
-                            <defs>
-                                <linearGradient id="brandGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#ec4899" />
-                                    <stop offset="100%" stopColor="#a855f7" />
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                    </div>
-                </div>
-
-                <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
-                    Complete Your Profile
-                </h1>
-                
-                {/* ✅ Profile Source Badge */}
-            {profileSource && profileSource !== 'manual' && (
-  <div className="text-center mb-4">
-    <span className="inline-block bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm px-3 py-1 rounded-full border border-purple-200 dark:border-purple-700">
-      {profileSource === 'farcaster' ? '🟣 Imported from Farcaster' : 
-       profileSource === 'miniapp' ? '🟦 Imported from Base Mini App' :
-       profileSource === 'existing' ? '✅ Existing Profile Found' :
-       'Manual Entry'}
-    </span>
-  </div>
-)}
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {error && (
-                        <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
-                            {error}
-                        </div>
-                    )}
-
-                    {/* Avatar Display */}
-                    <div className="flex justify-center">
-                        {avatarUrl && (
-                            <div className="text-center">
-                                <img
-                                    src={avatarUrl}
-                                    alt="Profile"
-                                    className="w-24 h-24 rounded-full border-4 border-purple-200 dark:border-purple-700 mb-2 object-cover"
-                                    onError={(e) => {
-                                        console.error('❌ Image failed to load:', avatarUrl);
-                                        if (address) {
-                                            const seed = address.substring(2, 10);
-                                            e.currentTarget.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
-                                        }
-                                    }}
+        <div className="min-h-screen bg-gray-50 dark:bg-black py-12 px-4">
+            <div className="max-w-xl mx-auto">
+                <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+                    
+                    {/* Header Banner */}
+                    <div className="h-32 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 relative">
+                        <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
+                            <div className="relative">
+                                <img 
+                                    src={avatarUrl} 
+                                    alt="Profile" 
+                                    className="w-24 h-24 rounded-full border-4 border-white dark:border-gray-900 shadow-xl object-cover"
                                 />
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-  {profileSource === 'farcaster' ? 'From Farcaster' :
-   profileSource === 'miniapp' ? 'From Base Mini App' :
-   profileSource === 'existing' ? 'Existing Photo' :
-   'Auto-generated avatar'}
-</p>
+                                {profileSource && (
+                                    <div className="absolute bottom-0 right-0 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full p-1">
+                                        <CheckCircle2 className="w-4 h-4 text-white" />
+                                    </div>
+                                )}
                             </div>
-                        )}
+                        </div>
                     </div>
 
-                    {/* Form fields: Name, BirthYear, Gender, Interests, Email */}
-                    {/* ... same as your current code ... */}
+                    <div className="pt-16 pb-10 px-8">
+                        <div className="text-center mb-8">
+                            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Complete Your Profile</h1>
+                            {profileSource && (
+                                <p className="text-sm text-purple-600 dark:text-purple-400 font-medium mt-1">
+                                    ✓ Verified {profileSource === 'farcaster' ? 'Farcaster' : 'Base'} profile imported
+                                </p>
+                            )}
+                        </div>
 
-                    <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-                    >
-                        {isLoading ? 'Processing...' : 'Continue to Mint →'}
-                    </button>
-                </form>
+                        {error && <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">{error}</div>}
 
-                <div className="mt-6 text-center">
-                    <button
-                        onClick={() => router.push('/')}
-                        className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 text-sm"
-                    >
-                        ← Back to home
-                    </button>
+                        <form onSubmit={handleSubmit} className="space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Display Name</label>
+                                    <input 
+                                        value={formData.name} 
+                                        onChange={e => setFormData({...formData, name: e.target.value})} 
+                                        className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-4 text-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 transition-all" 
+                                        placeholder="Full Name" required 
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Birth Year</label>
+                                    <input 
+                                        type="number" value={formData.birthYear} 
+                                        onChange={e => setFormData({...formData, birthYear: e.target.value})} 
+                                        className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-4 text-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500" 
+                                        placeholder="1995" required 
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Gender</label>
+                                <select 
+                                    value={formData.gender} 
+                                    onChange={e => setFormData({...formData, gender: e.target.value})} 
+                                    className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-4 text-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 appearance-none" 
+                                    required
+                                >
+                                    <option value="">Select Gender</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Non-binary">Non-binary</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">About / Interests</label>
+                                <textarea 
+                                    value={formData.interests} 
+                                    onChange={e => setFormData({...formData, interests: e.target.value})} 
+                                    rows={3}
+                                    className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-4 text-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500" 
+                                    placeholder="Tell us what you love..." required 
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Email Address</label>
+                                <input 
+                                    type="email" value={formData.email} 
+                                    onChange={e => setFormData({...formData, email: e.target.value})} 
+                                    className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-4 text-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500" 
+                                    placeholder="hello@example.com" required 
+                                />
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                disabled={isLoading} 
+                                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-2xl font-bold text-lg shadow-xl shadow-purple-500/20 hover:scale-[1.02] transition-transform active:scale-95 disabled:opacity-50"
+                            >
+                                {isLoading ? <Loader2 className="animate-spin mx-auto" /> : 'Confirm & Create Profile'}
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function CompleteWalletProfilePage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-purple-500 w-10 h-10" /></div>}>
+            <CompleteProfileContent />
+        </Suspense>
     );
 }
