@@ -1,5 +1,3 @@
-// app/register/wallet/complete/page.tsx 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,7 +10,7 @@ export default function CompleteWalletProfilePage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { address, isConnected } = useAccount();
-    const source = searchParams.get('source'); // 'farcaster', 'baseapp', or null
+    const source = searchParams.get('source');
 
     const [formData, setFormData] = useState({
         name: '',
@@ -26,9 +24,61 @@ export default function CompleteWalletProfilePage() {
     const [error, setError] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
     const [profileSource, setProfileSource] = useState<string | null>(null);
+    const [isCheckingExisting, setIsCheckingExisting] = useState(true);
 
-    // Load profile if coming from Farcaster or Base App
+    
     useEffect(() => {
+        if (!address) {
+            setIsCheckingExisting(false);
+            return;
+        }
+
+        const checkExistingProfile = async () => {
+            try {
+                const response = await fetch('/api/profile/get', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address }),
+                });
+
+                if (response.ok) {
+                    const { profile } = await response.json();
+                    
+                    if (profile) {
+                        console.log('✅ Found existing profile:', profile);
+                        
+                        
+                        if (profile.photoUrl) {
+                            setAvatarUrl(profile.photoUrl);
+                            setProfileSource(profile.profile_source || 'existing');
+                            console.log('📸 Using existing photo:', profile.photoUrl);
+                        }
+                        
+                        // Pre-fill form with existing data
+                        setFormData({
+                            name: profile.name || '',
+                            birthYear: profile.birthYear?.toString() || '',
+                            gender: profile.gender || '',
+                            interests: profile.interests || '',
+                            email: profile.email || '',
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('Error checking existing profile:', err);
+            } finally {
+                setIsCheckingExisting(false);
+            }
+        };
+
+        checkExistingProfile();
+    }, [address]);
+
+    // Load profile from Farcaster or Base App
+    useEffect(() => {
+        
+        if (isCheckingExisting || avatarUrl) return;
+
         if (source === 'farcaster') {
             const stored = localStorage.getItem('farcasterProfile');
             if (stored) {
@@ -42,7 +92,7 @@ export default function CompleteWalletProfilePage() {
                         interests: profile.bio || '',
                     }));
                     
-                    // FIX: Use photoUrl consistently (from your updated choice page)
+                    
                     const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
                     if (photoUrl) {
                         setAvatarUrl(photoUrl);
@@ -66,8 +116,8 @@ export default function CompleteWalletProfilePage() {
                         interests: profile.bio || profile.description || '',
                     }));
                     
-                    // FIX: Use photoUrl consistently (from your updated choice page)
-                    const photoUrl = profile.photoUrl || profile.avatar || profile.pfp || '';
+                    
+                    const photoUrl = profile.photoUrl || profile.pfp || profile.avatar || '';
                     if (photoUrl) {
                         setAvatarUrl(photoUrl);
                         setProfileSource('baseapp');
@@ -78,17 +128,18 @@ export default function CompleteWalletProfilePage() {
                 }
             }
         }
-    }, [source]);
+    }, [source, isCheckingExisting, avatarUrl]);
 
-    // FALLBACK: Generate Dicebear avatar if no profile photo found
+    
     useEffect(() => {
-        if (address && !avatarUrl) {
-            const seed = address.substring(2, 10);
-            const generatedAvatarUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
-            setAvatarUrl(generatedAvatarUrl);
-            console.log('🎲 Generated Dicebear avatar (fallback):', generatedAvatarUrl);
-        }
-    }, [address, avatarUrl]);
+        if (isCheckingExisting || avatarUrl || !address) return;
+
+        console.log('🎲 No existing photo found, generating Dicebear avatar');
+        const seed = address.substring(2, 10);
+        const generatedAvatarUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
+        setAvatarUrl(generatedAvatarUrl);
+        setProfileSource(prev => prev || 'manual');
+    }, [address, avatarUrl, isCheckingExisting]);
 
     if (!isConnected) {
         return (
@@ -150,7 +201,7 @@ export default function CompleteWalletProfilePage() {
             }
 
             console.log('📤 Submitting profile:', {
-                source: profileSource || 'manual',
+                source: profileSource,
                 hasPhoto: !!avatarUrl,
                 photoUrl: avatarUrl
             });
@@ -166,7 +217,7 @@ export default function CompleteWalletProfilePage() {
                     interests: formData.interests,
                     email: formData.email,
                     photoUrl: avatarUrl,
-                    profileSource: profileSource || 'manual', // Track the source
+                    profileSource: profileSource, // 🔥 FIX: Send profileSource
                 }),
             });
 
@@ -178,7 +229,7 @@ export default function CompleteWalletProfilePage() {
 
             console.log('✅ Profile registered successfully');
 
-            // Store for minting - use walletFirstMint to match wallet mint page
+            // Store for minting
             localStorage.setItem('walletFirstMint', JSON.stringify({
                 profile_id: data.userInfo?.profileId,
                 id: data.userInfo?.profileId,
@@ -194,7 +245,7 @@ export default function CompleteWalletProfilePage() {
                 contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS,
             }));
 
-            // Clean up localStorage after successful registration
+            // Clean up
             localStorage.removeItem('farcasterProfile');
             localStorage.removeItem('baseAppProfile');
 
@@ -210,6 +261,7 @@ export default function CompleteWalletProfilePage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
             <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-2xl w-full border border-gray-200 dark:border-gray-700">
+                {/* Rest of JSX remains the same... */}
                 <div className="flex justify-center mb-6">
                     <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
                         <Heart className="w-12 h-12" fill="url(#brandGradient2)" stroke="none" />
@@ -228,10 +280,13 @@ export default function CompleteWalletProfilePage() {
                     Complete Your Profile
                 </h1>
                 
-                {profileSource && (
+                {profileSource && profileSource !== 'manual' && (
                     <div className="text-center mb-4">
                         <span className="inline-block bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm px-3 py-1 rounded-full border border-purple-200 dark:border-purple-700">
-                            {profileSource === 'farcaster' ? '🟣 Imported from Farcaster' : '🟦 Imported from Base App'}
+                            {profileSource === 'farcaster' ? '🟣 Imported from Farcaster' : 
+                             profileSource === 'baseapp' ? '🟦 Imported from Base App' :
+                             profileSource === 'existing' ? '✅ Existing Profile Found' :
+                             'Manual Entry'}
                         </span>
                     </div>
                 )}
@@ -253,7 +308,6 @@ export default function CompleteWalletProfilePage() {
                                     className="w-24 h-24 rounded-full border-4 border-purple-200 dark:border-purple-700 mb-2 object-cover"
                                     onError={(e) => {
                                         console.error('❌ Image failed to load:', avatarUrl);
-                                        // Fallback to Dicebear if image fails
                                         if (address) {
                                             const seed = address.substring(2, 10);
                                             e.currentTarget.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
@@ -261,14 +315,16 @@ export default function CompleteWalletProfilePage() {
                                     }}
                                 />
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {profileSource 
-                                        ? `From ${profileSource === 'farcaster' ? 'Farcaster' : 'Base App'}` 
-                                        : 'Auto-generated avatar'}
+                                    {profileSource === 'farcaster' ? 'From Farcaster' :
+                                     profileSource === 'baseapp' ? 'From Base App' :
+                                     profileSource === 'existing' ? 'Existing Photo' :
+                                     'Auto-generated avatar'}
                                 </p>
                             </div>
                         )}
                     </div>
 
+                    {/* Form fields... */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name *</label>
                         <input
