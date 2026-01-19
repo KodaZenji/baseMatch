@@ -5,7 +5,7 @@ import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { Heart, Loader2, Edit3, CheckCircle2, Sparkles, AlertCircle } from 'lucide-react';
 import { SiFarcaster } from 'react-icons/si';
-import { useBaseAccount } from '@/lib/hooks/useBaseAccount';
+import { useBaseAccount } from '.@/lib/hooks/useBaseAccount';
 
 export default function SignupChoicePage() {
   const router = useRouter();
