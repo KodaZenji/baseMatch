@@ -1,4 +1,4 @@
-// app/api/check-baseapp/route.ts - 
+// app/api/check-baseapp/route.ts
 
 import { NextResponse } from 'next/server';
 import { createPublicClient, http } from 'viem';
@@ -31,14 +31,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ exists: false });
     }
 
-    // Create Base mainnet client
     const publicClient = createPublicClient({
       chain: base,
       transport: http(process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL),
     });
 
     try {
-      // Look up basename(s) for this address
       const names = await publicClient.readContract({
         address: L2_RESOLVER_ADDRESS,
         abi: REVERSE_RESOLVER_ABI,
@@ -47,10 +45,10 @@ export async function POST(request: Request) {
       });
 
       if (names && names.length > 0) {
-        const primaryName = names[0]; // First basename is usually primary
+        const primaryName = names[0];
 
         // Fetch profile data from base.app (if available)
-        let profileData = null;
+        let profileData: any = null;
         try {
           const username = primaryName.replace('.base.eth', '');
           const profileResponse = await fetch(`https://base.app/api/profile/${username}`, {
@@ -64,15 +62,27 @@ export async function POST(request: Request) {
           console.log('Could not fetch Base App profile data:', error);
         }
 
+        // ===== Apply photoUrl Logic =====
+        // Support multiple field names just in case (pfpUrl, avatar, pfp, pfp.url)
+        const photoUrl =
+          profileData?.pfpUrl ||
+          profileData?.avatar ||
+          profileData?.pfp?.url ||
+          '';
+
         return NextResponse.json({
           exists: true,
           profile: {
             basename: primaryName,
             username: primaryName.replace('.base.eth', ''),
             displayName: profileData?.displayName || primaryName.replace('.base.eth', ''),
-            pfp: profileData?.pfpUrl || profileData?.avatar || null,
             bio: profileData?.bio || '',
-            address: address,
+            address,
+
+            // backward compatibility fields:
+            pfp: photoUrl,
+            pfp_url: photoUrl,
+            photoUrl,
           },
         });
       }
