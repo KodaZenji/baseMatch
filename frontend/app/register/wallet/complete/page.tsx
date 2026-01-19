@@ -1,16 +1,18 @@
+// app/register/wallet/complete/page.tsx 
+
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Heart, User, CheckCircle2, Loader2 } from 'lucide-react';
+import { Heart } from 'lucide-react';
 
-function CompleteProfileContent() {
+export default function CompleteWalletProfilePage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { address, isConnected } = useAccount();
-    const source = searchParams.get('source');
+    const source = searchParams.get('source'); // 'farcaster', 'baseapp', or null
 
     const [formData, setFormData] = useState({
         name: '',
@@ -25,189 +27,296 @@ function CompleteProfileContent() {
     const [avatarUrl, setAvatarUrl] = useState('');
     const [profileSource, setProfileSource] = useState<string | null>(null);
 
+    // Load profile if coming from Farcaster or Base App
     useEffect(() => {
-        let profileData = null;
-        
         if (source === 'farcaster') {
             const stored = localStorage.getItem('farcasterProfile');
             if (stored) {
-                profileData = JSON.parse(stored);
+                const profile = JSON.parse(stored);
+                setFormData(prev => ({
+                    ...prev,
+                    name: profile.displayName || '',
+                    interests: profile.bio || '',
+                }));
+                setAvatarUrl(profile.pfp || '');
                 setProfileSource('farcaster');
+                localStorage.removeItem('farcasterProfile');
             }
         } else if (source === 'baseapp') {
             const stored = localStorage.getItem('baseAppProfile');
             if (stored) {
-                profileData = JSON.parse(stored);
+                const profile = JSON.parse(stored);
+                setFormData(prev => ({
+                    ...prev,
+                    name: profile.displayName || '',
+                    interests: profile.bio || '',
+                }));
+                setAvatarUrl(profile.pfp || '');
                 setProfileSource('baseapp');
+                localStorage.removeItem('baseAppProfile');
             }
-        }
-
-        if (profileData) {
-            setFormData(prev => ({
-                ...prev,
-                name: profileData.displayName || '',
-                interests: profileData.bio || '',
-            }));
-            setAvatarUrl(profileData.pfp || '');
-            // We keep it in storage until they actually submit to be safe
         }
     }, [source]);
 
+    // Generate avatar based on wallet address if no profile photo
     useEffect(() => {
         if (address && !avatarUrl) {
-            setAvatarUrl(`https://api.dicebear.com/7.x/pixel-art/svg?seed=${address.substring(2, 10)}`);
+            const seed = address.substring(2, 10);
+            const generatedAvatarUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
+            setAvatarUrl(generatedAvatarUrl);
         }
     }, [address, avatarUrl]);
 
+    if (!isConnected) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+                    <div className="flex justify-center mb-6">
+                        <div className="relative">
+                            <div className="bg-white rounded-full p-3 shadow-lg">
+                                <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
+                                <svg width="0" height="0">
+                                    <defs>
+                                        <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stopColor="#ec4899" />
+                                            <stop offset="100%" stopColor="#a855f7" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                        BaseMatch
+                    </h1>
+                    <p className="text-gray-700 mb-6 font-semibold">Connect Your Wallet</p>
+                    <div className="flex justify-center mb-6">
+                        <ConnectButton />
+                    </div>
+                    <button
+                        onClick={() => router.push('/')}
+                        className="text-gray-600 hover:text-gray-800 text-sm"
+                    >
+                        ← Back to home
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
         setIsLoading(true);
+
         try {
+            if (!address) throw new Error('Wallet not connected');
+
+            if (!formData.name || !formData.birthYear || !formData.gender || !formData.interests || !formData.email) {
+                throw new Error('Please fill in all required fields');
+            }
+
+            const birthYear = parseInt(formData.birthYear);
+            const currentYear = new Date().getFullYear();
+            const calculatedAge = currentYear - birthYear;
+            if (isNaN(birthYear) || calculatedAge < 18 || calculatedAge > 120) {
+                throw new Error('Birth year must correspond to an age between 18 and 120');
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(formData.email)) {
+                throw new Error('Please enter a valid email address');
+            }
+
             const response = await fetch('/api/profile/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     address,
-                    ...formData,
+                    name: formData.name,
+                    birthYear: birthYear,
+                    gender: formData.gender,
+                    interests: formData.interests,
+                    email: formData.email,
                     photoUrl: avatarUrl,
                     profileSource: profileSource || 'manual',
                 }),
             });
-            if (!response.ok) throw new Error('Registration failed');
-            
-            // Clean up
-            localStorage.removeItem('farcasterProfile');
-            localStorage.removeItem('baseAppProfile');
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Registration failed');
+            }
+
+            localStorage.setItem('walletRegistration', JSON.stringify({
+                profile_id: data.userInfo?.profileId,
+                id: data.userInfo?.profileId,
+                address: address,
+                email: formData.email,
+                createProfilePayload: {
+                    name: formData.name,
+                    birthYear: birthYear,
+                    gender: formData.gender,
+                    interests: formData.interests,
+                    photoUrl: avatarUrl,
+                },
+                contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS,
+            }));
+
             router.push('/mint');
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            console.error('❌ Error:', err);
+            setError(err instanceof Error ? err.message : 'Failed to complete profile');
         } finally {
             setIsLoading(false);
         }
     };
 
-    if (!isConnected) return (
-        <div className="min-h-screen bg-indigo-600 flex items-center justify-center">
-            <div className="bg-white p-8 rounded-3xl text-center shadow-2xl">
-                <Heart className="w-12 h-12 text-pink-500 mx-auto mb-4" fill="currentColor" />
-                <h2 className="text-xl font-bold mb-4">Connect Wallet to Continue</h2>
-                <ConnectButton />
-            </div>
-        </div>
-    );
-
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-black py-12 px-4">
-            <div className="max-w-xl mx-auto">
-                <div className="bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-                    
-                    {/* Header Banner */}
-                    <div className="h-32 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 relative">
-                        <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
-                            <div className="relative">
-                                <img 
-                                    src={avatarUrl} 
-                                    alt="Profile" 
-                                    className="w-24 h-24 rounded-full border-4 border-white dark:border-gray-900 shadow-xl object-cover"
-                                />
-                                {profileSource && (
-                                    <div className="absolute bottom-0 right-0 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full p-1">
-                                        <CheckCircle2 className="w-4 h-4 text-white" />
-                                    </div>
-                                )}
-                            </div>
+        <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full">
+                <div className="flex justify-center mb-6">
+                    <div className="relative">
+                        <div className="bg-white rounded-full p-3 shadow-lg">
+                            <Heart className="w-12 h-12" fill="url(#brandGradient2)" stroke="none" />
+                            <svg width="0" height="0">
+                                <defs>
+                                    <linearGradient id="brandGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#ec4899" />
+                                        <stop offset="100%" stopColor="#a855f7" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
                         </div>
                     </div>
+                </div>
 
-                    <div className="pt-16 pb-10 px-8">
-                        <div className="text-center mb-8">
-                            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Complete Your Profile</h1>
-                            {profileSource && (
-                                <p className="text-sm text-purple-600 dark:text-purple-400 font-medium mt-1">
-                                    ✓ Verified {profileSource === 'farcaster' ? 'Farcaster' : 'Base'} profile imported
+                <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                    Complete Your Profile
+                </h1>
+                
+                {profileSource && (
+                    <div className="text-center mb-4">
+                        <span className="inline-block bg-purple-100 text-purple-700 text-sm px-3 py-1 rounded-full">
+                            {profileSource === 'farcaster' ? ' Imported from Farcaster' : ' Imported from Base App'}
+                        </span>
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {error && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="flex justify-center">
+                        {avatarUrl && (
+                            <div className="text-center">
+                                <img
+                                    src={avatarUrl}
+                                    alt="Profile"
+                                    className="w-24 h-24 rounded-full border-4 border-purple-200 mb-2"
+                                />
+                                <p className="text-xs text-gray-500">
+                                    {profileSource ? 'Your profile photo' : 'Auto-generated avatar'}
                                 </p>
-                            )}
-                        </div>
-
-                        {error && <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">{error}</div>}
-
-                        <form onSubmit={handleSubmit} className="space-y-5">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Display Name</label>
-                                    <input 
-                                        value={formData.name} 
-                                        onChange={e => setFormData({...formData, name: e.target.value})} 
-                                        className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-4 text-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 transition-all" 
-                                        placeholder="Full Name" required 
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Birth Year</label>
-                                    <input 
-                                        type="number" value={formData.birthYear} 
-                                        onChange={e => setFormData({...formData, birthYear: e.target.value})} 
-                                        className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-4 text-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500" 
-                                        placeholder="1995" required 
-                                    />
-                                </div>
                             </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Gender</label>
-                                <select 
-                                    value={formData.gender} 
-                                    onChange={e => setFormData({...formData, gender: e.target.value})} 
-                                    className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-4 text-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 appearance-none" 
-                                    required
-                                >
-                                    <option value="">Select Gender</option>
-                                    <option value="Female">Female</option>
-                                    <option value="Male">Male</option>
-                                    <option value="Non-binary">Non-binary</option>
-                                </select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">About / Interests</label>
-                                <textarea 
-                                    value={formData.interests} 
-                                    onChange={e => setFormData({...formData, interests: e.target.value})} 
-                                    rows={3}
-                                    className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-4 text-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500" 
-                                    placeholder="Tell us what you love..." required 
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Email Address</label>
-                                <input 
-                                    type="email" value={formData.email} 
-                                    onChange={e => setFormData({...formData, email: e.target.value})} 
-                                    className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-4 text-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500" 
-                                    placeholder="hello@example.com" required 
-                                />
-                            </div>
-
-                            <button 
-                                type="submit" 
-                                disabled={isLoading} 
-                                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-2xl font-bold text-lg shadow-xl shadow-purple-500/20 hover:scale-[1.02] transition-transform active:scale-95 disabled:opacity-50"
-                            >
-                                {isLoading ? <Loader2 className="animate-spin mx-auto" /> : 'Confirm & Create Profile'}
-                            </button>
-                        </form>
+                        )}
                     </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
+                        <input
+                            type="text"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            required
+                            className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            placeholder="Your name"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Birth Year *</label>
+                        <select
+                            value={formData.birthYear}
+                            onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
+                            required
+                            className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">Select birth year</option>
+                            {Array.from({ length: 83 }, (_, i) => {
+                                const currentYear = new Date().getFullYear();
+                                const year = currentYear - 18 - i;
+                                const age = currentYear - year;
+                                return (
+                                    <option key={year} value={year}>
+                                        {year} ({age} years old)
+                                    </option>
+                                );
+                            })}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
+                        <select
+                            value={formData.gender}
+                            onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                            required
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-600"
+                        >
+                            <option value="">Select gender</option>
+                            <option value="Female">Female</option>
+                            <option value="Male">Male</option>
+                            <option value="Prefer not to say">Prefer not to say</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Interests *</label>
+                        <textarea
+                            value={formData.interests}
+                            onChange={(e) => setFormData({ ...formData, interests: e.target.value })}
+                            required
+                            rows={3}
+                            className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg"
+                            placeholder="Hiking, Photography, Crypto..."
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                        <input
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            required
+                            className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg"
+                            placeholder="your@email.com"
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
+                    >
+                        {isLoading ? 'Processing...' : 'Continue to Mint →'}
+                    </button>
+                </form>
+
+                <div className="mt-6 text-center">
+                    <button
+                        onClick={() => router.push('/')}
+                        className="text-gray-600 hover:text-gray-800 text-sm"
+                    >
+                        ← Back to home
+                    </button>
                 </div>
             </div>
         </div>
-    );
-}
-
-export default function CompleteWalletProfilePage() {
-    return (
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-purple-500 w-10 h-10" /></div>}>
-            <CompleteProfileContent />
-        </Suspense>
     );
 }
