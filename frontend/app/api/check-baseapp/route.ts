@@ -3,7 +3,6 @@ import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { getName, getAvatar } from '@coinbase/onchainkit/identity';
 import { normalize } from 'viem/ens';
-import { getAvatarUrl } from '@/lib/avatarStorage';
 
 const L2_RESOLVER_ADDRESS = '0xC6d566A56A1aFf6508b41f6c90ff131615583BCD';
 
@@ -19,6 +18,38 @@ const TEXT_RESOLVER_ABI = [
     type: 'function',
   },
 ] as const;
+
+/**
+ * Convert IPFS URLs to HTTP gateway URLs for browser display
+ */
+function convertIpfsToHttp(ipfsUrl: string): string {
+  if (!ipfsUrl) return '';
+  
+  // Already HTTP - return as is
+  if (ipfsUrl.startsWith('http://') || ipfsUrl.startsWith('https://')) {
+    return ipfsUrl;
+  }
+  
+  // Handle ipfs:// URLs
+  if (ipfsUrl.startsWith('ipfs://')) {
+    let cid = ipfsUrl.replace('ipfs://', '');
+    
+    // Remove extra ipfs/ if present (ipfs://ipfs/CID -> CID)
+    if (cid.startsWith('ipfs/')) {
+      cid = cid.replace('ipfs/', '');
+    }
+    
+    // Use Cloudflare IPFS gateway (fast and reliable)
+    return `https://cloudflare-ipfs.com/ipfs/${cid}`;
+  }
+  
+  // Handle raw CID
+  if (!ipfsUrl.includes('://') && !ipfsUrl.startsWith('/')) {
+    return `https://cloudflare-ipfs.com/ipfs/${ipfsUrl}`;
+  }
+  
+  return ipfsUrl;
+}
 
 export async function POST(request: Request) {
   try {
@@ -72,7 +103,7 @@ export async function POST(request: Request) {
         
         console.log('✅ Basename found:', basename);
 
-        // STEP 3: Get Base Account avatar and cache to Supabase
+        // STEP 3: Get Base Account avatar and convert IPFS to HTTP
         let avatarUrl = '';
         let rawAvatarUrl = '';
         try {
@@ -80,12 +111,12 @@ export async function POST(request: Request) {
           rawAvatarUrl = fetchedAvatar || '';
           
           if (rawAvatarUrl) {
-            // Download from IPFS and cache to Supabase Storage
-            avatarUrl = await getAvatarUrl(rawAvatarUrl);
+            // Convert ipfs:// to HTTP gateway URL
+            avatarUrl = convertIpfsToHttp(rawAvatarUrl);
             
-            console.log('🖼️ Base Account avatar processed!');
+            console.log('🖼️ Base Account avatar found!');
             console.log('   Raw IPFS URL:', rawAvatarUrl);
-            console.log('   Supabase URL:', avatarUrl);
+            console.log('   HTTP Gateway URL:', avatarUrl);
           } else {
             console.log('❌ No avatar found (will use dicebear fallback)');
           }
@@ -147,7 +178,7 @@ export async function POST(request: Request) {
           console.log('📝 Text records fetched:', { 
             bio: bio ? `✅ "${bio.substring(0, 50)}..."` : '❌',
             displayName: displayName ? `✅ "${displayName}"` : '❌',
-            avatar: avatarUrl ? '✅ (cached in Supabase)' : '❌',
+            avatar: avatarUrl ? '✅ (HTTP gateway)' : '❌',
             twitter: twitter ? '✅' : '❌',
             github: github ? '✅' : '❌',
             email: email ? '✅' : '❌'
@@ -167,11 +198,12 @@ export async function POST(request: Request) {
             bio: bio, // Maps to interests in frontend
             description: bio,
             address,
-            // Avatar URLs - Supabase Storage URL (faster, cached)
+            // Avatar URLs - HTTP gateway URL (IPFS converted)
             avatar: avatarUrl,
             photoUrl: avatarUrl,
             pfp: avatarUrl,
             pfp_url: avatarUrl,
+            _rawAvatarUrl: rawAvatarUrl,
             twitter: twitter,
             github: github,
             email: email,
