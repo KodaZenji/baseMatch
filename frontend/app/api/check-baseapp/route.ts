@@ -1,8 +1,24 @@
 import { NextResponse } from 'next/server';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
-import { getName, getAvatar, getEnsText } from '@coinbase/onchainkit/identity';
+import { getName, getAvatar } from '@coinbase/onchainkit/identity';
+import { normalize } from 'viem/ens';
 import { getAvatarUrl } from '@/lib/avatarStorage';
+
+const L2_RESOLVER_ADDRESS = '0xC6d566A56A1aFf6508b41f6c90ff131615583BCD';
+
+const TEXT_RESOLVER_ABI = [
+  {
+    inputs: [
+      { name: 'node', type: 'bytes32' },
+      { name: 'key', type: 'string' }
+    ],
+    name: 'text',
+    outputs: [{ name: '', type: 'string' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+] as const;
 
 export async function POST(request: Request) {
   try {
@@ -77,7 +93,7 @@ export async function POST(request: Request) {
           console.log('⚠️ Error fetching avatar:', error);
         }
 
-        // STEP 4: Get text records using OnchainKit's getEnsText
+        // STEP 4: Get text records using viem direct contract calls
         let bio = '';
         let twitter = '';
         let github = '';
@@ -87,13 +103,45 @@ export async function POST(request: Request) {
         try {
           console.log('📝 Fetching text records for:', basename);
           
-          // Use OnchainKit's getEnsText function which handles Base Account properly
+          const node = normalize(basename);
+          const namehash = require('viem/ens').namehash(node);
+          
+          // Fetch text records directly from L2 resolver
           [bio, twitter, github, email, displayName] = await Promise.all([
-            getEnsText({ ensName: basename, key: 'description', chain: base }).catch(() => ''),
-            getEnsText({ ensName: basename, key: 'com.twitter', chain: base }).catch(() => ''),
-            getEnsText({ ensName: basename, key: 'com.github', chain: base }).catch(() => ''),
-            getEnsText({ ensName: basename, key: 'email', chain: base }).catch(() => ''),
-            getEnsText({ ensName: basename, key: 'name', chain: base }).catch(() => ''),
+            publicClient.readContract({
+              address: L2_RESOLVER_ADDRESS,
+              abi: TEXT_RESOLVER_ABI,
+              functionName: 'text',
+              args: [namehash, 'description'],
+            }).catch(() => ''),
+            
+            publicClient.readContract({
+              address: L2_RESOLVER_ADDRESS,
+              abi: TEXT_RESOLVER_ABI,
+              functionName: 'text',
+              args: [namehash, 'com.twitter'],
+            }).catch(() => ''),
+            
+            publicClient.readContract({
+              address: L2_RESOLVER_ADDRESS,
+              abi: TEXT_RESOLVER_ABI,
+              functionName: 'text',
+              args: [namehash, 'com.github'],
+            }).catch(() => ''),
+            
+            publicClient.readContract({
+              address: L2_RESOLVER_ADDRESS,
+              abi: TEXT_RESOLVER_ABI,
+              functionName: 'text',
+              args: [namehash, 'email'],
+            }).catch(() => ''),
+            
+            publicClient.readContract({
+              address: L2_RESOLVER_ADDRESS,
+              abi: TEXT_RESOLVER_ABI,
+              functionName: 'text',
+              args: [namehash, 'name'],
+            }).catch(() => ''),
           ]);
 
           console.log('📝 Text records fetched:', { 
