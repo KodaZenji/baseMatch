@@ -6,13 +6,13 @@ import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Heart } from 'lucide-react';
+import { Heart, Sparkles } from 'lucide-react';
 
 export default function CompleteWalletProfilePage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { address, isConnected } = useAccount();
-    const source = searchParams.get('source'); // 'farcaster', 'baseapp', or null
+    const source = searchParams.get('source'); // 'farcaster', 'baseaccount', or null
 
     const [formData, setFormData] = useState({
         name: '',
@@ -26,9 +26,12 @@ export default function CompleteWalletProfilePage() {
     const [error, setError] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
     const [profileSource, setProfileSource] = useState<string | null>(null);
+    const [baseAccountInfo, setBaseAccountInfo] = useState<any>(null);
 
-    // UPDATED: Load profile if coming from Farcaster or Base App
+    // FIXED: Load profile - handle BOTH 'baseapp' and 'baseaccount' sources
     useEffect(() => {
+        console.log('🔍 Complete page loaded with source:', source);
+        
         if (source === 'farcaster') {
             const stored = localStorage.getItem('farcasterProfile');
             if (stored) {
@@ -42,13 +45,10 @@ export default function CompleteWalletProfilePage() {
                         interests: profile.bio || '',
                     }));
                     
-                    // CRITICAL FIX: Set avatar URL properly with all fallbacks
                     const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
                     if (photoUrl) {
                         setAvatarUrl(photoUrl);
                         console.log('✅ Farcaster avatar loaded:', photoUrl);
-                    } else {
-                        console.log('⚠️ No Farcaster avatar found in profile');
                     }
                     
                     setProfileSource('farcaster');
@@ -57,52 +57,58 @@ export default function CompleteWalletProfilePage() {
                     console.error('❌ Error parsing Farcaster profile:', error);
                 }
             }
-        } else if (source === 'baseapp') {
+        } 
+        // CRITICAL FIX: Handle both 'baseaccount' AND 'baseapp' source names
+        else if (source === 'baseaccount' || source === 'baseapp') {
             const stored = localStorage.getItem('baseAppProfile');
             if (stored) {
                 try {
                     const profile = JSON.parse(stored);
                     console.log('📦 Loading Base Account profile:', profile);
                     
+                    // Extract Base Account information
+                    const baseInfo = {
+                        basename: profile.basename || profile.name,
+                        isSmartWallet: profile.isSmartWallet,
+                        address: profile.address,
+                    };
+                    setBaseAccountInfo(baseInfo);
+                    
                     setFormData(prev => ({
                         ...prev,
-                        name: profile.displayName || profile.username || '',
-                        interests: profile.bio || '',
+                        name: profile.displayName || profile.username || profile.basename || '',
+                        interests: profile.bio || profile.description || '',
                     }));
                     
-                    // CRITICAL FIX: Set avatar URL properly with all fallbacks
-                    const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
+                    const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || profile.avatar || '';
                     if (photoUrl) {
                         setAvatarUrl(photoUrl);
                         console.log('✅ Base Account avatar loaded:', photoUrl);
-                    } else {
-                        console.log('⚠️ No Base Account avatar found in profile');
                     }
                     
-                    setProfileSource('baseapp');
-                    localStorage.removeItem('baseAppProfile');
+                    setProfileSource('baseaccount');
+                    // Keep in localStorage in case we need to reference it
+                    // localStorage.removeItem('baseAppProfile');
                 } catch (error) {
                     console.error('❌ Error parsing Base Account profile:', error);
                 }
+            } else {
+                console.log('⚠️ No Base Account profile found in localStorage');
             }
         }
     }, [source]);
 
-    // UPDATED: Generate avatar based on wallet address only if no profile was imported
+    // Generate fallback avatar if none exists
     useEffect(() => {
-        // Only generate fallback avatar if:
-        // 1. Wallet is connected
-        // 2. No avatar has been set yet
-        // 3. No profile was imported (manual signup or profile had no avatar)
         if (address && !avatarUrl) {
             const seed = address.substring(2, 10);
             const generatedAvatarUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
             setAvatarUrl(generatedAvatarUrl);
             console.log('🎨 Generated fallback avatar for address:', address.substring(0, 10) + '...');
         }
-    }, [address, avatarUrl]); // Removed profileSource dependency - not needed
+    }, [address, avatarUrl]);
 
-    // Dark mode initialization (read-only, set from landing page)
+    // Dark mode initialization
     useEffect(() => {
         const savedTheme = localStorage.getItem('theme');
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -180,6 +186,7 @@ export default function CompleteWalletProfilePage() {
                 hasAvatar: !!avatarUrl,
                 avatarUrl: avatarUrl?.substring(0, 50) + '...',
                 profileSource: profileSource || 'manual',
+                baseAccountInfo,
             });
 
             const response = await fetch('/api/profile/register', {
@@ -194,6 +201,7 @@ export default function CompleteWalletProfilePage() {
                     email: formData.email,
                     photoUrl: avatarUrl,
                     profileSource: profileSource || 'manual',
+                    baseAccountInfo, // Include Base Account metadata
                 }),
             });
 
@@ -203,13 +211,12 @@ export default function CompleteWalletProfilePage() {
                 throw new Error(data.error || 'Registration failed');
             }
 
-            // CRITICAL: Use consistent key name for mint page recovery
             const mintData = {
                 profile_id: data.userInfo?.profileId,
                 id: data.userInfo?.profileId,
                 address: address,
                 email: formData.email,
-                registerWithWalletPayload: {  // Keep this key for backwards compatibility
+                registerWithWalletPayload: {
                     name: formData.name,
                     birthYear: birthYear,
                     gender: formData.gender,
@@ -254,11 +261,35 @@ export default function CompleteWalletProfilePage() {
                     Complete Your Profile
                 </h1>
                 
+                {/* Source Badge with Base Account Info */}
                 {profileSource && (
                     <div className="text-center mb-4">
-                        <span className="inline-block bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm px-3 py-1 rounded-full border border-purple-200 dark:border-purple-800">
-                            {profileSource === 'farcaster' ? '✨ Imported from Farcaster' : '🟦 Imported from Base Account'}
-                        </span>
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border ${
+                                profileSource === 'baseaccount' 
+                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800' 
+                                    : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+                            }`}>
+                                {profileSource === 'farcaster' ? (
+                                    <>✨ Imported from Farcaster</>
+                                ) : (
+                                    <>
+                                        <Sparkles className="w-3.5 h-3.5" />
+                                        Base Account
+                                    </>
+                                )}
+                            </span>
+                            {baseAccountInfo?.basename && (
+                                <span className="inline-block bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                                    {baseAccountInfo.basename}
+                                </span>
+                            )}
+                            {baseAccountInfo?.isSmartWallet && (
+                                <span className="inline-block bg-green-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                                    ⚡ Smart Wallet
+                                </span>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -278,7 +309,6 @@ export default function CompleteWalletProfilePage() {
                                     className="w-24 h-24 rounded-full border-4 border-purple-200 dark:border-purple-800 mb-2 shadow-lg"
                                     onError={(e) => {
                                         console.error('❌ Avatar failed to load:', avatarUrl);
-                                        // Fallback to generated avatar on error
                                         if (address) {
                                             const seed = address.substring(2, 10);
                                             e.currentTarget.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
