@@ -7,6 +7,7 @@ import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { Heart, Loader2, Edit3 } from 'lucide-react';
 import { SiFarcaster } from 'react-icons/si';
+import sdk from '@farcaster/miniapp-sdk'; // ✅ UPDATED IMPORT
 
 export default function SignupChoicePage() {
   const router = useRouter();
@@ -62,6 +63,37 @@ export default function SignupChoicePage() {
     setError('');
 
     try {
+      // ✅ NEW: Get Base Mini App context
+      const context = await sdk.context;
+      
+      console.log('🔍 Mini App Context:', context);
+
+      if (context?.user) {
+        console.log('✅ Running in Base Mini App! User data:', context.user);
+        
+        // Use data from Mini App context
+        const miniAppProfile = {
+          username: context.user.username || 'user',
+          displayName: context.user.displayName || context.user.username || 'User',
+          name: context.user.displayName || context.user.username || 'User',
+          photoUrl: context.user.pfpUrl || '',
+          pfp: context.user.pfpUrl || '',
+          pfp_url: context.user.pfpUrl || '',
+          avatar: context.user.pfpUrl || '',
+          bio: context.user.bio || '',
+          description: context.user.bio || '',
+          fid: context.user.fid,
+          address,
+        };
+        
+        console.log('📦 Storing Mini App profile:', miniAppProfile);
+        localStorage.setItem('baseAppProfile', JSON.stringify(miniAppProfile));
+        router.push('/register/wallet/complete?source=miniapp');
+        return;
+      }
+
+      // Fallback: Try to get basename from blockchain
+      console.log('⚠️ Not in Mini App context, checking basename...');
       const response = await fetch('/api/check-baseapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -81,6 +113,8 @@ export default function SignupChoicePage() {
     } catch (error) {
       console.error('Error checking Base App:', error);
       router.push('/register/wallet/complete');
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -171,8 +205,8 @@ export default function SignupChoicePage() {
                   <span className="text-2xl">🟦</span>
                 </div>
                 <div className="text-left">
-                  <h3 className="font-bold text-lg">Use Basename</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Have a .base.eth name? Import it</p>
+                  <h3 className="font-bold text-lg">Use Base Profile</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Import from Base.app or Basename</p>
                 </div>
               </div>
               {checking ? (
