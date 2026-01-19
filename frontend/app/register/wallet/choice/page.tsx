@@ -1,5 +1,3 @@
-// app/register/wallet/choice/page.tsx 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,7 +5,6 @@ import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { Heart, Loader2, Edit3 } from 'lucide-react';
 import { SiFarcaster } from 'react-icons/si';
-import sdk from '@farcaster/miniapp-sdk';
 
 export default function SignupChoicePage() {
   const router = useRouter();
@@ -15,61 +12,58 @@ export default function SignupChoicePage() {
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState('');
 
-  // Dark mode initialization (read-only, set from landing page)
+  // Dark mode initialization
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const shouldBeDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
-    
-    if (shouldBeDark) {
-      document.documentElement.classList.add('dark');
-    }
+    if (shouldBeDark) document.documentElement.classList.add('dark');
   }, []);
 
-  if (!isConnected) {
-    router.push('/');
-    return null;
-  }
+  // Redirect if wallet not connected
+  useEffect(() => {
+    if (!isConnected) router.push('/');
+  }, [isConnected, router]);
 
+  // Farcaster signup (via your API)
   const handleFarcasterSignup = async () => {
     setChecking(true);
     setError('');
-
     try {
       const response = await fetch('/api/check-farcaster', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address }),
       });
-
       const data = await response.json();
-
       if (data.exists && data.profile) {
         localStorage.setItem('farcasterProfile', JSON.stringify(data.profile));
         router.push('/register/wallet/complete?source=farcaster');
       } else {
         router.push('/register/wallet/complete');
       }
-    } catch (error) {
-      console.error('Error checking Farcaster:', error);
+    } catch (err) {
+      console.error('Error checking Farcaster:', err);
       router.push('/register/wallet/complete');
+    } finally {
+      setChecking(false);
     }
   };
 
+  // Base Mini App signup
   const handleBaseAppSignup = async () => {
     setChecking(true);
     setError('');
-
     try {
-      // Check if running in Base Mini App
-      const context = await sdk.context;
-      
-      console.log('🔍 Mini App Context:', context);
+      // Small delay to ensure window is ready
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
-      if (context?.user) {
-        console.log('✅ Running in Base Mini App! User data:', context.user);
-        
-        // Use data from Mini App context
+      const isMiniApp = typeof (window as any).BaseMiniApp !== 'undefined';
+      const context = isMiniApp ? (window as any).BaseMiniApp.context : null;
+
+      console.log('🔍 Base Mini App detection:', { isMiniApp, context });
+
+      if (isMiniApp && context?.user) {
         const miniAppProfile = {
           username: context.user.username || 'user',
           displayName: context.user.displayName || context.user.username || 'User',
@@ -78,46 +72,47 @@ export default function SignupChoicePage() {
           pfp: context.user.pfpUrl || '',
           pfp_url: context.user.pfpUrl || '',
           avatar: context.user.pfpUrl || '',
-          bio: '', // Mini App SDK doesn't provide bio
-          description: '', // Mini App SDK doesn't provide bio
-          fid: context.user.fid,
+          bio: context.user.bio || '',
+          description: context.user.bio || '',
+          fid: context.user.fid || '',
           address,
         };
-        
+
         console.log('📦 Storing Mini App profile:', miniAppProfile);
         localStorage.setItem('baseAppProfile', JSON.stringify(miniAppProfile));
         router.push('/register/wallet/complete?source=miniapp');
       } else {
-        // Not in Mini App context - go to manual entry
-        console.log('⚠️ Not in Mini App context, redirecting to manual entry');
+        console.log('⚠️ Not in Base Mini App context or user not available, fallback');
         router.push('/register/wallet/complete');
       }
-    } catch (error) {
-      console.error('Error checking Base Mini App:', error);
+    } catch (err) {
+      console.error('Error checking Base Mini App:', err);
       router.push('/register/wallet/complete');
     } finally {
       setChecking(false);
     }
   };
 
+  // Manual signup
   const handleManualSignup = () => {
     router.push('/register/wallet/complete');
   };
 
+  // Render UI
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
       <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full border border-gray-200 dark:border-gray-700 relative">
-        
+
         {/* Back Arrow */}
         <button
           onClick={() => window.history.back()}
           className="absolute top-4 left-4 p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors backdrop-blur-sm group"
           aria-label="Go back"
         >
-          <svg 
-            className="w-5 h-5 text-gray-600 dark:text-gray-300 group-hover:-translate-x-0.5 transition-transform" 
-            fill="none" 
-            viewBox="0 0 24 24" 
+          <svg
+            className="w-5 h-5 text-gray-600 dark:text-gray-300 group-hover:-translate-x-0.5 transition-transform"
+            fill="none"
+            viewBox="0 0 24 24"
             stroke="currentColor"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -188,7 +183,7 @@ export default function SignupChoicePage() {
                 </div>
                 <div className="text-left">
                   <h3 className="font-bold text-lg">Use Base Profile</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Import from BaseApp</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Import from Base.app</p>
                 </div>
               </div>
               {checking ? (
