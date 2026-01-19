@@ -1,23 +1,31 @@
-
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useCapabilities, useWriteContracts } from 'wagmi/experimental';
 import { useRouter } from 'next/navigation';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Heart, Loader2, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Heart, Loader2, CheckCircle, AlertTriangle, RefreshCw, Zap } from 'lucide-react';
+import { base } from 'wagmi/chains';
 
-const TX_TIMEOUT = 120000; // 2 minutes for Base mainnet
+const TX_TIMEOUT = 90000; // 90 seconds for Base mainnet
 
 export default function WalletMintPage() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
+  
+  // Check for paymaster capabilities
+  const { data: availableCapabilities } = useCapabilities({
+    account: address,
+  });
+  
   const { writeContract, data: hash, isPending, error: writeError, reset } = useWriteContract();
+  
+  // OPTIMIZED: Reduced polling interval from 3s to 1s for faster confirmation
   const { isLoading: isConfirming, isSuccess, error: confirmError } = useWaitForTransactionReceipt({ 
     hash,
-    pollingInterval: 3_000,
+    pollingInterval: 1_000, // 1 second polling
   });
 
   const [mintData, setMintData] = useState<any>(null);
@@ -26,6 +34,22 @@ export default function WalletMintPage() {
   const [mintStep, setMintStep] = useState<'idle' | 'signing' | 'confirming' | 'success' | 'failed'>('idle');
   const [canRetry, setCanRetry] = useState(false);
   const [recoveryAttempted, setRecoveryAttempted] = useState(false);
+  const [paymasterAvailable, setPaymasterAvailable] = useState(false);
+
+  // Check if paymaster is available
+  useEffect(() => {
+    if (availableCapabilities && availableCapabilities[base.id]) {
+      const capabilities = availableCapabilities[base.id];
+      const hasPaymaster = capabilities?.paymasterService?.supported || false;
+      setPaymasterAvailable(hasPaymaster);
+      
+      if (hasPaymaster) {
+        console.log('✅ Paymaster available - Gas-free minting enabled!');
+      } else {
+        console.log('⚠️ Paymaster not available - User will pay gas');
+      }
+    }
+  }, [availableCapabilities]);
 
   // Track minting progress
   useEffect(() => {
@@ -43,9 +67,8 @@ export default function WalletMintPage() {
   useEffect(() => {
     if (hash && isConfirming && !isSuccess) {
       const timer = setTimeout(() => {
-        setError('Transaction timeout. Check BaseScan or click Retry.');
-        setMintStep('failed');
-        setCanRetry(true);
+        setError('Transaction is taking longer than expected. Check BaseScan or wait a bit more.');
+        setCanRetry(false); // Don't allow retry while tx is still pending
       }, TX_TIMEOUT);
       return () => clearTimeout(timer);
     }
@@ -190,12 +213,12 @@ export default function WalletMintPage() {
       setTimeout(() => {
         console.log('🔄 Redirecting to dashboard...');
         router.push('/');
-      }, 2500);
+      }, 2000);
     }
   }, [isSuccess, address, hash, router]);
 
   // ============================================
-  // MINT HANDLER
+  // MINT HANDLER WITH PAYMASTER SUPPORT
   // ============================================
   const handleMint = async () => {
     if (!mintData?.registerWithWalletPayload) {
@@ -210,12 +233,21 @@ export default function WalletMintPage() {
     try {
       const payload = mintData.registerWithWalletPayload;
 
-      console.log(' Initiating mint with payload:', {
+      console.log('🚀 Initiating mint with payload:', {
         name: payload.name,
         birthYear: payload.birthYear,
         gender: payload.gender,
         hasPhoto: !!payload.photoUrl,
+        paymasterEnabled: paymasterAvailable,
       });
+
+      // Prepare capabilities for paymaster
+      const capabilities: any = {};
+      
+      if (paymasterAvailable && availableCapabilities?.[base.id]) {
+        capabilities.paymasterService = availableCapabilities[base.id].paymasterService;
+        console.log('⚡ Using paymaster for gas-free transaction');
+      }
 
       writeContract({
         address: CONTRACTS.PROFILE_NFT as `0x${string}`,
@@ -228,6 +260,8 @@ export default function WalletMintPage() {
           payload.interests,
           payload.photoUrl || '',
         ],
+        // Add capabilities if paymaster is available
+        ...(paymasterAvailable && { capabilities }),
       });
     } catch (err) {
       console.error('❌ Mint error:', err);
@@ -289,7 +323,7 @@ export default function WalletMintPage() {
             mintStep === 'success' ? 'text-gray-600 dark:text-gray-400' :
             'text-gray-500 dark:text-gray-500'
           }`}>
-            Confirming on blockchain
+            Confirming on blockchain (~10-15s)
           </span>
         </div>
 
@@ -388,7 +422,7 @@ export default function WalletMintPage() {
           </div>
           <button
             onClick={() => router.push('/')}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity shadow-lg"
           >
             Go Back
           </button>
@@ -425,7 +459,7 @@ export default function WalletMintPage() {
           <p className="text-gray-700 dark:text-gray-300 mb-6">{error || 'No registration data found'}</p>
           <button
             onClick={() => router.push('/register/wallet/complete')}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity shadow-lg"
           >
             Back to Registration
           </button>
@@ -470,6 +504,13 @@ export default function WalletMintPage() {
           </div>
         )}
 
+        {paymasterAvailable && mintStep === 'idle' && (
+          <div className="bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded-lg mb-6 flex items-center justify-center gap-2">
+            <Zap className="w-5 h-5" />
+            <span className="font-semibold">Gas-Free Minting Enabled!</span>
+          </div>
+        )}
+
         {isSuccess ? (
           <div className="text-center py-8">
             <p className="text-4xl mb-4">🎉</p>
@@ -493,7 +534,9 @@ export default function WalletMintPage() {
             ) : (
               <>
                 <p className="text-gray-700 dark:text-gray-300 mb-2">Ready to mint your BaseMatch profile NFT?</p>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">This will create your on-chain profile.</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
+                  This will create your on-chain profile{paymasterAvailable ? ' for free!' : '.'}
+                </p>
               </>
             )}
 
@@ -505,6 +548,16 @@ export default function WalletMintPage() {
                   <p><span className="font-medium">Name:</span> {mintData.registerWithWalletPayload.name}</p>
                   <p><span className="font-medium">Age:</span> {new Date().getFullYear() - mintData.registerWithWalletPayload.birthYear}</p>
                   <p><span className="font-medium">Gender:</span> {mintData.registerWithWalletPayload.gender}</p>
+                  {mintData.registerWithWalletPayload.photoUrl && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="font-medium">Avatar:</span>
+                      <img 
+                        src={mintData.registerWithWalletPayload.photoUrl} 
+                        alt="Profile" 
+                        className="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-600"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -513,19 +566,20 @@ export default function WalletMintPage() {
             <button
               onClick={canRetry ? handleRetry : handleMint}
               disabled={isPending || isConfirming || (mintStep !== 'idle' && mintStep !== 'failed')}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
             >
               {canRetry && <RefreshCw className="w-5 h-5" />}
+              {paymasterAvailable && mintStep === 'idle' && !canRetry && <Zap className="w-5 h-5" />}
               {isPending ? 'Waiting for signature...' : 
                isConfirming ? 'Confirming on blockchain...' : 
                canRetry ? 'Retry Mint' :
-               '✨ Mint Profile NFT'}
+               paymasterAvailable ? '⚡ Mint Profile NFT (Free)' : '✨ Mint Profile NFT'}
             </button>
 
             {mintStep === 'idle' && (
               <button
                 onClick={() => router.push('/register/wallet/complete')}
-                className="w-full mt-4 bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-semibold hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
+                className="w-full mt-4 bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-semibold hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors shadow-md"
               >
                 ← Back to Edit
               </button>
