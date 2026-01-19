@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
-import { Heart, Loader2, Edit3 } from 'lucide-react';
+import { Heart, Loader2, Edit3, ChevronRight } from 'lucide-react';
 import { SiFarcaster } from 'react-icons/si';
 
 export default function SignupChoicePage() {
