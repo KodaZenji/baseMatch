@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     }
 
     const neynarClient = new NeynarAPIClient({
-      apiKey: process.env.NEYNAR_API_KEY
+      apiKey: process.env.NEYNAR_API_KEY!
     });
 
     // Fetch by wallet address
