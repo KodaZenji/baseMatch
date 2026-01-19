@@ -145,9 +145,9 @@ function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
       >
         <div className="p-6">
           <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
+  onClick={onClose}
+  className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors z-10"
+>
             <X className="w-6 h-6 text-gray-600 dark:text-gray-300" />
           </button>
 
@@ -206,6 +206,10 @@ export default function Home() {
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+  setIsMenuOpen(false);
+}, []);
 
   const { unreadCount } = useNotifications({
     userAddress: address,
