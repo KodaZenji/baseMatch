@@ -22,13 +22,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         setMounted(true);
 
-        // Validate environment variables on startup
         const envValidation = validateEnvironment();
         if (!envValidation.isValid) {
             console.error('Critical environment variables missing. Please check your .env.local file.');
         }
 
-        // Initialize Farcaster Mini App SDK
         const initMiniApp = async () => {
             try {
                 await sdk.actions.ready();
@@ -51,10 +49,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <DarkModeProvider>
                 <WagmiProvider config={config}>
                     <QueryClientProvider client={queryClient}>
-                        <OnchainKitProvider
-                            chain={base}
-                            
-                        >
+                        <OnchainKitProvider chain={base}>
                             <RainbowKitProvider
                                 initialChain={base}
                                 theme={darkTheme({
