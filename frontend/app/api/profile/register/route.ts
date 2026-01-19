@@ -8,9 +8,19 @@ const PROFILE_NFT_ADDRESS = process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { address, name, birthYear, gender, interests, email, photoUrl, farcasterVerified } = body;
+    const { 
+      address, 
+      name, 
+      birthYear, 
+      gender, 
+      interests, 
+      email, 
+      photoUrl, 
+      farcasterVerified,
+      profileSource 
+    } = body;
 
-    console.log('📥 Registration request');
+    console.log('📥 Registration request:', { profileSource, photoUrl });
 
     if (!address || !name || !birthYear || !gender || !interests) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -19,7 +29,7 @@ export async function POST(request: NextRequest) {
     const normalizedAddress = address.toLowerCase();
     const normalizedEmail = email?.toLowerCase().trim() || null;
 
-    // Validate birth year to ensure age is between 18 and 120
+    // Validate birth year
     const currentYear = new Date().getFullYear();
     const calculatedAge = currentYear - birthYear;
     if (calculatedAge < 18 || calculatedAge > 120) {
@@ -36,26 +46,41 @@ export async function POST(request: NextRequest) {
     let profileId: string;
 
     if (existingProfile) {
-      // Update existing
+      
+      const updateData: any = {
+        wallet_verified: true,
+        farcaster_verified: farcasterVerified || false,
+        name,
+        birthYear,
+        gender,
+        interests,
+        email: normalizedEmail,
+        updated_at: new Date().toISOString(),
+      };
+
+  
+      if (photoUrl && photoUrl !== existingProfile.photoUrl) {
+        updateData.photoUrl = photoUrl;
+        console.log('📸 Updating photo:', photoUrl);
+      } else {
+        console.log('📸 Preserving existing photo:', existingProfile.photoUrl);
+      }
+
+      
+      if (profileSource && !existingProfile.profile_source) {
+        updateData.profile_source = profileSource;
+        console.log('✅ Setting profile_source:', profileSource);
+      }
+
       await supabaseService
         .from('profiles')
-        .update({
-          wallet_verified: true,
-          farcaster_verified: farcasterVerified || false,
-          name,
-          birthYear,
-          gender,
-          interests,
-          email: normalizedEmail,
-          photoUrl,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', existingProfile.id);
 
       profileId = existingProfile.id;
-      console.log('✅ Profile updated with Farcaster status:', farcasterVerified);
+      console.log('✅ Profile updated, photo preserved');
     } else {
-      // Create new
+      // Create new profile
       const { data: newProfile } = await supabaseService
         .from('profiles')
         .insert([{
@@ -63,6 +88,7 @@ export async function POST(request: NextRequest) {
           wallet_verified: true,
           email_verified: false,
           farcaster_verified: farcasterVerified || false,
+          profile_source: profileSource || 'manual', 
           name,
           birthYear,
           gender,
@@ -76,7 +102,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       profileId = newProfile!.id;
-      console.log('✅ Profile created with Farcaster status:', farcasterVerified);
+      console.log('✅ New profile created with source:', profileSource);
     }
 
     return NextResponse.json({
@@ -89,6 +115,7 @@ export async function POST(request: NextRequest) {
         email: normalizedEmail,
         walletAddress: normalizedAddress,
         farcasterVerified: farcasterVerified || false,
+        profileSource: profileSource || 'manual',
       },
     });
   } catch (error) {
