@@ -18,7 +18,6 @@ export async function POST(request: Request) {
       apiKey: process.env.NEYNAR_API_KEY 
     });
 
-    // Fix: Pass an object with addresses property
     const result = await neynarClient.fetchBulkUsersByEthOrSolAddress({
       addresses: [address.toLowerCase()]
     });
@@ -27,13 +26,19 @@ export async function POST(request: Request) {
 
     if (users && users.length > 0) {
       const user = users[0];
+      
+      
+      const photoUrl = user.pfp_url || user.pfp?.url || '';
+      
       return NextResponse.json({
         exists: true,
         profile: {
           fid: user.fid,
           username: user.username,
-          displayName: user.display_name,
-          pfp: user.pfp_url,
+          displayName: user.display_name || user.username,
+          photoUrl, // 
+          pfp_url: photoUrl, // Also included for backwards compatibility
+          pfp: photoUrl,
           bio: user.profile?.bio?.text || '',
           followerCount: user.follower_count || 0,
         },
