@@ -129,25 +129,43 @@ function ExploreMenu({ isOpen, onClose, setActiveTab }: {
 
 // Landing Menu (Not Connected)
 function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  // Prevent any automatic opening
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
   return (
     <>
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity"
-          onClick={onClose}
-        />
-      )}
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+      />
       
       <div
-        className={`fixed top-0 right-0 h-full w-72 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className="fixed top-0 right-0 h-full w-72 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl shadow-2xl z-50 transform transition-transform duration-300 ease-in-out translate-x-0"
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6">
+        <div className="p-6 relative">
           <button
-  onClick={onClose}
-  className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors z-10"
->
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors z-50"
+            type="button"
+          >
             <X className="w-6 h-6 text-gray-600 dark:text-gray-300" />
           </button>
 
@@ -167,19 +185,18 @@ function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
               </div>
             </a>
 
-          <a
-  href="https://discord.gg/vF7bZWhJ85"
-  target="_blank"
-  rel="noopener noreferrer"
-  className="flex items-center gap-3 p-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700"
->
-  <FaDiscord className="w-5 h-5" />
-  <div>          
-  <div className="font-semibold">Join the Community</div>
-    <div className="text-xs text-gray-500 dark:text-gray-400">BaseMatch Discord</div>
-  </div>
-</a>
-                 
+            <a
+              href="https://discord.gg/vF7bZWhJ85"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 p-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700"
+            >
+              <FaDiscord className="w-5 h-5" />
+              <div>          
+                <div className="font-semibold">Join the Community</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">BaseMatch Discord</div>
+              </div>
+            </a>
           </nav>
         </div>
       </div>
