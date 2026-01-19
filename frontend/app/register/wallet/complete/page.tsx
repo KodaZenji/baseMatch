@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Heart, User, CheckCircle2 } from 'lucide-react';
+import { Heart, User, CheckCircle2, Loader2 } from 'lucide-react';
 
 function CompleteProfileContent() {
     const router = useRouter();
