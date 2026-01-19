@@ -1,3 +1,5 @@
+
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -5,129 +7,218 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagm
 import { useRouter } from 'next/navigation';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Heart, Loader2, CheckCircle } from 'lucide-react';
+import { Heart, Loader2, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
+
+const TX_TIMEOUT = 120000; // 2 minutes for Base mainnet
 
 export default function WalletMintPage() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
-  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
+  const { writeContract, data: hash, isPending, error: writeError, reset } = useWriteContract();
   const { isLoading: isConfirming, isSuccess, error: confirmError } = useWaitForTransactionReceipt({ 
     hash,
-    pollingInterval: 1_000, // Poll every 1 second - KEY OPTIMIZATION
+    pollingInterval: 3_000,
   });
 
   const [mintData, setMintData] = useState<any>(null);
   const [error, setError] = useState('');
-  const [isMinting, setIsMinting] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
-  const [mintStep, setMintStep] = useState<'idle' | 'signing' | 'confirming' | 'success'>('idle');
+  const [mintStep, setMintStep] = useState<'idle' | 'signing' | 'confirming' | 'success' | 'failed'>('idle');
+  const [canRetry, setCanRetry] = useState(false);
+  const [recoveryAttempted, setRecoveryAttempted] = useState(false);
 
   // Track minting progress
   useEffect(() => {
     if (isPending) {
       setMintStep('signing');
-    } else if (isConfirming) {
+      setCanRetry(false);
+    } else if (isConfirming && hash) {
       setMintStep('confirming');
     } else if (isSuccess) {
       setMintStep('success');
     }
-  }, [isPending, isConfirming, isSuccess]);
+  }, [isPending, isConfirming, isSuccess, hash]);
+
+  // Transaction timeout handler
+  useEffect(() => {
+    if (hash && isConfirming && !isSuccess) {
+      const timer = setTimeout(() => {
+        setError('Transaction timeout. Check BaseScan or click Retry.');
+        setMintStep('failed');
+        setCanRetry(true);
+      }, TX_TIMEOUT);
+      return () => clearTimeout(timer);
+    }
+  }, [hash, isConfirming, isSuccess]);
 
   // Handle errors
   useEffect(() => {
-    if (writeError || confirmError) {
-      setError((writeError || confirmError)?.message || 'Transaction failed');
-      setIsMinting(false);
-      setMintStep('idle');
+    const err = writeError || confirmError;
+    if (err) {
+      const msg = err.message || 'Transaction failed';
+      
+      if (msg.includes('User rejected') || msg.includes('denied') || msg.includes('cancelled')) {
+        setError('Transaction cancelled. Click "Retry Mint" to try again.');
+      } else if (msg.includes('insufficient funds')) {
+        setError('Insufficient ETH for gas fees. Please add ETH to your wallet.');
+      } else {
+        setError(msg);
+      }
+      
+      setMintStep('failed');
+      setCanRetry(true);
     }
   }, [writeError, confirmError]);
 
-  // --- EFFECT: Check Profile Status and Load Data ---
+  // ============================================
+  // CRITICAL: Check status and recover data
+  // ============================================
   useEffect(() => {
     if (!address) {
       setIsCheckingStatus(false);
-      setMintData(null);
       return;
     }
 
-    const checkAndLoadData = async () => {
+    const checkAndRecover = async () => {
       setIsCheckingStatus(true);
 
       try {
-        // Check if the user already has an NFT
-        const response = await fetch('/api/profile/status', {
+        console.log('🔍 Checking profile status for:', address);
+
+        // Step 1: Check if NFT already exists on blockchain
+        const statusRes = await fetch('/api/profile/status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ address }),
         });
 
-        const statusData = await response.json();
-        console.log('📊 Profile status:', statusData);
+        const status = await statusRes.json();
+        console.log('📊 Profile status:', status);
 
-        // Only redirect if they have an NFT on blockchain
-        if (response.ok && statusData.profileExists && statusData.source === 'blockchain') {
-          console.log('✅ User already has NFT, redirecting to dashboard');
+        // If NFT exists on blockchain, redirect to home
+        if (statusRes.ok && status.profileExists && status.source === 'blockchain') {
+          console.log('✅ NFT already minted, redirecting to dashboard...');
+          localStorage.removeItem('walletFirstMint');
           router.push('/');
           return;
         }
 
-        // Load wallet registration data from localStorage
-        const walletReg = localStorage.getItem('walletFirstMint');
+        // Step 2: Try to load from localStorage first
+        const storedData = localStorage.getItem('walletFirstMint');
+        
+        if (storedData) {
+          try {
+            const data = JSON.parse(storedData);
+            console.log('✅ Loaded mint data from localStorage');
+            setMintData(data);
+            setError('');
+            setIsCheckingStatus(false);
+            return;
+          } catch (parseError) {
+            console.error('❌ Failed to parse localStorage data:', parseError);
+            localStorage.removeItem('walletFirstMint');
+          }
+        }
 
-        if (walletReg) {
-          const data = JSON.parse(walletReg);
-          console.log('✅ Loaded wallet mint data:', data);
-          setMintData(data);
-          setError('');
+        // Step 3: CRITICAL - Recover from database if localStorage is missing
+        if (status.profileExists && status.source === 'database' && !status.hasNFT) {
+          console.log('🔄 No localStorage found, attempting database recovery...');
+          
+          const profileRes = await fetch('/api/profile/get', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address }),
+          });
+
+          if (profileRes.ok) {
+            const { profile } = await profileRes.json();
+
+            if (profile && profile.wallet_address) {
+              console.log('✅ Profile recovered from database:', profile);
+
+              // Reconstruct mint data
+              const recoveredData = {
+                profile_id: profile.id,
+                id: profile.id,
+                address: profile.wallet_address,
+                email: profile.email,
+                registerWithWalletPayload: {
+                  name: profile.name,
+                  birthYear: profile.birthYear,
+                  gender: profile.gender,
+                  interests: profile.interests,
+                  photoUrl: profile.photoUrl || '',
+                },
+                contractAddress: CONTRACTS.PROFILE_NFT,
+              };
+
+              // Save back to localStorage
+              localStorage.setItem('walletFirstMint', JSON.stringify(recoveredData));
+              
+              setMintData(recoveredData);
+              setError('');
+              setRecoveryAttempted(true);
+              console.log('✅ Mint data recovered and saved to localStorage');
+            } else {
+              throw new Error('Profile data incomplete');
+            }
+          } else {
+            throw new Error('Failed to fetch profile from database');
+          }
         } else {
-          console.error('❌ No wallet registration data found');
-          setError('No registration data found. Please complete your profile first.');
+          // No profile found anywhere
+          setError('No registration data found. Please complete registration first.');
         }
 
       } catch (err) {
-        console.error('❌ Error checking status:', err);
-        setError('Failed to check profile status. Please try again.');
+        console.error('❌ Error during status check/recovery:', err);
+        setError('Failed to load profile data. Please try registering again or contact support.');
       } finally {
         setIsCheckingStatus(false);
       }
     };
 
-    checkAndLoadData();
+    checkAndRecover();
   }, [address, router]);
 
-  // --- EFFECT: Handle Successful Mint ---
+  // Success handler - cleanup and redirect
   useEffect(() => {
-    if (isSuccess && address) {
-      console.log('🎉 Mint successful!');
-
-      // Clear registration data
+    if (isSuccess && address && hash) {
+      console.log('🎉 Mint successful! Transaction:', hash);
       localStorage.removeItem('walletFirstMint');
-
-      // Redirect after a short delay
+      
       setTimeout(() => {
         console.log('🔄 Redirecting to dashboard...');
         router.push('/');
-      }, 2000);
+      }, 2500);
     }
-  }, [isSuccess, address, router]);
+  }, [isSuccess, address, hash, router]);
 
-  // --- MINT HANDLER ---
+  // ============================================
+  // MINT HANDLER
+  // ============================================
   const handleMint = async () => {
     if (!mintData?.registerWithWalletPayload) {
-      setError('No minting data available');
+      setError('No minting data available. Please complete registration first.');
       return;
     }
 
     setError('');
-    setIsMinting(true);
+    setCanRetry(false);
+    reset(); // Clear previous transaction state
 
     try {
       const payload = mintData.registerWithWalletPayload;
 
-      console.log('🚀 Minting with payload:', payload);
+      console.log(' Initiating mint with payload:', {
+        name: payload.name,
+        birthYear: payload.birthYear,
+        gender: payload.gender,
+        hasPhoto: !!payload.photoUrl,
+      });
 
       writeContract({
-        address: (mintData.contractAddress || CONTRACTS.PROFILE_NFT) as `0x${string}`,
+        address: CONTRACTS.PROFILE_NFT as `0x${string}`,
         abi: PROFILE_NFT_ABI,
         functionName: 'createProfile',
         args: [
@@ -140,25 +231,46 @@ export default function WalletMintPage() {
       });
     } catch (err) {
       console.error('❌ Mint error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to mint profile');
-      setIsMinting(false);
+      setError(err instanceof Error ? err.message : 'Failed to initiate mint transaction');
+      setMintStep('failed');
+      setCanRetry(true);
     }
   };
 
-  // --- RENDER HELPERS ---
+  // ============================================
+  // RETRY HANDLER
+  // ============================================
+  const handleRetry = () => {
+    console.log('🔄 Retrying mint...');
+    setError('');
+    setCanRetry(false);
+    reset();
+    handleMint();
+  };
+
+  // ============================================
+  // UI COMPONENTS
+  // ============================================
   const MintStepIndicator = () => (
     <div className="bg-gradient-to-br from-blue-50/50 to-purple-50/50 dark:from-blue-900/10 dark:to-purple-900/10 rounded-2xl p-6 mb-6 border border-blue-200/30 dark:border-blue-500/20">
       <div className="space-y-4">
-        {/* Step 1: Sign Transaction */}
+        {/* Step 1: Sign transaction */}
         <div className="flex items-center gap-3">
           {mintStep === 'signing' ? (
             <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin" />
-          ) : mintStep === 'confirming' || mintStep === 'success' ? (
+          ) : (mintStep === 'confirming' || mintStep === 'success') ? (
             <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+          ) : mintStep === 'failed' ? (
+            <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
           ) : (
             <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600" />
           )}
-          <span className={`font-medium ${mintStep === 'signing' ? 'text-blue-600 dark:text-blue-400' : mintStep === 'confirming' || mintStep === 'success' ? 'text-gray-600 dark:text-gray-400' : 'text-gray-500 dark:text-gray-500'}`}>
+          <span className={`font-medium ${
+            mintStep === 'signing' ? 'text-blue-600 dark:text-blue-400' : 
+            mintStep === 'failed' ? 'text-red-600 dark:text-red-400' :
+            (mintStep === 'confirming' || mintStep === 'success') ? 'text-gray-600 dark:text-gray-400' :
+            'text-gray-500 dark:text-gray-500'
+          }`}>
             Sign transaction in wallet
           </span>
         </div>
@@ -172,19 +284,25 @@ export default function WalletMintPage() {
           ) : (
             <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600" />
           )}
-          <span className={`font-medium ${mintStep === 'confirming' ? 'text-blue-600 dark:text-blue-400' : mintStep === 'success' ? 'text-gray-600 dark:text-gray-400' : 'text-gray-500 dark:text-gray-500'}`}>
+          <span className={`font-medium ${
+            mintStep === 'confirming' ? 'text-blue-600 dark:text-blue-400' : 
+            mintStep === 'success' ? 'text-gray-600 dark:text-gray-400' :
+            'text-gray-500 dark:text-gray-500'
+          }`}>
             Confirming on blockchain
           </span>
         </div>
 
-        {/* Step 3: Success */}
+        {/* Step 3: Profile created */}
         <div className="flex items-center gap-3">
           {mintStep === 'success' ? (
             <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
           ) : (
             <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600" />
           )}
-          <span className={`font-medium ${mintStep === 'success' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-500'}`}>
+          <span className={`font-medium ${
+            mintStep === 'success' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-500'
+          }`}>
             Profile created!
           </span>
         </div>
@@ -205,8 +323,9 @@ export default function WalletMintPage() {
     </div>
   );
 
-  // --- RENDER LOGIC ---
-
+  // ============================================
+  // LOADING STATE
+  // ============================================
   if (isCheckingStatus) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
@@ -238,6 +357,9 @@ export default function WalletMintPage() {
     );
   }
 
+  // ============================================
+  // NOT CONNECTED
+  // ============================================
   if (!isConnected) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
@@ -275,6 +397,9 @@ export default function WalletMintPage() {
     );
   }
 
+  // ============================================
+  // NO MINT DATA
+  // ============================================
   if (!mintData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
@@ -309,7 +434,9 @@ export default function WalletMintPage() {
     );
   }
 
-  // Main mint screen
+  // ============================================
+  // MAIN MINT SCREEN
+  // ============================================
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
       <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-2xl w-full text-center border border-gray-200 dark:border-gray-700">
@@ -334,6 +461,12 @@ export default function WalletMintPage() {
         {error && (
           <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-6">
             {error}
+          </div>
+        )}
+
+        {recoveryAttempted && !error && (
+          <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-400 dark:border-blue-800 text-blue-700 dark:text-blue-300 px-4 py-3 rounded-lg mb-6">
+            ✅ Profile data recovered from database successfully!
           </div>
         )}
 
@@ -364,7 +497,7 @@ export default function WalletMintPage() {
               </>
             )}
 
-            {/* Show preview of data being minted */}
+            {/* Preview */}
             {mintData?.registerWithWalletPayload && mintStep === 'idle' && (
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 mb-6 text-left border border-gray-200 dark:border-gray-700">
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Profile Preview:</p>
@@ -376,15 +509,20 @@ export default function WalletMintPage() {
               </div>
             )}
 
+            {/* Mint Button */}
             <button
-              onClick={handleMint}
-              disabled={isPending || isConfirming || isMinting}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+              onClick={canRetry ? handleRetry : handleMint}
+              disabled={isPending || isConfirming || (mintStep !== 'idle' && mintStep !== 'failed')}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2"
             >
-              {isPending ? 'Waiting for signature...' : isConfirming ? 'Confirming on blockchain...' : isMinting ? 'Minting...' : '✨ Mint Profile NFT'}
+              {canRetry && <RefreshCw className="w-5 h-5" />}
+              {isPending ? 'Waiting for signature...' : 
+               isConfirming ? 'Confirming on blockchain...' : 
+               canRetry ? 'Retry Mint' :
+               '✨ Mint Profile NFT'}
             </button>
 
-            {!isMinting && (
+            {mintStep === 'idle' && (
               <button
                 onClick={() => router.push('/register/wallet/complete')}
                 className="w-full mt-4 bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-xl font-semibold hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
