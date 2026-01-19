@@ -3,6 +3,7 @@ import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { getName, getAvatar } from '@coinbase/onchainkit/identity';
 import { normalize } from 'viem/ens';
+import { getAvatarUrl } from '@/lib/avatarStorage';
 
 const L2_RESOLVER_ADDRESS = '0xC6d566A56A1aFf6508b41f6c90ff131615583BCD';
 
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
         }
       }
 
-      // STEP 2: Get Basename from base-org/accounts ONLY (NOT .eth)
+      // STEP 2: Get Basename from base-org/accounts ONLY
       const basename = await getName({ address: address as `0x${string}`, chain: base });
 
       if (basename) {
@@ -71,14 +72,25 @@ export async function POST(request: Request) {
         
         console.log('✅ Basename found:', basename);
 
-        // STEP 3: Get Base Account avatar using OnchainKit
+        // STEP 3: Get Base Account avatar and cache to Supabase
         let avatarUrl = '';
+        let rawAvatarUrl = '';
         try {
           const fetchedAvatar = await getAvatar({ ensName: basename, chain: base });
-          avatarUrl = fetchedAvatar || '';
-          console.log('🖼️ Base Account avatar:', avatarUrl ? '✅ Found' : '❌ None (will use dicebear fallback)');
+          rawAvatarUrl = fetchedAvatar || '';
+          
+          if (rawAvatarUrl) {
+            // ✅ Download from IPFS and cache to Supabase Storage
+            avatarUrl = await getAvatarUrl(rawAvatarUrl);
+            
+            console.log('🖼️ Base Account avatar processed!');
+            console.log('   Raw IPFS URL:', rawAvatarUrl);
+            console.log('   Supabase URL:', avatarUrl);
+          } else {
+            console.log('❌ No avatar found (will use dicebear fallback)');
+          }
         } catch (error) {
-          console.log('⚠️ No avatar found for basename, will fallback to dicebear');
+          console.log('⚠️ Error fetching avatar:', error);
         }
 
         // STEP 4: Get text records from Base Account
@@ -129,10 +141,10 @@ export async function POST(request: Request) {
             }).catch(() => ''),
           ]);
 
-          console.log('📝 Base Account data fetched:', { 
+          console.log('📝 Base Account data:', { 
             bio: bio ? '✅' : '❌',
             displayName: displayName ? '✅' : '❌',
-            avatar: avatarUrl ? '✅' : '❌ (dicebear fallback)'
+            avatar: avatarUrl ? '✅ (cached in Supabase)' : '❌'
           });
         } catch (error) {
           console.log('⚠️ Could not fetch text records:', error);
@@ -146,14 +158,14 @@ export async function POST(request: Request) {
             basename: basename,
             username: username,
             displayName: displayName || username,
-            bio: bio, // Maps to interests in frontend
+            bio: bio,
             description: bio,
             address,
-            // Avatar fields - Base Account avatar OR empty (dicebear fallback in frontend)
+            // Avatar URLs - Supabase Storage URL (faster, cached)
             avatar: avatarUrl,
+            photoUrl: avatarUrl,
             pfp: avatarUrl,
             pfp_url: avatarUrl,
-            photoUrl: avatarUrl,
             twitter: twitter,
             github: github,
             email: email,
@@ -165,7 +177,7 @@ export async function POST(request: Request) {
 
       // STEP 5: Base Account without Basename
       if (isSmartWallet || isBaseAccount) {
-        console.log('✅ Base Account detected without Basename (no avatar, will use dicebear)');
+        console.log('✅ Base Account detected without Basename');
         
         return NextResponse.json({
           exists: true,
@@ -177,11 +189,10 @@ export async function POST(request: Request) {
             bio: '',
             description: '',
             address,
-            // No avatar - dicebear will be used as fallback
             avatar: '',
+            photoUrl: '',
             pfp: '',
             pfp_url: '',
-            photoUrl: '',
             twitter: '',
             github: '',
             email: '',
