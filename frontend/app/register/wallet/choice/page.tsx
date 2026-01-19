@@ -7,7 +7,7 @@ import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { Heart, Loader2, Edit3 } from 'lucide-react';
 import { SiFarcaster } from 'react-icons/si';
-import sdk from '@farcaster/miniapp-sdk'; // ✅ UPDATED IMPORT
+import sdk from '@farcaster/miniapp-sdk';
 
 export default function SignupChoicePage() {
   const router = useRouter();
@@ -45,11 +45,9 @@ export default function SignupChoicePage() {
       const data = await response.json();
 
       if (data.exists && data.profile) {
-        // Found Farcaster - store and redirect
         localStorage.setItem('farcasterProfile', JSON.stringify(data.profile));
         router.push('/register/wallet/complete?source=farcaster');
       } else {
-        // No Farcaster found - silently revert to manual
         router.push('/register/wallet/complete');
       }
     } catch (error) {
@@ -63,7 +61,7 @@ export default function SignupChoicePage() {
     setError('');
 
     try {
-      // ✅ NEW: Get Base Mini App context
+      // Check if running in Base Mini App
       const context = await sdk.context;
       
       console.log('🔍 Mini App Context:', context);
@@ -89,29 +87,13 @@ export default function SignupChoicePage() {
         console.log('📦 Storing Mini App profile:', miniAppProfile);
         localStorage.setItem('baseAppProfile', JSON.stringify(miniAppProfile));
         router.push('/register/wallet/complete?source=miniapp');
-        return;
-      }
-
-      // Fallback: Try to get basename from blockchain
-      console.log('⚠️ Not in Mini App context, checking basename...');
-      const response = await fetch('/api/check-baseapp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address }),
-      });
-
-      const data = await response.json();
-
-      if (data.exists && data.profile) {
-        // Found Base App profile
-        localStorage.setItem('baseAppProfile', JSON.stringify(data.profile));
-        router.push('/register/wallet/complete?source=baseapp');
       } else {
-        // No Base App profile - silently revert to manual
+        // Not in Mini App context - go to manual entry
+        console.log('⚠️ Not in Mini App context, redirecting to manual entry');
         router.push('/register/wallet/complete');
       }
     } catch (error) {
-      console.error('Error checking Base App:', error);
+      console.error('Error checking Base Mini App:', error);
       router.push('/register/wallet/complete');
     } finally {
       setChecking(false);
@@ -193,7 +175,7 @@ export default function SignupChoicePage() {
             </div>
           </button>
 
-          {/* Base App / Basename Option */}
+          {/* Base Mini App Option */}
           <button
             onClick={handleBaseAppSignup}
             disabled={checking}
@@ -206,7 +188,7 @@ export default function SignupChoicePage() {
                 </div>
                 <div className="text-left">
                   <h3 className="font-bold text-lg">Use Base Profile</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Import from Base.app or Basename</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Import from Baseapp</p>
                 </div>
               </div>
               {checking ? (
@@ -217,7 +199,7 @@ export default function SignupChoicePage() {
             </div>
           </button>
 
-          {/* Manual Option - Minimalist glass */}
+          {/* Manual Option */}
           <button
             onClick={handleManualSignup}
             disabled={checking}
