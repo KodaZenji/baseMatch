@@ -3,12 +3,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
+import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { config } from '@/lib/wagmi';
 import { validateEnvironment } from '@/lib/validateEnv';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { DarkModeProvider } from '@/components/DarkModeProvider';
 import { base } from 'wagmi/chains';
 import '@rainbow-me/rainbowkit/styles.css';
+import '@coinbase/onchainkit/styles.css'; 
 import { useState, useEffect } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
 
@@ -30,10 +32,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
         const initMiniApp = async () => {
             try {
                 await sdk.actions.ready();
-                console.log('Farcaster Mini App SDK initialized');
-                console.log('Expected network: Base Mainnet (Chain ID: 8453)');
+                console.log('✅ Farcaster Mini App SDK initialized');
+                console.log('🌐 Expected network: Base Mainnet (Chain ID: 8453)');
             } catch (error) {
-                console.error('Failed to initialize Mini App SDK:', error);
+                console.error('❌ Failed to initialize Mini App SDK:', error);
             }
         };
 
@@ -49,16 +51,21 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <DarkModeProvider>
                 <WagmiProvider config={config}>
                     <QueryClientProvider client={queryClient}>
-                        <RainbowKitProvider
-                            initialChain={base}
-                            theme={darkTheme({
-                                accentColor: '#FF1493',
-                                accentColorForeground: 'white',
-                                borderRadius: 'large',
-                            })}
+                        <OnchainKitProvider
+                            chain={base}
+                            
                         >
-                            {children}
-                        </RainbowKitProvider>
+                            <RainbowKitProvider
+                                initialChain={base}
+                                theme={darkTheme({
+                                    accentColor: '#FF1493',
+                                    accentColorForeground: 'white',
+                                    borderRadius: 'large',
+                                })}
+                            >
+                                {children}
+                            </RainbowKitProvider>
+                        </OnchainKitProvider>
                     </QueryClientProvider>
                 </WagmiProvider>
             </DarkModeProvider>
