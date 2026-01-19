@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@farcaster/miniapp-sdk": "^0.1.0",
+    "@coinbase/onchainkit": "^0.36.4",
     "@getbrevo/brevo": "^3.0.1",
     "@neynar/nodejs-sdk": "^2.13.0",
     "@rainbow-me/rainbowkit": "^2.1.0",
