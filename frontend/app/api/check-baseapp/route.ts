@@ -19,9 +19,6 @@ const TEXT_RESOLVER_ABI = [
   },
 ] as const;
 
-// Base Account Contract (ERC-4337 Smart Wallet)
-const BASE_ACCOUNT_FACTORY = '0x0BA5ED0c6AA8c49038F819E587E2633c4A9F428a'; // Base Account Factory
-
 export async function POST(request: Request) {
   try {
     const { address, isBaseAccount } = await request.json();
@@ -44,20 +41,18 @@ export async function POST(request: Request) {
     console.log('🔵 Is Base Account environment:', isBaseAccount);
 
     try {
-      // PRIORITY 1: Check if this is a Base Account (ERC-4337 Smart Wallet)
+      // STEP 1: Check if this is a Base Account (ERC-4337 Smart Wallet)
       let isSmartWallet = false;
       let baseAccountData: any = null;
 
       if (isBaseAccount) {
         try {
-          // Check if address is a smart contract (Base Account indicator)
           const code = await publicClient.getBytecode({ address: address as `0x${string}` });
           isSmartWallet = code !== undefined && code !== '0x';
           
           console.log('✅ Smart Wallet detected:', isSmartWallet);
 
           if (isSmartWallet) {
-            // This is likely a Base Account - prioritize this data
             baseAccountData = {
               isBaseAccount: true,
               accountType: 'smart-wallet',
@@ -68,7 +63,7 @@ export async function POST(request: Request) {
         }
       }
 
-      // PRIORITY 2: Get Basename (if exists)
+      // STEP 2: Get Basename from base-org/accounts ONLY (NOT .eth)
       const basename = await getName({ address: address as `0x${string}`, chain: base });
 
       if (basename) {
@@ -76,15 +71,17 @@ export async function POST(request: Request) {
         
         console.log('✅ Basename found:', basename);
 
-        // Get avatar
+        // STEP 3: Get Base Account avatar using OnchainKit
         let avatarUrl = '';
         try {
-          avatarUrl = await getAvatar({ ensName: basename, chain: base }) || '';
+          const fetchedAvatar = await getAvatar({ ensName: basename, chain: base });
+          avatarUrl = fetchedAvatar || '';
+          console.log('🖼️ Base Account avatar:', avatarUrl ? '✅ Found' : '❌ None (will use dicebear fallback)');
         } catch (error) {
-          console.log('No avatar found for basename');
+          console.log('⚠️ No avatar found for basename, will fallback to dicebear');
         }
 
-        // Get ENS text records from Basename
+        // STEP 4: Get text records from Base Account
         let bio = '';
         let twitter = '';
         let github = '';
@@ -95,7 +92,6 @@ export async function POST(request: Request) {
           const node = normalize(basename);
           const namehash = require('viem/ens').namehash(node);
           
-          // Fetch all available text records
           [bio, twitter, github, email, displayName] = await Promise.all([
             publicClient.readContract({
               address: L2_RESOLVER_ADDRESS,
@@ -133,7 +129,11 @@ export async function POST(request: Request) {
             }).catch(() => ''),
           ]);
 
-          console.log('📝 Text records found:', { bio, twitter, github, email, displayName });
+          console.log('📝 Base Account data fetched:', { 
+            bio: bio ? '✅' : '❌',
+            displayName: displayName ? '✅' : '❌',
+            avatar: avatarUrl ? '✅' : '❌ (dicebear fallback)'
+          });
         } catch (error) {
           console.log('⚠️ Could not fetch text records:', error);
         }
@@ -146,23 +146,26 @@ export async function POST(request: Request) {
             basename: basename,
             username: username,
             displayName: displayName || username,
-            bio: bio,
+            bio: bio, // Maps to interests in frontend
+            description: bio,
             address,
+            // Avatar fields - Base Account avatar OR empty (dicebear fallback in frontend)
+            avatar: avatarUrl,
             pfp: avatarUrl,
             pfp_url: avatarUrl,
             photoUrl: avatarUrl,
             twitter: twitter,
             github: github,
             email: email,
-            // Base Account specific fields
+            isSmartWallet: isSmartWallet,
             ...(baseAccountData || {}),
           },
         });
       }
 
-      // PRIORITY 3: Even without Basename, if it's Base Account, return success
+      // STEP 5: Base Account without Basename
       if (isSmartWallet || isBaseAccount) {
-        console.log('✅ Base Account detected without Basename');
+        console.log('✅ Base Account detected without Basename (no avatar, will use dicebear)');
         
         return NextResponse.json({
           exists: true,
@@ -172,7 +175,10 @@ export async function POST(request: Request) {
             displayName: 'Base Account User',
             username: address.slice(0, 8),
             bio: '',
+            description: '',
             address,
+            // No avatar - dicebear will be used as fallback
+            avatar: '',
             pfp: '',
             pfp_url: '',
             photoUrl: '',
@@ -180,7 +186,8 @@ export async function POST(request: Request) {
             github: '',
             email: '',
             isBaseAccount: true,
-            needsBasename: true, // Flag to suggest getting a Basename
+            isSmartWallet: true,
+            needsBasename: true,
           },
         });
       }
