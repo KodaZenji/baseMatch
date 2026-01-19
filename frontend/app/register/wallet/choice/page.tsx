@@ -35,6 +35,8 @@ export default function SignupChoicePage() {
     setError('');
 
     try {
+      console.log('🔍 Checking Farcaster account for:', address);
+
       const response = await fetch('/api/check-farcaster', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -43,17 +45,50 @@ export default function SignupChoicePage() {
 
       const data = await response.json();
 
+      console.log('📦 Farcaster check response:', data);
+
       if (data.exists && data.profile) {
-        // Found Farcaster - store and redirect
-        localStorage.setItem('farcasterProfile', JSON.stringify(data.profile));
+        // CRITICAL: Log what we got
+        console.log('✅ Farcaster profile found:', {
+          displayName: data.profile.displayName,
+          username: data.profile.username,
+          bio: data.profile.bio,
+          hasAvatar: !!data.profile.photoUrl,
+          avatarUrl: data.profile.photoUrl ? data.profile.photoUrl.substring(0, 50) + '...' : 'none',
+          // Check all avatar fields
+          pfp: data.profile.pfp,
+          pfp_url: data.profile.pfp_url,
+          photoUrl: data.profile.photoUrl,
+        });
+
+        // Store profile with comprehensive data
+        localStorage.setItem('farcasterProfile', JSON.stringify({
+          displayName: data.profile.displayName || data.profile.username,
+          username: data.profile.username,
+          bio: data.profile.bio || '',
+          fid: data.profile.fid,
+          followerCount: data.profile.followerCount || 0,
+          
+          // CRITICAL: Store all avatar field variations
+          photoUrl: data.profile.photoUrl || data.profile.pfp_url || data.profile.pfp || '',
+          pfp_url: data.profile.pfp_url || data.profile.photoUrl || data.profile.pfp || '',
+          pfp: data.profile.pfp || data.profile.photoUrl || data.profile.pfp_url || '',
+        }));
+
+        console.log('✅ Stored Farcaster profile to localStorage');
+        
         router.push('/register/wallet/complete?source=farcaster');
       } else {
         // No Farcaster found - silently revert to manual
+        console.log('⚠️ No Farcaster account found, redirecting to manual signup');
         router.push('/register/wallet/complete');
       }
     } catch (error) {
-      console.error('Error checking Farcaster:', error);
+      console.error('❌ Error checking Farcaster:', error);
+      // Silently fall back to manual on error
       router.push('/register/wallet/complete');
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -62,6 +97,8 @@ export default function SignupChoicePage() {
     setError('');
 
     try {
+      console.log('🔍 Checking Base Account for:', address);
+
       const response = await fetch('/api/check-baseapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -70,21 +107,49 @@ export default function SignupChoicePage() {
 
       const data = await response.json();
 
+      console.log('📦 Base Account check response:', data);
+
       if (data.exists && data.profile) {
-        // Found Base App profile
-        localStorage.setItem('baseAppProfile', JSON.stringify(data.profile));
+        // CRITICAL: Log what we got
+        console.log('✅ Base Account profile found:', {
+          displayName: data.profile.displayName,
+          username: data.profile.username,
+          bio: data.profile.bio,
+          hasAvatar: !!data.profile.photoUrl,
+          avatarUrl: data.profile.photoUrl ? data.profile.photoUrl.substring(0, 50) + '...' : 'none',
+        });
+
+        // Store Base App profile
+        localStorage.setItem('baseAppProfile', JSON.stringify({
+          displayName: data.profile.displayName || data.profile.username,
+          username: data.profile.username,
+          basename: data.profile.basename,
+          bio: data.profile.bio || '',
+          
+          // CRITICAL: Store all avatar field variations
+          photoUrl: data.profile.photoUrl || data.profile.pfp_url || data.profile.pfp || '',
+          pfp_url: data.profile.pfp_url || data.profile.photoUrl || data.profile.pfp || '',
+          pfp: data.profile.pfp || data.profile.photoUrl || data.profile.pfp_url || '',
+        }));
+
+        console.log('✅ Stored Base Account profile to localStorage');
+        
         router.push('/register/wallet/complete?source=baseapp');
       } else {
         // No Base App profile - silently revert to manual
+        console.log('⚠️ No Base Account found, redirecting to manual signup');
         router.push('/register/wallet/complete');
       }
     } catch (error) {
-      console.error('Error checking Base App:', error);
+      console.error('❌ Error checking Base App:', error);
       router.push('/register/wallet/complete');
+    } finally {
+      setChecking(false);
     }
   };
 
   const handleManualSignup = () => {
+    console.log('📝 Manual signup selected');
     router.push('/register/wallet/complete');
   };
 
@@ -195,7 +260,7 @@ export default function SignupChoicePage() {
                   <Edit3 className="w-6 h-6 text-gray-600 dark:text-gray-300" />
                 </div>
                 <div className="text-left">
-                  <h3 className="font-bold text-lg">Sign Up Manually</h3>
+                  <h3 className="font-bold text-gray-500 text-lg">Sign Up Manually</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Fill out the form yourself</p>
                 </div>
               </div>
