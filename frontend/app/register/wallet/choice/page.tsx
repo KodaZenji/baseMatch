@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Heart, Loader2, Edit3, CheckCircle2, Sparkles, AlertCircle } from 'lucide-react';
 import { SiFarcaster } from 'react-icons/si';
 import { useBaseAccount } from '@/hooks/useBaseAccount';
+import { sdk } from "@farcaster/miniapp-sdk";
 
 export default function SignupChoicePage() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function SignupChoicePage() {
     }
   }, []);
 
-  // AUTO-CHECK Base Account on mount (PRIORITY CHECK)
+  // 🎯 AUTO-CHECK: Use Context API ONLY to get full profile with PFP!
   useEffect(() => {
     const autoCheckBaseAccount = async () => {
       if (!address || !isConnected) {
@@ -35,43 +36,63 @@ export default function SignupChoicePage() {
         return;
       }
 
-      // If Base App detected, automatically check for Base Account
       if (isBaseApp) {
-        console.log('🚀 Auto-checking Base Account...');
+        console.log('🚀 Auto-checking Base Account via Context API...');
         
         try {
-          const response = await fetch('/api/check-baseapp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              address,
-              isBaseAccount: true,
-            }),
-          });
-
-          const data = await response.json();
+          // Check if we're in a Mini App
+          const isInMiniApp = await sdk.isInMiniApp();
           
-          if (data.exists && data.profile) {
-            console.log('✅ Base Account profile auto-detected!');
-            console.log('🔍 AUTO-CHECK AVATAR DEBUG:', {
-              avatar: data.profile.avatar,
-              photoUrl: data.profile.photoUrl,
-              pfp: data.profile.pfp,
-              pfp_url: data.profile.pfp_url,
-              _rawAvatarUrl: data.profile._rawAvatarUrl,
-            });
+          if (isInMiniApp) {
+            // Get context - THIS HAS THE PFP!
+            const context = await sdk.context;
             
-            setBaseAccountProfile(data.profile);
-            
-            // Show brief notification that we found their account
-            setTimeout(() => {
+            if (context && context.user) {
+              const user = context.user;
+              
+              console.log('🎉 Profile from Context API:', {
+                fid: user.fid,
+                username: user.username,
+                displayName: user.displayName,
+                pfpUrl: user.pfpUrl,  // 🎯 YOUR ANIME PFP!
+                bio: user.bio,
+              });
+
+              const profile = {
+                fid: user.fid,
+                username: user.username || address.slice(0, 8),
+                displayName: user.displayName || user.username || 'Base User',
+                bio: user.bio || '',
+                description: user.bio || '',
+                // 🎯 THE MAGIC: Map pfpUrl to all avatar fields
+                avatar: user.pfpUrl || '',
+                photoUrl: user.pfpUrl || '',
+                pfp: user.pfpUrl || '',
+                pfp_url: user.pfpUrl || '',
+                address,
+                location: user.location,
+                isBaseAccount: true,
+                isSmartWallet: isSmartWallet,
+                profileSource: 'context-api',
+              };
+
+              setBaseAccountProfile(profile);
+              
+              console.log('✅ Profile loaded with avatar:', user.pfpUrl ? 'YES! 🎨' : 'No avatar (will use dicebear)');
+              
+              setTimeout(() => {
+                setAutoChecking(false);
+              }, 1000);
+            } else {
+              console.log('⚠️ No user in context');
               setAutoChecking(false);
-            }, 1000);
+            }
           } else {
+            console.log('⚠️ Not in Mini App environment');
             setAutoChecking(false);
           }
         } catch (error) {
-          console.error('❌ Auto-check failed:', error);
+          console.error('❌ Context API failed:', error);
           setAutoChecking(false);
         }
       } else {
@@ -80,7 +101,7 @@ export default function SignupChoicePage() {
     };
 
     autoCheckBaseAccount();
-  }, [address, isConnected, isBaseApp]);
+  }, [address, isConnected, isBaseApp, isSmartWallet]);
 
   if (!isConnected) {
     router.push('/');
@@ -92,73 +113,60 @@ export default function SignupChoicePage() {
     setError('');
 
     try {
-      console.log('🔍 Checking Base Account for:', address);
-      console.log('🔵 Base App detected:', isBaseApp);
-      console.log('🔵 Smart Wallet:', isSmartWallet);
+      console.log('🔍 Getting Base Account profile from Context API...');
 
-      const response = await fetch('/api/check-baseapp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          address,
-          isBaseAccount: isBaseApp || isSmartWallet,
-        }),
+      const isInMiniApp = await sdk.isInMiniApp();
+      
+      if (!isInMiniApp) {
+        throw new Error('Not in Mini App environment. Please open in Base App.');
+      }
+
+      const context = await sdk.context;
+      
+      if (!context || !context.user) {
+        throw new Error('Could not get user context');
+      }
+
+      const user = context.user;
+      
+      console.log('✅ Context API profile:', {
+        fid: user.fid,
+        username: user.username,
+        displayName: user.displayName,
+        hasPfp: !!user.pfpUrl,
+        hasBio: !!user.bio,
       });
 
-      const data = await response.json();
+      const profile = {
+        fid: user.fid,
+        username: user.username || address?.slice(0, 8) || 'user',
+        displayName: user.displayName || user.username || 'Base User',
+        bio: user.bio || '',
+        description: user.bio || '',
+        // Map pfpUrl to all avatar fields
+        avatar: user.pfpUrl || '',
+        photoUrl: user.pfpUrl || '',
+        pfp: user.pfpUrl || '',
+        pfp_url: user.pfpUrl || '',
+        address,
+        location: user.location,
+        isBaseAccount: true,
+        isSmartWallet: isSmartWallet,
+        profileSource: 'context-api',
+      };
 
-      console.log('📦 Base Account check response:', data);
+      console.log('📦 Storing profile:', {
+        hasAvatar: !!profile.avatar,
+        avatarUrl: profile.avatar ? profile.avatar.substring(0, 50) + '...' : 'none',
+        source: 'context-api',
+      });
 
-      if (data.exists && data.profile) {
-        console.log('✅ Base Account profile found:', data.profile);
-        
-        // 🔍 CRITICAL DEBUG: Check what avatar URLs we got
-        console.log('🔍 AVATAR DEBUG BEFORE STORAGE:', {
-          avatar: data.profile.avatar,
-          photoUrl: data.profile.photoUrl,
-          pfp: data.profile.pfp,
-          pfp_url: data.profile.pfp_url,
-          _rawAvatarUrl: data.profile._rawAvatarUrl,
-          hasAvatar: !!(data.profile.avatar || data.profile.photoUrl),
-        });
-
-        // Store Base Account profile with priority flag
-        const profileToStore = {
-          ...data.profile,
-          isBaseAccount: true,
-          isSmartWallet: data.accountType === 'smart-wallet',
-          prioritySource: true,
-        };
-        
-        localStorage.setItem('baseAppProfile', JSON.stringify(profileToStore));
-        
-        console.log('✅ Stored Base Account profile to localStorage');
-        console.log('📦 Stored data:', profileToStore);
-        
-        router.push('/register/wallet/complete?source=baseaccount');
-      } else if (isBaseApp || isSmartWallet) {
-        // Base Account detected but no profile data - still proceed
-        console.log('✅ Base Account detected, proceeding without profile data');
-        
-        localStorage.setItem('baseAppProfile', JSON.stringify({
-          isBaseAccount: true,
-          isSmartWallet: true,
-          displayName: 'Base Account User',
-          username: address?.slice(0, 8) || 'user',
-          address,
-          needsBasename: true,
-          prioritySource: true,
-        }));
-        
-        router.push('/register/wallet/complete?source=baseaccount');
-      } else {
-        console.log('⚠️ No Base Account found, redirecting to manual signup');
-        router.push('/register/wallet/complete');
-      }
+      localStorage.setItem('baseAppProfile', JSON.stringify(profile));
+      
+      router.push('/register/wallet/complete?source=baseaccount');
     } catch (error) {
-      console.error('❌ Error checking Base Account:', error);
-      router.push('/register/wallet/complete');
-    } finally {
+      console.error('❌ Error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to get profile');
       setChecking(false);
     }
   };
@@ -206,17 +214,17 @@ export default function SignupChoicePage() {
     router.push('/register/wallet/complete');
   };
 
-  // Show loading while auto-checking Base Account
+  // Show loading while auto-checking
   if (autoChecking) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
         <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full border border-gray-200 dark:border-gray-700 text-center">
           <Loader2 className="w-12 h-12 animate-spin text-blue-600 dark:text-blue-400 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-2">
-            Checking Base Account...
+            Loading Your Profile...
           </h2>
           <p className="text-gray-600 dark:text-gray-400 text-sm">
-            Looking for your Base identity
+            Getting your Base Account info
           </p>
         </div>
       </div>
@@ -263,7 +271,7 @@ export default function SignupChoicePage() {
         </h1>
         <p className="text-gray-600 dark:text-gray-400 text-center mb-8">Choose your signup method</p>
 
-        {/* Base Account Detected - PROMINENT ALERT */}
+        {/* Base Account Detected */}
         {(isBaseApp || baseAccountProfile) && (
           <div className="mb-6 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 dark:from-blue-500/10 dark:to-indigo-500/10 border-2 border-blue-400 dark:border-blue-500 rounded-xl p-4">
             <div className="flex items-start gap-3">
@@ -271,22 +279,22 @@ export default function SignupChoicePage() {
               <div className="text-sm flex-1">
                 <p className="font-bold text-blue-900 dark:text-blue-100 mb-1 flex items-center gap-2">
                   Base Account Detected!
-                  {baseAccountProfile?.basename && (
+                  {baseAccountProfile?.username && (
                     <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">
-                      {baseAccountProfile.basename}
+                      @{baseAccountProfile.username}
                     </span>
                   )}
                 </p>
                 <p className="text-blue-700 dark:text-blue-300">
-                  {baseAccountProfile ? 
-                    'Your profile is ready to import with one click!' : 
-                    'We recommend using your Base Account for the best experience'
+                  {baseAccountProfile?.avatar 
+                    ? '🎨 Profile ready with your avatar!' 
+                    : 'Your profile is ready to import!'
                   }
                 </p>
                 {isSmartWallet && (
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
-                    Smart Wallet (ERC-4337) • Gasless transactions available
+                    Smart Wallet • Gasless transactions
                   </p>
                 )}
               </div>
@@ -302,7 +310,7 @@ export default function SignupChoicePage() {
         )}
 
         <div className="space-y-4">
-          {/* PRIORITY: Base Account Option - Always First */}
+          {/* Base Account Option */}
           <button
             onClick={handleBaseAccountSignup}
             disabled={checking}
@@ -312,7 +320,6 @@ export default function SignupChoicePage() {
                 : 'bg-white/10 dark:bg-white/5 border border-blue-300/30 dark:border-blue-500/20 hover:bg-white/20 dark:hover:bg-white/10 hover:border-blue-400/40 dark:hover:border-blue-400/30 hover:shadow-xl'
             }`}
           >
-            {/* Recommended Badge */}
             {(isBaseApp || baseAccountProfile) && (
               <div className="absolute -top-1 -right-1">
                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold rounded-full shadow-lg">
@@ -336,9 +343,9 @@ export default function SignupChoicePage() {
                     Base Account {isSmartWallet && '⚡'}
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {baseAccountProfile?.basename ? 
-                      `Import ${baseAccountProfile.basename}` : 
-                      (isBaseApp ? 'Your identity is ready' : 'Use your .base.eth name')
+                    {baseAccountProfile?.displayName 
+                      ? `Welcome, ${baseAccountProfile.displayName}!` 
+                      : 'Use your Base identity'
                     }
                   </p>
                   {baseAccountProfile && (
@@ -400,7 +407,7 @@ export default function SignupChoicePage() {
             </div>
           </button>
         </div>
-      {/* Connected Wallet Info */}
+
         {address && (
           <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 text-center">
             <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
