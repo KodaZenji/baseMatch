@@ -32,11 +32,11 @@ function RainbowKitThemeWrapper({ children }: { children: React.ReactNode }) {
     <RainbowKitProvider 
       initialChain={base} 
       theme={isDark ? darkTheme({
-        accentColor: '#ec4899',
+        accentColor: '#C11C84',
         accentColorForeground: 'white',
         borderRadius: 'large',
       }) : lightTheme({
-        accentColor: '#ec4899',
+        accentColor: '#C11C84',
         accentColorForeground: 'white',
         borderRadius: 'large',
       })}
