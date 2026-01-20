@@ -192,7 +192,7 @@ export async function POST(request: Request) {
         <div class="brand-footer">
             <div>Thanks for choosing BaseMatch!</div>
             <div style="margin-top: 10px; font-size: 12px; color: rgba(255,255,255,0.6);">
-                © 2025 BaseMatch. All rights reserved.
+                © 2026 BaseMatch. All rights reserved.
             </div>
         </div>
     </div>
