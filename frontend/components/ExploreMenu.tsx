@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { X, MessageCircle, Users, LayoutDashboard } from 'lucide-react';
 import { FaDiscord } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
@@ -9,26 +10,30 @@ interface ExploreMenuProps {
 }
 
 export function ExploreMenu({ isOpen, onClose, setActiveTab }: ExploreMenuProps) {
+  // Force close on mount to prevent menu from obstructing the view
+  useEffect(() => {
+    onClose();
+  }, []);
+
   const handleNavClick = (tab: 'browse' | 'matches' | 'profile' | 'notifications') => {
     setActiveTab(tab);
     onClose();
   };
 
+  // Don't render anything if menu is closed
+  if (!isOpen) return null;
+
   return (
     <>
       {/* Backdrop */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 transition-opacity"
-          onClick={onClose}
-        />
-      )}
+      <div
+        className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+        onClick={onClose}
+      />
       
       {/* Slide-in Menu */}
       <div
-        className={`fixed top-0 right-0 h-full w-72 bg-white dark:bg-gray-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className="fixed top-0 right-0 h-full w-72 bg-white dark:bg-gray-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out translate-x-0"
       >
         <div className="p-6">
           <button
