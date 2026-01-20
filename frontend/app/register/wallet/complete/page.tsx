@@ -269,11 +269,9 @@ export default function CompleteWalletProfilePage() {
                   }}
                 />
                 <p className="text-xs text-gray-700 dark:text-gray-400 font-semibold">
-                  {avatarUrl.includes('dicebear') 
-                    ? 'Generated avatar' 
-                    : profileSource === 'farcaster' 
-                      ? 'Farcaster avatar' 
-                      : 'Your profile photo'}
+                  {profileSource === 'farcaster' && avatarLoaded
+                    ? 'Farcaster avatar' 
+                    : 'Generated avatar'}
                 </p>
               </div>
             )}
