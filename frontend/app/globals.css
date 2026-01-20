@@ -2,80 +2,40 @@
 
 @variant dark (&:where(.dark, .dark *));
 
-/* ============================================
-   COLOR VARIABLES - CLEAN & CONSISTENT
-   ============================================ */
-
 :root {
-  /* Light Mode */
-  --background: #ffffff;
-  --surface: #f8fafc;
-  --surface-elevated: #ffffff;
-  --border: #e2e8f0;
-  --border-hover: #cbd5e1;
-  
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-tertiary: #64748b;
-  
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
-  --accent-light: #dbeafe;
-  
-  --success: #10b981;
-  --success-light: #d1fae5;
-  
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 .dark {
-  /* Dark Mode */
   --background: #0a0a0f;
-  --surface: #16161d;
-  --surface-elevated: #1e1e29;
-  --border: rgba(59, 130, 246, 0.15);
-  --border-hover: rgba(59, 130, 246, 0.3);
-  
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-tertiary: #94a3b8;
-  
-  --accent: #3b82f6;
-  --accent-hover: #60a5fa;
-  --accent-light: rgba(59, 130, 246, 0.1);
-  
-  --success: #10b981;
-  --success-light: rgba(16, 185, 129, 0.1);
-  
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.7);
+  --foreground: #f8fafc;
 }
 
-/* ============================================
-   BASE STYLES
-   ============================================ */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: #0a0a0f;
+    --foreground: #f8fafc;
+  }
+}
 
 body {
   background: var(--background);
-  color: var(--text-primary);
-  font-family: var(--font-lexend), sans-serif;
+  color: var(--foreground);
+  font-family: var(--font-sans), sans-serif;
   min-height: 100vh;
 }
 
-/* Gradient background for dark mode */
 .dark body {
-  background: linear-gradient(135deg, #0a0a0f 0%, #1a1d2e 50%, #0a0a0f 100%) !important;
+  background: linear-gradient(135deg, #0a0a0f 0%, #1a1d2e 50%, #0a0a0f 100%);
   background-attachment: fixed;
 }
 
 /* ============================================
-   DARK MODE GLASSMORPHISM OVERRIDES
+   FORCE OVERRIDE ALL GRADIENTS IN DARK MODE
    ============================================ */
 
-/* Override gradient backgrounds in dark mode */
+/* Override blue/indigo gradients used in registration/profile pages */
 .dark .bg-gradient-to-br,
 .dark .bg-gradient-to-r,
 .dark .bg-gradient-to-l,
@@ -84,16 +44,18 @@ body {
   background: transparent !important;
 }
 
+/* Remove all forced gradient backgrounds */
 .dark [class*="from-indigo"],
 .dark [class*="from-blue"],
 .dark [class*="via-blue"],
-.dark [class*="to-indigo"],
-.dark [class*="from-purple"],
-.dark [class*="to-purple"] {
+.dark [class*="to-indigo"] {
   background: transparent !important;
 }
 
-/* Override white/light backgrounds to transparent in dark mode */
+/* ============================================
+   OVERRIDE WHITE BACKGROUNDS GLOBALLY
+   ============================================ */
+
 .dark .bg-white {
   background-color: transparent !important;
 }
@@ -105,21 +67,10 @@ body {
 }
 
 /* ============================================
-   CARDS & CONTAINERS - GLASSMORPHISM
+   CARDS AND CONTAINERS
    ============================================ */
 
-/* Light mode - clean solid cards */
-.rounded-xl.shadow-lg,
-.rounded-2xl.shadow-lg,
-.rounded-3xl.shadow-2xl,
-.p-8.max-w-md,
-.p-6.max-w-md {
-  background: var(--surface-elevated);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
-}
-
-/* Dark mode - glassmorphism effect */
+/* Style actual cards with glassmorphism */
 .dark .rounded-3xl.shadow-2xl,
 .dark .rounded-2xl.shadow-lg,
 .dark .rounded-xl.shadow-lg {
@@ -130,57 +81,41 @@ body {
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(59, 130, 246, 0.08) !important;
 }
 
+/* Email/profile card containers */
 .dark .p-8.max-w-md,
 .dark .p-6.max-w-md {
   background: rgba(22, 22, 29, 0.85) !important;
   backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(59, 130, 246, 0.2) !important;
 }
 
 /* ============================================
-   TYPOGRAPHY
+   TEXT COLORS - FORCE VISIBILITY
    ============================================ */
 
-h1, h2, h3, h4, h5, h6 {
-  color: var(--text-primary);
-}
-
-p, span, div {
-  color: var(--text-primary);
-}
-
-/* Light mode text colors */
-.text-gray-900 { color: #0f172a; }
-.text-gray-800 { color: #1e293b; }
-.text-gray-700 { color: #334155; }
-.text-gray-600 { color: #475569; }
-.text-gray-500 { color: #64748b; }
-.text-gray-400 { color: #94a3b8; }
-
-/* Dark mode text - force visibility */
+/* Headers and titles */
 .dark h1,
 .dark h2,
 .dark h3 {
-  color: #d1d5db !important;
+  color: #9ca3af !important;
 }
 
+/* "Edit Your Profile", "BaseMatch", "Email Registration" titles */
 .dark .text-3xl,
 .dark .text-2xl,
 .dark .text-xl {
   color: #d1d5db !important;
 }
 
+/* Labels */
 .dark label,
 .dark .text-sm.font-medium {
   color: #9ca3af !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
-.dark .text-gray-900,
-.dark .text-gray-800 {
-  color: #e5e7eb !important;
-}
-
+/* Gray text */
 .dark .text-gray-700,
 .dark .text-gray-600,
 .dark .text-gray-500,
@@ -188,43 +123,34 @@ p, span, div {
   color: #9ca3af !important;
 }
 
+/* Body text */
+.dark .text-gray-900,
+.dark .text-gray-800 {
+  color: #e5e7eb !important;
+}
+
+/* Helper text - "Click the pencil to upload..." */
 .dark p.text-sm,
 .dark .text-center.text-sm,
 .dark .text-xs {
   color: #9ca3af !important;
   opacity: 0.9 !important;
+  visibility: visible !important;
 }
 
 /* ============================================
-   INPUTS & FORMS
+   HIDE SQUARE NAVIGATION GRIDS
    ============================================ */
 
-/* Light mode inputs */
-input,
-textarea,
-select {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  transition: all 0.2s ease;
+.dark .grid.grid-cols-4,
+.dark .grid.grid-cols-2.gap-4 {
+  display: none !important;
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: var(--text-tertiary);
-  opacity: 0.6;
-}
+/* ============================================
+   INPUT FIELDS
+   ============================================ */
 
-input:focus,
-textarea:focus,
-select:focus {
-  background: var(--surface-elevated);
-  border-color: var(--accent);
-  outline: none;
-  box-shadow: 0 0 0 3px var(--accent-light);
-}
-
-/* Dark mode inputs */
 .dark input,
 .dark textarea,
 .dark select {
@@ -234,7 +160,8 @@ select:focus {
 }
 
 .dark input::placeholder,
-.dark textarea::placeholder {
+.dark textarea::placeholder,
+.dark input[placeholder] {
   color: rgba(148, 163, 184, 0.5) !important;
 }
 
@@ -243,48 +170,26 @@ select:focus {
 .dark select:focus {
   background: rgba(30, 30, 42, 0.8) !important;
   border-color: rgba(59, 130, 246, 0.6) !important;
+  outline: none !important;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
 }
 
-input:disabled,
-textarea:disabled {
+.dark input:disabled,
+.dark textarea:disabled {
+  background: rgba(30, 30, 42, 0.3) !important;
   opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* ============================================
    BUTTONS
    ============================================ */
 
-/* Light mode - solid primary buttons */
-button.bg-blue-600,
-button.bg-blue-500,
-button.bg-indigo-600,
-button.bg-purple-600,
-button.bg-purple-500 {
-  background: var(--accent);
-  color: white;
-  border: 1px solid transparent;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
-}
-
-button.bg-blue-600:hover,
-button.bg-blue-500:hover,
-button.bg-indigo-600:hover,
-button.bg-purple-600:hover,
-button.bg-purple-500:hover {
-  background: var(--accent-hover);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-}
-
-/* Dark mode - gradient buttons */
+/* Purple/Blue gradient buttons */
 .dark button.bg-purple-600,
 .dark button.bg-purple-500,
 .dark button[class*="from-pink"],
 .dark button[class*="from-blue"],
-.dark button[class*="from-indigo"] {
+.dark button[class*="from-green"] {
   background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
   border: 1px solid rgba(59, 130, 246, 0.3) !important;
   box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
@@ -299,21 +204,7 @@ button.bg-purple-500:hover {
   box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
 }
 
-/* Success buttons - both modes */
-button.bg-green-600,
-button.bg-green-500 {
-  background: var(--success);
-  color: white;
-  border: 1px solid transparent;
-  transition: all 0.2s ease;
-}
-
-button.bg-green-600:hover,
-button.bg-green-500:hover {
-  background: #059669;
-  transform: translateY(-1px);
-}
-
+/* Green button override for registration */
 .dark button[class*="from-green"] {
   background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%) !important;
   border: 1px solid rgba(16, 185, 129, 0.3) !important;
@@ -325,58 +216,9 @@ button.bg-green-500:hover {
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
 }
 
-/* Secondary buttons */
-button.bg-gray-100,
-button.bg-gray-200 {
-  background: var(--surface);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  transition: all 0.2s ease;
-}
-
-button.bg-gray-100:hover,
-button.bg-gray-200:hover {
-  background: var(--surface-elevated);
-  border-color: var(--border-hover);
-}
-
 /* ============================================
-   BADGES & PILLS
+   BADGES
    ============================================ */
-
-/* Light mode badges */
-.bg-blue-100,
-.bg-blue-50 {
-  background: #dbeafe;
-  color: #1e40af;
-  border: 1px solid #93c5fd;
-}
-
-.bg-green-100,
-.bg-green-50 {
-  background: #d1fae5;
-  color: #065f46;
-  border: 1px solid #6ee7b7;
-}
-
-/* Dark mode badges */
-.dark .bg-blue-500,
-.dark .bg-blue-600 {
-  background: #3b82f6 !important;
-  color: white !important;
-}
-
-.dark .bg-blue-100,
-.dark .bg-blue-50 {
-  background: rgba(59, 130, 246, 0.15) !important;
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  color: #60a5fa !important;
-}
-
-.dark .text-blue-800,
-.dark .text-blue-700 {
-  color: #60a5fa !important;
-}
 
 .dark .bg-green-500,
 .dark .bg-green-600 {
@@ -396,23 +238,53 @@ button.bg-gray-200:hover {
   color: #34d399 !important;
 }
 
+.dark .bg-blue-500,
+.dark .bg-blue-600 {
+  background: #3b82f6 !important;
+  color: white !important;
+}
+
+.dark .bg-blue-100,
+.dark .bg-blue-50 {
+  background: rgba(59, 130, 246, 0.15) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa !important;
+}
+
+.dark .text-blue-800,
+.dark .text-blue-700 {
+  color: #60a5fa !important;
+}
+
+/* ============================================
+   GRADIENT TEXT - KEEP COLORFUL
+   ============================================ */
+
+.dark .bg-gradient-to-r.from-pink-500.to-purple-500.bg-clip-text,
+.dark .bg-gradient-to-r.from-blue-600.to-purple-600.bg-clip-text {
+  background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* ============================================
+   FEATURE BOXES
+   ============================================ */
+
+.dark .from-pink-50.to-purple-50,
+.dark .bg-gradient-to-br.from-pink-50 {
+  background: linear-gradient(to bottom right, rgba(236, 72, 153, 0.1), rgba(168, 85, 247, 0.1)) !important;
+  border: 1px solid rgba(236, 72, 153, 0.2);
+}
+
 /* ============================================
    BORDERS
    ============================================ */
 
-.border,
-.border-gray-200,
-.border-gray-300 {
-  border-color: var(--border);
-}
-
 .dark .border-gray-200,
 .dark .border-gray-300 {
   border-color: rgba(59, 130, 246, 0.2) !important;
-}
-
-hr {
-  border-color: var(--border);
 }
 
 .dark hr {
@@ -420,46 +292,7 @@ hr {
 }
 
 /* ============================================
-   LINKS
-   ============================================ */
-
-a {
-  color: var(--accent);
-  transition: color 0.2s ease;
-}
-
-a:hover {
-  color: var(--accent-hover);
-}
-
-.dark a {
-  color: #3b82f6;
-}
-
-.dark a:hover {
-  color: #60a5fa;
-}
-
-/* ============================================
-   HOVER STATES
-   ============================================ */
-
-.hover\:bg-gray-50:hover,
-.hover\:bg-gray-100:hover {
-  background: var(--surface);
-}
-
-.hover\:bg-gray-200:hover {
-  background: var(--surface-elevated);
-}
-
-.dark .hover\:bg-gray-50:hover,
-.dark .hover\:bg-gray-100:hover {
-  background-color: rgba(59, 130, 246, 0.08) !important;
-}
-
-/* ============================================
-   BACK BUTTON & ICON BUTTONS
+   BACK BUTTON
    ============================================ */
 
 .dark .rounded-full.bg-purple-600 {
@@ -473,15 +306,51 @@ a:hover {
 }
 
 /* ============================================
-   SHADOWS
+   HOVER STATES
    ============================================ */
 
-.shadow-sm { box-shadow: var(--shadow-sm); }
-.shadow { box-shadow: var(--shadow-md); }
-.shadow-md { box-shadow: var(--shadow-md); }
-.shadow-lg { box-shadow: var(--shadow-lg); }
-.shadow-xl { box-shadow: var(--shadow-lg); }
-.shadow-2xl { box-shadow: var(--shadow-lg); }
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-100:hover {
+  background-color: rgba(59, 130, 246, 0.08) !important;
+}
+
+/* ============================================
+   SCROLLBAR
+   ============================================ */
+
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: rgba(20, 20, 28, 0.3);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.4);
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.6);
+}
+
+/* ============================================
+   LINKS
+   ============================================ */
+
+.dark a {
+  color: #3b82f6;
+}
+
+.dark a:hover {
+  color: #60a5fa;
+}
+
+/* ============================================
+   SHADOWS
+   ============================================ */
 
 .dark .shadow-2xl {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
@@ -495,49 +364,29 @@ a:hover {
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.5) !important;
 }
 
-/* ============================================
-   SCROLLBAR
-   ============================================ */
-
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: var(--surface);
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--border-hover);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
-}
-
-.dark ::-webkit-scrollbar-track {
-  background: rgba(20, 20, 28, 0.3);
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: rgba(59, 130, 246, 0.4);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(59, 130, 246, 0.6);
-}
-
-/* ============================================
-   MOBILE NAVIGATION
-   ============================================ */
-
+/* Mobile Bottom Navigation */
 @media (max-width: 768px) {
+  /* Hide desktop navigation on mobile */
   nav.desktop-nav {
-    display: none;
+    display: none !important;
   }
   
+  /* Show mobile bottom nav */
   .mobile-bottom-nav {
     position: fixed;
     bottom: 0;
@@ -554,22 +403,26 @@ a:hover {
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
   }
   
+  /* Dark mode for mobile nav */
   .dark .mobile-bottom-nav {
     background: rgba(17, 24, 39, 0.95);
     border-top-color: rgba(75, 85, 99, 0.3);
   }
   
+  /* Add padding to main content so it doesn't hide behind nav */
   main {
-    padding-bottom: 80px;
+    padding-bottom: 80px !important;
   }
 }
 
+/* Hide mobile nav on desktop */
 @media (min-width: 769px) {
   .mobile-bottom-nav {
-    display: none;
+    display: none !important;
   }
 }
 
+/* Mobile nav button styles */
 .mobile-nav-btn {
   display: flex;
   flex-direction: column;
@@ -580,34 +433,9 @@ a:hover {
   background: transparent;
   cursor: pointer;
   transition: all 0.2s;
-  color: var(--text-secondary);
-}
-
-.mobile-nav-btn:hover {
-  color: var(--text-primary);
-  background: var(--surface);
-  border-radius: 0.5rem;
+  position: relative;
 }
 
 .mobile-nav-btn:active {
   transform: scale(0.95);
-}
-
-/* ============================================
-   ANIMATIONS
-   ============================================ */
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.5s ease-out;
 }
