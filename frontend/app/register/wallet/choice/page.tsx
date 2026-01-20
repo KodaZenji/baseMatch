@@ -65,16 +65,22 @@ export default function SignupChoicePage() {
       if (data.verified && data.profile) {
         setFarcasterProfile(data.profile);
         
-        // Save profile to localStorage
+        // UPDATED: Save complete profile to localStorage with FID
         localStorage.setItem('farcasterProfile', JSON.stringify({
           displayName: data.profile.displayName || data.profile.username,
           username: data.profile.username,
-          bio: '',
-          fid: data.profile.fid,
+          bio: data.profile.bio || '',
+          fid: fid.trim(), // Use the FID from user input
           photoUrl: data.profile.pfp || '',
           pfp_url: data.profile.pfp || '',
           pfp: data.profile.pfp || '',
         }));
+        
+        console.log('✅ Farcaster profile saved to localStorage:', {
+          username: data.profile.username,
+          fid: fid.trim(),
+          displayName: data.profile.displayName
+        });
         
         // Navigate to complete page after showing success
         setTimeout(() => {
@@ -182,7 +188,7 @@ export default function SignupChoicePage() {
                         {farcasterProfile.displayName}
                       </p>
                       <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mt-1">
-                        FID: {farcasterProfile.fid}
+                        FID: {fid}
                       </p>
                     </div>
                   </div>
