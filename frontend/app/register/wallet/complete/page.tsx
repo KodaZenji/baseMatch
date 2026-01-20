@@ -24,17 +24,21 @@ export default function CompleteWalletProfilePage() {
   const [error, setError] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [profileSource, setProfileSource] = useState<string | null>(null);
+  const [avatarLoaded, setAvatarLoaded] = useState(false);
 
   // Load Farcaster profile data if available
   useEffect(() => {
     console.log('🔍 Complete page loaded with source:', source);
+    console.log('🔍 Address:', address);
     
     if (source === 'farcaster') {
       const stored = localStorage.getItem('farcasterProfile');
+      console.log('📦 Raw localStorage data:', stored);
+      
       if (stored) {
         try {
           const profile = JSON.parse(stored);
-          console.log('📦 Loading Farcaster profile:', profile);
+          console.log('✅ Parsed Farcaster profile:', profile);
           
           setFormData(prev => ({
             ...prev,
@@ -42,30 +46,44 @@ export default function CompleteWalletProfilePage() {
             interests: profile.bio || '',
           }));
           
+          // CRITICAL: Try all possible photo field names
           const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
-          if (photoUrl) {
+          console.log('🖼️ Avatar URL found:', photoUrl);
+          
+          if (photoUrl && photoUrl.trim() !== '') {
+            console.log('✅ Setting Farcaster avatar:', photoUrl);
             setAvatarUrl(photoUrl);
-            console.log('✅ Farcaster avatar loaded:', photoUrl);
+            setProfileSource('farcaster');
+            setAvatarLoaded(true);
+          } else {
+            console.warn('⚠️ No avatar URL found in Farcaster profile');
+            setAvatarLoaded(false);
           }
           
-          setProfileSource('farcaster');
           localStorage.removeItem('farcasterProfile');
         } catch (error) {
           console.error('❌ Error parsing Farcaster profile:', error);
+          setAvatarLoaded(false);
         }
+      } else {
+        console.warn('⚠️ No farcasterProfile found in localStorage');
+        setAvatarLoaded(false);
       }
+    } else {
+      setAvatarLoaded(false);
     }
   }, [source]);
 
-  // Generate dicebear fallback if no avatar exists
+  // Generate dicebear fallback ONLY if Farcaster didn't load
   useEffect(() => {
-    if (address && !avatarUrl) {
+    if (address && !avatarLoaded && !avatarUrl) {
+      console.log('🎨 No Farcaster avatar, generating dicebear');
       const seed = address.substring(2, 10);
       const dicebearUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
       setAvatarUrl(dicebearUrl);
-      console.log('🎨 Using dicebear fallback');
+      console.log('✅ Dicebear fallback set:', dicebearUrl);
     }
-  }, [address, avatarUrl]);
+  }, [address, avatarLoaded, avatarUrl]);
 
   // Dark mode initialization
   useEffect(() => {
@@ -196,8 +214,8 @@ export default function CompleteWalletProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
-      <div className="bg-white dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-2xl w-full border border-gray-200 dark:border-gray-700">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 py-8 transition-colors">
+      <div className="bg-white dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 w-full max-w-2xl border border-gray-200 dark:border-gray-700 my-4">
         <div className="flex justify-center mb-6">
           <div className="relative">
             <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
@@ -268,7 +286,7 @@ export default function CompleteWalletProfilePage() {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium"
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400"
               placeholder="Your name"
             />
           </div>
@@ -279,7 +297,7 @@ export default function CompleteWalletProfilePage() {
               value={formData.birthYear}
               onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
               required
-              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium"
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium"
             >
               <option value="">Select birth year</option>
               {Array.from({ length: 83 }, (_, i) => {
@@ -301,7 +319,7 @@ export default function CompleteWalletProfilePage() {
               value={formData.gender}
               onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium"
             >
               <option value="">Select gender</option>
               <option value="Female">Female</option>
@@ -317,7 +335,7 @@ export default function CompleteWalletProfilePage() {
               onChange={(e) => setFormData({ ...formData, interests: e.target.value })}
               required
               rows={3}
-              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors resize-none font-medium"
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors resize-none font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400"
               placeholder="Hiking, Photography, Crypto..."
             />
           </div>
@@ -329,7 +347,7 @@ export default function CompleteWalletProfilePage() {
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
-              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium"
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400"
               placeholder="your@email.com"
             />
           </div>
@@ -337,7 +355,7 @@ export default function CompleteWalletProfilePage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-bold hover:opacity-90 disabled:opacity-50 transition-opacity shadow-lg hover:shadow-xl"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-bold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl text-lg"
           >
             {isLoading ? 'Processing...' : 'Continue to Mint →'}
           </button>
