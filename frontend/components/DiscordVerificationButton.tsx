@@ -1,7 +1,6 @@
-// frontend/components/DiscordVerificationButton.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle, AlertTriangle, Loader, AlertCircle as AlertIcon } from 'lucide-react';
 import { FaDiscord } from 'react-icons/fa';
 import { useDiscordVerification } from '@/hooks/useDiscordVerification';
@@ -12,6 +11,44 @@ export default function DiscordVerificationButton() {
   const { isVerified, showSuccess, canVerify, isLoading } = useDiscordVerification();
   const [error, setError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [membershipStatus, setMembershipStatus] = useState<{
+    inServer: boolean;
+    hasVerifiedRole: boolean;
+    checking: boolean;
+  }>({ inServer: false, hasVerifiedRole: false, checking: false });
+
+  // Check Discord membership when component loads
+  useEffect(() => {
+    if (address && canVerify && !isVerified) {
+      checkDiscordMembership();
+    }
+  }, [address, canVerify, isVerified]);
+
+  const checkDiscordMembership = async () => {
+    setMembershipStatus(prev => ({ ...prev, checking: true }));
+    
+    try {
+      const response = await fetch('/api/discord/check-membership', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMembershipStatus({
+          inServer: data.inServer || false,
+          hasVerifiedRole: data.hasVerifiedRole || false,
+          checking: false,
+        });
+      } else {
+        setMembershipStatus({ inServer: false, hasVerifiedRole: false, checking: false });
+      }
+    } catch (err) {
+      console.error('Membership check error:', err);
+      setMembershipStatus({ inServer: false, hasVerifiedRole: false, checking: false });
+    }
+  };
 
   const handleVerify = async () => {
     if (!address) {
@@ -64,7 +101,7 @@ export default function DiscordVerificationButton() {
         <div>
           <p className="font-bold text-lg text-green-800">Discord Verified!</p>
           <p className="text-sm text-green-700 mt-1">
-            You now have the "Early OG" role
+            You now have the "Early OG" role 
           </p>
         </div>
       </div>
@@ -90,21 +127,60 @@ export default function DiscordVerificationButton() {
     <div className="space-y-4">
       <button
         onClick={handleVerify}
-        disabled={isLoading || isVerifying || !address || !canVerify}
+        disabled={isLoading || isVerifying || !address || !canVerify || membershipStatus.checking}
         className="w-full flex items-center justify-center gap-3 bg-[#5865F2] hover:bg-[#4752C4] text-white px-6 py-3 rounded-xl font-semibold transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isLoading || isVerifying ? (
+        {isLoading || isVerifying || membershipStatus.checking ? (
           <>
             <Loader className="w-5 h-5 animate-spin" />
-            <span>{isVerifying ? 'Opening Discord...' : 'Checking...'}</span>
+            <span>
+              {membershipStatus.checking ? 'Checking Discord...' : 
+               isVerifying ? 'Opening Discord...' : 'Checking...'}
+            </span>
           </>
         ) : (
           <>
             <FaDiscord className="w-5 h-5" />
-            <span>Verify with Discord</span>
+            <span>
+              {membershipStatus.inServer && membershipStatus.hasVerifiedRole
+                ? 'Claim Early OG Role'
+                : 'Join Discord & Verify'}
+            </span>
           </>
         )}
       </button>
+
+      {/* Show warning if in server but missing verified role */}
+      {membershipStatus.inServer && !membershipStatus.hasVerifiedRole && !membershipStatus.checking && (
+        <div className="flex items-start gap-2 p-4 rounded-lg bg-yellow-50 border-2 border-yellow-300">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0 text-yellow-600" />
+          <div className="text-sm text-yellow-800">
+            <p className="font-semibold mb-1">Missing "verified" role</p>
+            <p className="mb-2">
+              You're in the server! Please get the "verified" role in the{' '}
+              <span className="font-mono bg-yellow-100 px-1.5 py-0.5 rounded">#verify</span> channel first.
+            </p>
+            <button 
+              onClick={checkDiscordMembership}
+              className="text-yellow-900 underline font-semibold hover:text-yellow-700 flex items-center gap-1"
+            >
+              <Loader className="w-3 h-3" />
+              Got verified? Click to check again
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Show success if ready to claim */}
+      {membershipStatus.inServer && membershipStatus.hasVerifiedRole && !membershipStatus.checking && (
+        <div className="flex items-start gap-2 p-4 rounded-lg bg-green-50 border-2 border-green-300">
+          <CheckCircle className="w-5 h-5 flex-shrink-0 text-green-600" />
+          <div className="text-sm text-green-800">
+            <p className="font-semibold">✅ All requirements met!</p>
+            <p className="text-xs mt-1">Click the button above to claim your Early OG role 👆</p>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="flex items-start gap-2 p-4 rounded-lg bg-red-50 text-red-700 border border-red-200">
@@ -139,6 +215,19 @@ export default function DiscordVerificationButton() {
             </span>
             <span className={canVerify ? "font-semibold" : ""}>
               Farcaster account linked {!canVerify && "(Required)"}
+            </span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className={
+              membershipStatus.checking ? "text-blue-500" :
+              membershipStatus.inServer && membershipStatus.hasVerifiedRole ? "text-green-500" : 
+              "text-blue-500"
+            }>
+              {membershipStatus.checking ? "⟳" :
+               membershipStatus.inServer && membershipStatus.hasVerifiedRole ? "✓" : "○"}
+            </span>
+            <span className={membershipStatus.inServer && membershipStatus.hasVerifiedRole ? "font-semibold" : ""}>
+              Join Discord & get "verified" role
             </span>
           </li>
         </ul>
