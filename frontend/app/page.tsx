@@ -228,6 +228,12 @@ export default function Home() {
   setIsMenuOpen(false);
 }, []);
 
+  useEffect(() => {
+    if (isConnected && profile?.exists) {
+      setIsMenuOpen(false);
+    }
+  }, [isConnected, profile?.exists]);
+
   const { unreadCount } = useNotifications({
     userAddress: address,
     autoRefresh: true
