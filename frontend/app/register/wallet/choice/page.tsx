@@ -76,14 +76,13 @@ export default function SignupChoicePage() {
           pfp: data.profile.pfp || '',
         }));
         
-        // Navigate to complete page
+        // Navigate to complete page after showing success
         setTimeout(() => {
           router.push('/register/wallet/complete?source=farcaster');
         }, 1500);
       }
     } catch (error) {
       setError('Verification failed. Please try again.');
-    } finally {
       setIsVerifying(false);
     }
   };
@@ -94,13 +93,13 @@ export default function SignupChoicePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
-      <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full border border-gray-200 dark:border-gray-700">
         
         <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
           How do you want to sign up?
         </h1>
         
-        <p className="text-center text-gray-700 dark:text-gray-400 text-sm mb-8">
+        <p className="text-center text-gray-800 dark:text-gray-300 text-sm mb-8 font-medium">
           Choose your signup method
         </p>
 
@@ -116,10 +115,10 @@ export default function SignupChoicePage() {
                 <SiFarcaster className="w-8 h-8 text-purple-600 dark:text-purple-400" />
                 <div>
                   <h3 className="font-bold text-gray-900 dark:text-gray-100">Use Farcaster</h3>
-                  <p className="text-sm text-gray-700 dark:text-gray-400">Join with your Farcaster account(Recommended)</p>
+                  <p className="text-sm text-gray-800 dark:text-gray-300">Sign up with Farcaster account</p>
                 </div>
               </div>
-              <span className="text-gray-400 dark:text-gray-500 text-xl">→</span>
+              <span className="text-gray-500 dark:text-gray-400 text-xl">→</span>
             </div>
           </button>
 
@@ -130,13 +129,13 @@ export default function SignupChoicePage() {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4 text-left">
-                <Edit3 className="w-8 h-8 text-gray-500 dark:text-gray-400" />
+                <Edit3 className="w-8 h-8 text-gray-600 dark:text-gray-400" />
                 <div>
                   <h3 className="font-bold text-gray-900 dark:text-gray-100">Sign Up Manually</h3>
-                  <p className="text-sm text-gray-700 dark:text-gray-400">Fill out the form yourself</p>
+                  <p className="text-sm text-gray-800 dark:text-gray-300">Fill out the form yourself</p>
                 </div>
               </div>
-              <span className="text-gray-400 dark:text-gray-500 text-xl">→</span>
+              <span className="text-gray-500 dark:text-gray-400 text-xl">→</span>
             </div>
           </button>
 
@@ -145,7 +144,7 @@ export default function SignupChoicePage() {
         <div className="mt-6 text-center">
           <button
             onClick={() => router.push('/')}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm transition-colors"
+            className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-sm transition-colors font-medium"
           >
             ← Back to home
           </button>
@@ -154,7 +153,7 @@ export default function SignupChoicePage() {
 
       {/* Farcaster Verification Modal */}
       {showFarcasterModal && (
-        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/50 z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/60 z-50 p-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 w-full max-w-md border border-gray-200 dark:border-gray-700 shadow-2xl">
             
             {farcasterProfile ? (
@@ -164,32 +163,32 @@ export default function SignupChoicePage() {
                   <CheckCircle className="w-16 h-16 text-green-500" />
                 </div>
                 
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                   Profile Verified! 🎉
                 </h3>
                 
-                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-xl p-4 my-4">
-                  <div className="flex items-center gap-3 mb-3">
+                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-xl p-5 my-6">
+                  <div className="flex items-center gap-4 mb-3">
                     <img
                       src={farcasterProfile.pfp}
                       alt="Profile"
                       className="w-16 h-16 rounded-full border-2 border-purple-300 dark:border-purple-600"
                     />
                     <div className="text-left">
-                      <p className="font-bold text-gray-900 dark:text-white">
+                      <p className="font-bold text-gray-900 dark:text-white text-lg">
                         @{farcasterProfile.username}
                       </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-gray-800 dark:text-gray-300">
                         {farcasterProfile.displayName}
                       </p>
-                      <p className="text-xs text-purple-600 dark:text-purple-400">
+                      <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mt-1">
                         FID: {farcasterProfile.fid}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                <p className="text-sm text-gray-700 dark:text-gray-400 mb-4 font-medium">
                   Redirecting to complete your profile...
                 </p>
 
@@ -198,9 +197,9 @@ export default function SignupChoicePage() {
             ) : (
               // Input State
               <>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                    Verify Farcaster Account
+                    Onboard with Farcaster Account
                   </h3>
                   <button
                     onClick={() => {
@@ -209,13 +208,13 @@ export default function SignupChoicePage() {
                       setFid('');
                       setUsername('');
                     }}
-                    className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                    className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 text-2xl leading-none"
                   >
                     ✕
                   </button>
                 </div>
 
-                <p className="text-sm text-gray-700 dark:text-gray-400 mb-6">
+                <p className="text-sm text-gray-800 dark:text-gray-300 mb-6 font-medium">
                   Enter your Farcaster FID and username to verify your account
                 </p>
 
@@ -225,7 +224,7 @@ export default function SignupChoicePage() {
                     <div>
                       <p>{error}</p>
                       {attemptsLeft !== null && (
-                        <p className="text-xs mt-1">Attempts remaining: {attemptsLeft}/3</p>
+                        <p className="text-xs mt-1 font-semibold">Attempts remaining: {attemptsLeft}/3</p>
                       )}
                     </div>
                   </div>
@@ -233,7 +232,7 @@ export default function SignupChoicePage() {
 
                 <div className="space-y-4 mb-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
+                    <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                       Farcaster FID
                     </label>
                     <input
@@ -241,12 +240,12 @@ export default function SignupChoicePage() {
                       value={fid}
                       onChange={(e) => setFid(e.target.value)}
                       placeholder="e.g., 12345"
-                      className="w-full px-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                      className="w-full px-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors font-medium"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
+                    <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                       Farcaster Username
                     </label>
                     <input
@@ -254,9 +253,9 @@ export default function SignupChoicePage() {
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="e.g., username"
-                      className="w-full px-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                      className="w-full px-4 py-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors font-medium"
                     />
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                    <p className="text-xs text-gray-700 dark:text-gray-400 mt-2 font-medium">
                       Enter without the @ symbol
                     </p>
                   </div>
@@ -266,11 +265,11 @@ export default function SignupChoicePage() {
                   <button
                     onClick={handleFarcasterVerify}
                     disabled={isVerifying || !fid || !username}
-                    className="w-full py-3 text-white bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full py-3 text-white bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
                   >
                     {isVerifying ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="w-5 h-5 animate-spin" />
                         Verifying...
                       </>
                     ) : (
@@ -282,7 +281,7 @@ export default function SignupChoicePage() {
                     href="https://warpcast.com/~/settings"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block text-center text-xs text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 underline"
+                    className="block text-center text-xs text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 underline font-semibold"
                   >
                     Find your FID in Farcaster settings →
                   </a>
