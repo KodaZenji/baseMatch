@@ -25,6 +25,7 @@ export default function CompleteWalletProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [profileSource, setProfileSource] = useState<string | null>(null);
   const [avatarLoaded, setAvatarLoaded] = useState(false);
+  const [farcasterData, setFarcasterData] = useState<{username: string, fid: string} | null>(null);
 
   // Consolidated logic for profile initialization
   useEffect(() => {
@@ -42,13 +43,19 @@ export default function CompleteWalletProfilePage() {
         if (stored) {
           try {
             const profile = JSON.parse(stored);
-            console.log('✅ Found Farcaster data');
+            console.log('✅ Found Farcaster data:', profile);
 
             setFormData(prev => ({
               ...prev,
               name: profile.displayName || profile.username || '',
               interests: profile.bio || '',
             }));
+
+            // Store Farcaster username and FID
+            setFarcasterData({
+              username: profile.username,
+              fid: profile.fid
+            });
 
             const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
             if (photoUrl && photoUrl.trim() !== '') {
@@ -158,6 +165,7 @@ export default function CompleteWalletProfilePage() {
         hasAvatar: !!avatarUrl,
         avatarSource: avatarUrl?.includes('dicebear') ? 'dicebear fallback' : profileSource || 'manual',
         profileSource: profileSource || 'manual',
+        farcasterData: farcasterData,
       });
 
       const response = await fetch('/api/profile/register', {
@@ -172,6 +180,9 @@ export default function CompleteWalletProfilePage() {
           email: formData.email,
           photoUrl: avatarUrl,
           profileSource: profileSource || 'manual',
+          farcasterVerified: profileSource === 'farcaster' && farcasterData !== null,
+          farcasterUsername: farcasterData?.username || null,
+          farcasterFid: farcasterData?.fid || null,
         }),
       });
 
