@@ -100,13 +100,13 @@ export default function CompleteWalletProfilePage() {
           <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
             BaseMatch
           </h1>
-          <p className="text-gray-700 dark:text-gray-300 mb-6 font-semibold">Connect Your Wallet</p>
+          <p className="text-gray-800 dark:text-gray-200 mb-6 font-semibold">Connect Your Wallet</p>
           <div className="flex justify-center mb-6">
             <ConnectButton />
           </div>
           <button
             onClick={() => router.push('/')}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm transition-colors"
+            className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-sm transition-colors font-medium"
           >
             ← Back to home
           </button>
@@ -197,7 +197,7 @@ export default function CompleteWalletProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
-      <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-2xl w-full border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-2xl w-full border border-gray-200 dark:border-gray-700">
         <div className="flex justify-center mb-6">
           <div className="relative">
             <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
@@ -220,9 +220,9 @@ export default function CompleteWalletProfilePage() {
         
         {/* Source Badge */}
         {profileSource === 'farcaster' && (
-          <div className="text-center mb-4">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800">
-              <Sparkles className="w-3.5 h-3.5" />
+          <div className="text-center mb-6">
+            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 font-semibold">
+              <Sparkles className="w-4 h-4" />
               Imported from Farcaster
             </span>
           </div>
@@ -230,7 +230,7 @@ export default function CompleteWalletProfilePage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
+            <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-800 dark:text-red-300 px-4 py-3 rounded-lg font-medium">
               {error}
             </div>
           )}
@@ -241,7 +241,7 @@ export default function CompleteWalletProfilePage() {
                 <img
                   src={avatarUrl}
                   alt="Profile"
-                  className="w-24 h-24 rounded-full border-4 border-purple-200 dark:border-purple-800 mb-2 shadow-lg"
+                  className="w-24 h-24 rounded-full border-4 border-purple-300 dark:border-purple-700 mb-2 shadow-lg"
                   onError={(e) => {
                     console.error('❌ Avatar failed to load, using dicebear fallback');
                     if (address) {
@@ -250,7 +250,7 @@ export default function CompleteWalletProfilePage() {
                     }
                   }}
                 />
-                <p className="text-xs text-gray-600 dark:text-gray-400">
+                <p className="text-xs text-gray-700 dark:text-gray-400 font-semibold">
                   {avatarUrl.includes('dicebear') 
                     ? 'Generated avatar' 
                     : profileSource === 'farcaster' 
@@ -262,24 +262,24 @@ export default function CompleteWalletProfilePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">Name *</label>
+            <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Name *</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors"
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium"
               placeholder="Your name"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">Birth Year *</label>
+            <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Birth Year *</label>
             <select
               value={formData.birthYear}
               onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
               required
-              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors"
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium"
             >
               <option value="">Select birth year</option>
               {Array.from({ length: 83 }, (_, i) => {
@@ -296,12 +296,12 @@ export default function CompleteWalletProfilePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">Gender *</label>
+            <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Gender *</label>
             <select
               value={formData.gender}
               onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium"
             >
               <option value="">Select gender</option>
               <option value="Female">Female</option>
@@ -311,25 +311,25 @@ export default function CompleteWalletProfilePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">Interests *</label>
+            <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Interests *</label>
             <textarea
               value={formData.interests}
               onChange={(e) => setFormData({ ...formData, interests: e.target.value })}
               required
               rows={3}
-              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors resize-none"
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors resize-none font-medium"
               placeholder="Hiking, Photography, Crypto..."
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">Email *</label>
+            <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Email *</label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
-              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors"
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium"
               placeholder="your@email.com"
             />
           </div>
@@ -337,7 +337,7 @@ export default function CompleteWalletProfilePage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity shadow-lg hover:shadow-xl"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-bold hover:opacity-90 disabled:opacity-50 transition-opacity shadow-lg hover:shadow-xl"
           >
             {isLoading ? 'Processing...' : 'Continue to Mint →'}
           </button>
@@ -346,7 +346,7 @@ export default function CompleteWalletProfilePage() {
         <div className="mt-6 text-center">
           <button
             onClick={() => router.push('/register/wallet/choice')}
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm transition-colors"
+            className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-sm transition-colors font-medium"
           >
             ← Back to signup options
           </button>
