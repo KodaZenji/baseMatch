@@ -17,10 +17,18 @@ export async function POST(request: NextRequest) {
       email, 
       photoUrl, 
       farcasterVerified,
+      farcasterUsername,
+      farcasterFid,
       profileSource 
     } = body;
 
-    console.log('📥 Registration request:', { profileSource, photoUrl });
+    console.log('📥 Registration request:', { 
+      profileSource, 
+      photoUrl,
+      farcasterVerified,
+      farcasterUsername,
+      farcasterFid 
+    });
 
     if (!address || !name || !birthYear || !gender || !interests) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -50,6 +58,8 @@ export async function POST(request: NextRequest) {
       const updateData: any = {
         wallet_verified: true,
         farcaster_verified: farcasterVerified || false,
+        farcaster_username: farcasterUsername || null,
+        farcaster_fid: farcasterFid || null,
         name,
         birthYear,
         gender,
@@ -78,7 +88,11 @@ export async function POST(request: NextRequest) {
         .eq('id', existingProfile.id);
 
       profileId = existingProfile.id;
-      console.log('✅ Profile updated, photo preserved');
+      console.log('✅ Profile updated with Farcaster data:', {
+        farcaster_verified: updateData.farcaster_verified,
+        farcaster_username: updateData.farcaster_username,
+        farcaster_fid: updateData.farcaster_fid
+      });
     } else {
       // Create new profile
       const { data: newProfile } = await supabaseService
@@ -88,6 +102,8 @@ export async function POST(request: NextRequest) {
           wallet_verified: true,
           email_verified: false,
           farcaster_verified: farcasterVerified || false,
+          farcaster_username: farcasterUsername || null,
+          farcaster_fid: farcasterFid || null,
           profile_source: profileSource || 'manual', 
           name,
           birthYear,
@@ -102,7 +118,12 @@ export async function POST(request: NextRequest) {
         .single();
 
       profileId = newProfile!.id;
-      console.log('✅ New profile created with source:', profileSource);
+      console.log('✅ New profile created with Farcaster data:', {
+        source: profileSource,
+        farcaster_verified: farcasterVerified,
+        farcaster_username: farcasterUsername,
+        farcaster_fid: farcasterFid
+      });
     }
 
     return NextResponse.json({
@@ -115,6 +136,7 @@ export async function POST(request: NextRequest) {
         email: normalizedEmail,
         walletAddress: normalizedAddress,
         farcasterVerified: farcasterVerified || false,
+        farcasterUsername: farcasterUsername || null,
         profileSource: profileSource || 'manual',
       },
     });
