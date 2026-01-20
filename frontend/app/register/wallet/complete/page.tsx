@@ -258,13 +258,14 @@ export default function CompleteWalletProfilePage() {
             </div>
           )}
 
+          {/* ---------- UPDATED AVATAR SECTION ---------- */}
           <div className="flex justify-center">
             {avatarUrl && (
               <div className="text-center">
                 <img
                   src={avatarUrl}
                   alt="Profile"
-                  className="w-24 h-24 rounded-full border-4 border-purple-300 dark:border-purple-700 mb-2 shadow-lg"
+                  className="w-24 h-24 rounded-full border-4 border-purple-300 dark:border-purple-700 mb-1 shadow-lg"
                   onError={(e) => {
                     console.error('❌ Avatar failed to load, using dicebear fallback');
                     if (address) {
@@ -273,15 +274,21 @@ export default function CompleteWalletProfilePage() {
                     }
                   }}
                 />
-                <p className="text-xs text-gray-700 dark:text-gray-400 font-semibold">
-                  {profileSource === 'farcaster' && avatarLoaded
-                    ? 'Farcaster avatar' 
-                    : 'Generated avatar'}
-                </p>
+                {profileSource === 'farcaster' && avatarLoaded ? (
+                  <p className="text-[10px] text-gray-700 dark:text-gray-400 font-semibold">
+                    Farcaster avatar
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-gray-700 dark:text-gray-400 italic">
+                    We generated a custom beautiful pixel art for you. Change it anytime in profile settings.
+                  </p>
+                )}
               </div>
             )}
           </div>
+          {/* ---------- END AVATAR SECTION ---------- */}
 
+          {/* Name */}
           <div>
             <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Name *</label>
             <input
@@ -294,6 +301,7 @@ export default function CompleteWalletProfilePage() {
             />
           </div>
 
+          {/* Birth Year */}
           <div>
             <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Birth Year *</label>
             <select
@@ -316,6 +324,7 @@ export default function CompleteWalletProfilePage() {
             </select>
           </div>
 
+          {/* Gender */}
           <div>
             <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Gender *</label>
             <select
@@ -331,6 +340,7 @@ export default function CompleteWalletProfilePage() {
             </select>
           </div>
 
+          {/* Interests */}
           <div>
             <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Interests *</label>
             <textarea
@@ -343,6 +353,7 @@ export default function CompleteWalletProfilePage() {
             />
           </div>
 
+          {/* Email */}
           <div>
             <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Email *</label>
             <input
