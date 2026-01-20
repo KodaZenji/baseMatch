@@ -7,6 +7,7 @@ export const runtime = 'nodejs';
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID;
 const EARLY_OG_ROLE_ID = process.env.DISCORD_EARLY_OG_ROLE_ID;
+const DISCORD_VERIFIED_ROLE_ID = process.env.DISCORD_VERIFIED_ROLE_ID;
 
 interface DiscordVerificationAttempt {
   wallet_address: string;
@@ -81,7 +82,40 @@ export async function POST(request: Request) {
 
     const farcasterFid = String(profile.farcaster_fid);
 
-    // 🎯 NEW: Check if THIS FID already verified Discord (regardless of wallet)
+    // 🎯 NEW CHECK: Must have verified role in Discord (if configured)
+    if (DISCORD_VERIFIED_ROLE_ID && DISCORD_BOT_TOKEN && DISCORD_GUILD_ID) {
+      try {
+        const memberResponse = await fetch(
+          `https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/members/${discordUserId}`,
+          {
+            headers: {
+              'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
+            },
+          }
+        );
+
+        if (memberResponse.ok) {
+          const member = await memberResponse.json();
+          const hasVerifiedRole = member.roles.includes(DISCORD_VERIFIED_ROLE_ID);
+
+          if (!hasVerifiedRole) {
+            console.warn('❌ User missing verified role:', discordUserId);
+            return NextResponse.json({ 
+              error: 'Missing "verified" role. Please get verified in the Discord server first, then try again.',
+              success: false,
+              missingVerifiedRole: true
+            }, { status: 403 });
+          }
+
+          console.log('✅ User has verified role:', discordUserId);
+        }
+      } catch (error) {
+        console.error('Error checking verified role:', error);
+        // Continue anyway if check fails (graceful degradation)
+      }
+    }
+
+    // 🎯 Check if THIS FID already verified Discord (regardless of wallet)
     const { data: existingFidVerification } = await supabaseService
       .from('discord_verification_attempts')
       .select('*')
@@ -161,7 +195,7 @@ export async function POST(request: Request) {
     const attemptData: Partial<DiscordVerificationAttempt> = {
       wallet_address: normalizedAddress,
       discord_user_id: discordUserId,
-      farcaster_fid: farcasterFid, // ← Store FID
+      farcaster_fid: farcasterFid,
       attempt_count: (existingAttempts?.length || 0) + 1,
       first_attempt_at: existingAttempts?.[0]?.first_attempt_at || new Date().toISOString(),
       last_attempt_at: new Date().toISOString(),
