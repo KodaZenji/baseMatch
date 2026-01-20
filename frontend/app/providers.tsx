@@ -11,7 +11,6 @@ import { useState, useEffect } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
 
 import '@rainbow-me/rainbowkit/styles.css';
-import '@coinbase/onchainkit/styles.css'; 
 
 const queryClient = new QueryClient();
 
