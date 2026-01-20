@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { X, MessageCircle, Users, LayoutDashboard } from 'lucide-react';
 import { FaDiscord } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
@@ -10,30 +9,26 @@ interface ExploreMenuProps {
 }
 
 export function ExploreMenu({ isOpen, onClose, setActiveTab }: ExploreMenuProps) {
-  // Force close on mount to prevent menu from obstructing the view
-  useEffect(() => {
-    onClose();
-  }, []);
-
   const handleNavClick = (tab: 'browse' | 'matches' | 'profile' | 'notifications') => {
     setActiveTab(tab);
     onClose();
   };
 
-  // Don't render anything if menu is closed
-  if (!isOpen) return null;
-
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 z-40 transition-opacity"
-        onClick={onClose}
-      />
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+          onClick={onClose}
+        />
+      )}
       
       {/* Slide-in Menu */}
       <div
-        className="fixed top-0 right-0 h-full w-72 bg-white dark:bg-gray-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out translate-x-0"
+        className={`fixed top-0 right-0 h-full w-72 bg-white dark:bg-gray-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
       >
         <div className="p-6">
           <button
@@ -85,7 +80,7 @@ export function ExploreMenu({ isOpen, onClose, setActiveTab }: ExploreMenuProps)
 
             {/* Discord */}
             <a
-              href="https://discord.gg/basematch"
+              href="https://discord.gg/vF7bZWhJ85"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
