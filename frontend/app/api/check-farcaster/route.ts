@@ -1,83 +1,48 @@
-// app/api/check-farcaster/route.ts
-// ENHANCED VERSION: Now properly returns avatar for signup flow
-
 import { NextResponse } from 'next/server';
 import { NeynarAPIClient } from '@neynar/nodejs-sdk';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { address } = body;
+    const { address } = await request.json();
 
     if (!address) {
-      return NextResponse.json({ error: 'Missing address' }, { status: 400 });
+      return NextResponse.json({ exists: false, error: 'Address required' }, { status: 400 });
     }
 
-    const neynarClient = new NeynarAPIClient({
-      apiKey: process.env.NEYNAR_API_KEY!
+    if (!process.env.NEYNAR_API_KEY) {
+      console.warn('NEYNAR_API_KEY not configured');
+      return NextResponse.json({ exists: false });
+    }
+
+    const neynarClient = new NeynarAPIClient({ 
+      apiKey: process.env.NEYNAR_API_KEY 
     });
 
-    console.log('🔍 Checking Farcaster for address:', address);
-
-    // Fetch by wallet address
+    // Fix: Pass an object with addresses property
     const result = await neynarClient.fetchBulkUsersByEthOrSolAddress({
       addresses: [address.toLowerCase()]
     });
 
-    const users = result?.users || [];
+    const users = result[address.toLowerCase()];
 
-    if (users.length === 0) {
-      console.log('❌ No Farcaster account found');
-      return NextResponse.json({ exists: false });
+    if (users && users.length > 0) {
+      const user = users[0];
+      return NextResponse.json({
+        exists: true,
+        profile: {
+          fid: user.fid,
+          username: user.username,
+          displayName: user.display_name,
+          pfp: user.pfp_url,
+          bio: user.profile?.bio?.text || '',
+          followerCount: user.follower_count || 0,
+        },
+      });
     }
 
-    const rawUser = users[0] as any;
-
-    // CRITICAL: Properly extract avatar with multiple fallbacks
-    const photoUrl = 
-      rawUser.pfp_url ||           // Primary field
-      rawUser.pfp?.url ||          // Nested object
-      rawUser.profile?.pfp_url ||  // Profile nested
-      '';
-
-    console.log('✅ Farcaster profile found:', {
-      fid: rawUser.fid,
-      username: rawUser.username,
-      hasAvatar: !!photoUrl,
-      avatarUrl: photoUrl ? photoUrl.substring(0, 50) + '...' : 'none'
-    });
-
-    // Return comprehensive profile data for signup
-    return NextResponse.json({
-      exists: true,
-      profile: {
-        // Identity
-        fid: rawUser.fid,
-        username: rawUser.username,
-        displayName: rawUser.display_name || rawUser.username,
-        
-        // Bio/Description
-        bio: rawUser.profile?.bio?.text || '',
-        
-        // Social stats
-        followerCount: rawUser.follower_count || 0,
-        followingCount: rawUser.following_count || 0,
-
-        // CRITICAL: Avatar with all fallback fields for compatibility
-        pfp: photoUrl,
-        pfp_url: photoUrl,
-        photoUrl: photoUrl,
-        
-        // Additional metadata
-        verifications: rawUser.verifications || [],
-        verified_addresses: rawUser.verified_addresses || {},
-      }
-    });
-  } catch (err: any) {
-    console.error('❌ check-farcaster error:', err);
-    return NextResponse.json({ 
-      exists: false,
-      error: 'Failed to check Farcaster account'
-    }, { status: 500 });
+    return NextResponse.json({ exists: false });
+  } catch (error) {
+    console.error('Error checking Farcaster:', error);
+    return NextResponse.json({ exists: false });
   }
 }
