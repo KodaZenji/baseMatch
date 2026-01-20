@@ -26,64 +26,59 @@ export default function CompleteWalletProfilePage() {
   const [profileSource, setProfileSource] = useState<string | null>(null);
   const [avatarLoaded, setAvatarLoaded] = useState(false);
 
-  // Load Farcaster profile data if available
+  // Consolidated logic for profile initialization
   useEffect(() => {
-    console.log('🔍 Complete page loaded with source:', source);
-    console.log('🔍 Address:', address);
-    
-    if (source === 'farcaster') {
-      const stored = localStorage.getItem('farcasterProfile');
-      console.log('📦 Raw localStorage data:', stored);
-      
-      if (stored) {
-        try {
-          const profile = JSON.parse(stored);
-          console.log('✅ Parsed Farcaster profile:', profile);
-          
-          setFormData(prev => ({
-            ...prev,
-            name: profile.displayName || profile.username || '',
-            interests: profile.bio || '',
-          }));
-          
-          // CRITICAL: Try all possible photo field names
-          const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
-          console.log('🖼️ Avatar URL found:', photoUrl);
-          
-          if (photoUrl && photoUrl.trim() !== '') {
-            console.log('✅ Setting Farcaster avatar:', photoUrl);
-            setAvatarUrl(photoUrl);
-            setProfileSource('farcaster');
-            setAvatarLoaded(true);
-          } else {
-            console.warn('⚠️ No avatar URL found in Farcaster profile');
-            setAvatarLoaded(false);
-          }
-          
-          localStorage.removeItem('farcasterProfile');
-        } catch (error) {
-          console.error('❌ Error parsing Farcaster profile:', error);
-          setAvatarLoaded(false);
-        }
-      } else {
-        console.warn('⚠️ No farcasterProfile found in localStorage');
-        setAvatarLoaded(false);
-      }
-    } else {
-      setAvatarLoaded(false);
-    }
-  }, [source]);
+    if (!address) return;
 
-  // Generate dicebear fallback ONLY if Farcaster didn't load
-  useEffect(() => {
-    if (address && !avatarLoaded && !avatarUrl) {
-      console.log('🎨 No Farcaster avatar, generating dicebear');
-      const seed = address.substring(2, 10);
-      const dicebearUrl = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
-      setAvatarUrl(dicebearUrl);
-      console.log('✅ Dicebear fallback set:', dicebearUrl);
-    }
-  }, [address, avatarLoaded, avatarUrl]);
+    console.log('🔍 Initializing profile for:', address, 'Source:', source);
+
+    const initializeData = () => {
+      let finalAvatar = '';
+      let isFarcaster = false;
+
+      // 1. Handle Farcaster Import
+      if (source === 'farcaster') {
+        const stored = localStorage.getItem('farcasterProfile');
+        if (stored) {
+          try {
+            const profile = JSON.parse(stored);
+            console.log('✅ Found Farcaster data');
+
+            setFormData(prev => ({
+              ...prev,
+              name: profile.displayName || profile.username || '',
+              interests: profile.bio || '',
+            }));
+
+            const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
+            if (photoUrl && photoUrl.trim() !== '') {
+              finalAvatar = photoUrl;
+              isFarcaster = true;
+              setProfileSource('farcaster');
+            }
+            // Clear storage after successful extraction
+            localStorage.removeItem('farcasterProfile');
+          } catch (err) {
+            console.error('❌ Error parsing Farcaster profile:', err);
+          }
+        }
+      }
+
+      // 2. Generate Dicebear Fallback if no avatar was found from Farcaster
+      if (!finalAvatar) {
+        console.log('🎨 Using dicebear fallback');
+        const seed = address.substring(2, 10);
+        finalAvatar = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
+        setProfileSource(null);
+      }
+
+      // 3. Batch state updates
+      setAvatarUrl(finalAvatar);
+      setAvatarLoaded(isFarcaster);
+    };
+
+    initializeData();
+  }, [source, address]);
 
   // Dark mode initialization
   useEffect(() => {
@@ -236,7 +231,6 @@ export default function CompleteWalletProfilePage() {
           Complete Your Profile
         </h1>
         
-        {/* Source Badge */}
         {profileSource === 'farcaster' && (
           <div className="text-center mb-6">
             <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 font-semibold">
