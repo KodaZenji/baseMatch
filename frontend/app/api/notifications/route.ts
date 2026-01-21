@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendFarcasterNotification } from '@/lib/sendFarcasterNotification';
 
 export const runtime = 'nodejs';
 
@@ -78,6 +79,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
     
+    // Store in your database
     const { data, error } = await supabase
       .from('notifications')
       .insert({
@@ -98,6 +100,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ALSO send via Farcaster (fire and forget)
+    sendFarcasterNotification(
+      userAddress,
+      title,
+      message,
+      metadata?.targetUrl
+    ).catch(err => console.error('Farcaster notification failed:', err));
+
     return NextResponse.json({ notification: data }, { status: 201 });
   } catch (error) {
     console.error('Error in POST /api/notifications:', error);
@@ -107,7 +117,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
 // PATCH - Mark notifications as read
 export async function PATCH(request: NextRequest) {
   try {
