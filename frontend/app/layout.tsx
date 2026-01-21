@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
   openGraph: {
     title: "BaseMatch - Find Your Match On-Chain",
-    description: "Your wallet is your dating profile. Build real reputation, meet real people.",
+    description: "No Bots, every profile is a wallet. Build real reputation, meet real people.",
     images: ['https://ipfs.filebase.io/ipfs/QmdvmF7F39sYqF345gyzWnWQdff66JjDNTFokBXwwrPW5b.png'],
     url: 'https://basematch.app',
     siteName: 'BaseMatch',
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'BaseMatch - Find Your Match On-Chain',
-    description: 'Your wallet is your dating profile. Build real reputation, meet real people.',
+    description: 'No Bots, every profile is a wallet. Build real reputation, meet real people.',
     images: ['https://ipfs.filebase.io/ipfs/QmdvmF7F39sYqF345gyzWnWQdff66JjDNTFokBXwwrPW5b.png'],
   },
 
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
       version: "next",
       imageUrl: "https://ipfs.filebase.io/ipfs/QmdvmF7F39sYqF345gyzWnWQdff66JjDNTFokBXwwrPW5b.png",
       button: {
-        title: "Find Your Match",
+        title: "Web3 Dating on Base",
         action: {
           type: "launch_miniapp",
           name: "BaseMatch",
