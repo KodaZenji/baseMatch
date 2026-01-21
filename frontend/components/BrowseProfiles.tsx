@@ -7,6 +7,7 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { useState, useEffect, useMemo } from 'react';
 import GiftingModal from './GiftingModal';
 import { RefreshCw } from 'lucide-react';
+import AddMiniAppModal from './AddMiniAppModal';
 
 // Fisher-Yates shuffle algorithm
 function shuffleArray<T>(array: T[]): T[] {
@@ -91,12 +92,18 @@ export default function BrowseProfiles() {
             const profileName = profiles.find(p => p.wallet_address === targetAddress)?.name || 'user';
 
             if (data.matched) {
-                // It's a match!
-                setSuccessMessage(`🎉 It's a match with ${profileName}! Check your notifications.`);
-            } else {
-                // Interest recorded
-                setSuccessMessage(`❤️ Interest sent to ${profileName}!`);
-            }
+    // It's a match!
+    setSuccessMessage(`🎉 It's a match with ${profileName}! Check your notifications.`);
+    
+    // Show mini app prompt after first match (7 seconds delay)
+    const alreadyAdded = localStorage.getItem('basematch_miniapp_added');
+    if (!alreadyAdded) {
+        setTimeout(() => setShowMiniAppPrompt(true), 7000);
+    }
+} else {
+    // Interest recorded
+    setSuccessMessage(`❤️ Interest sent to ${profileName}!`);
+}
 
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 4000);
@@ -241,6 +248,14 @@ export default function BrowseProfiles() {
                 recipientAddress={selectedRecipient.address}
                 recipientName={selectedRecipient.name}
             />
+
+            {/* Mini App Prompt Modal */}
+            {showMiniAppPrompt && (
+                <AddMiniAppModal
+                    trigger="after-match"
+                    onClose={() => setShowMiniAppPrompt(false)}
+                />
+            )}
         </div>
     );
 }
