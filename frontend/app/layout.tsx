@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "BaseMatch - Find Your Match On-Chain",
     description: "No Bots, every profile is a wallet. Build real reputation, meet real people.",
-    images: ['https://ipfs.filebase.io/ipfs/QmdvmF7F39sYqF345gyzWnWQdff66JjDNTFokBXwwrPW5b.png'],
+    images: ['https://ipfs.filebase.io/ipfs/QmX3Tkqk4H2wW8n4P6VDsQdwEfEM3M9KkBcGrWBKAGLjXXb.png'],
     url: 'https://basematch.app',
     siteName: 'BaseMatch',
     type: 'website',
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'BaseMatch - Find Your Match On-Chain',
     description: 'No Bots, every profile is a wallet. Build real reputation, meet real people.',
-    images: ['https://ipfs.filebase.io/ipfs/QmdvmF7F39sYqF345gyzWnWQdff66JjDNTFokBXwwrPW5b.png'],
+    images: ['https://ipfs.filebase.io/ipfs/QmX3Tkqk4H2wW8n4P6VDsQdwEfEM3M9KkBcGrWBKAGLjXX.png'],
   },
 
   icons: {
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     'base:app_id': '69427d5ed19763ca26ddc392',
     'fc:miniapp': JSON.stringify({
       version: "next",
-      imageUrl: "https://ipfs.filebase.io/ipfs/QmdvmF7F39sYqF345gyzWnWQdff66JjDNTFokBXwwrPW5b.png",
+      imageUrl: "https://ipfs.filebase.io/ipfs/QmX3Tkqk4H2wW8n4P6VDsQdwEfEM3M9KkBcGrWBKAGLjXX.png",
       button: {
         title: "Web3 Dating on Base",
         action: {
