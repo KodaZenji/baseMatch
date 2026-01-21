@@ -30,6 +30,7 @@ export default function BrowseProfiles() {
     const [isExpressingInterest, setIsExpressingInterest] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [shuffleSeed, setShuffleSeed] = useState(0); // Track when to reshuffle
+    const [showMiniAppPrompt, setShowMiniAppPrompt] = useState(false);
 
     const { writeContract, isPending, isError, error } = useWriteContract();
 
