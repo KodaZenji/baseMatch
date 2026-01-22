@@ -181,7 +181,7 @@ export default function SignupChoicePage() {
                   </div>
                   <div>
                     <h3 className="font-bold text-gray-900 dark:text-gray-100">Use Base Profile</h3>
-                    <p className="text-sm text-gray-800 dark:text-gray-300">sign Up with BaseApp account</p>
+                    <p className="text-sm text-gray-800 dark:text-gray-300">Sign Up with BaseApp account</p>
                   </div>
                 </div>
                 <span className="text-gray-500 dark:text-gray-400 text-xl">→</span>
