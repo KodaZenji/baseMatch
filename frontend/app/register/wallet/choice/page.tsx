@@ -51,7 +51,6 @@ export default function SignupChoicePage() {
     setIsVerifying(true);
 
     try {
-      // Get Base app context
       const context = await sdk.context;
       
       console.log('Base app context:', context);
@@ -64,32 +63,51 @@ export default function SignupChoicePage() {
 
       const user = context.user;
 
-      // Create profile from Base app data
-      const profile = {
-        displayName: user.displayName || user.username || 'Base User',
-        username: user.username || `user${user.fid}`,
-        bio: '',
-        fid: user.fid,
-        photoUrl: user.pfpUrl || '',
-        pfpUrl: user.pfpUrl || '',
-        pfp: user.pfpUrl || '',
-      };
+      // Call Base app verification endpoint
+      const response = await fetch('/api/verify-baseapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address,
+          fid: user.fid,
+          username: user.username,
+          displayName: user.displayName,
+          pfpUrl: user.pfpUrl,
+        }),
+      });
 
-      setBaseProfile(profile);
+      const data = await response.json();
 
-      // Save to localStorage
-      localStorage.setItem('baseProfile', JSON.stringify(profile));
-      
-      console.log('✅ Base profile saved:', profile);
+      if (!response.ok) {
+        setError(data.error || 'Verification failed');
+        setIsVerifying(false);
+        return;
+      }
 
-      // Navigate to complete page
-      setTimeout(() => {
-        router.push('/register/wallet/complete?source=baseapp');
-      }, 1500);
+      if (data.verified && data.profile) {
+        const profile = {
+          displayName: data.profile.displayName,
+          username: data.profile.username,
+          bio: '',
+          fid: data.profile.fid,
+          photoUrl: data.profile.pfp,
+          pfpUrl: data.profile.pfp,
+          pfp: data.profile.pfp,
+        };
+
+        setBaseProfile(profile);
+        localStorage.setItem('baseProfile', JSON.stringify(profile));
+        
+        console.log('✅ Base profile verified and saved:', profile);
+
+        setTimeout(() => {
+          router.push('/register/wallet/complete?source=baseapp');
+        }, 1500);
+      }
 
     } catch (error) {
       console.error('Base app signup error:', error);
-      setError('Failed to fetch Base profile. Please try another signup method.');
+      setError('Failed to verify Base profile. Please try another signup method.');
       setIsVerifying(false);
     }
   };
@@ -245,7 +263,7 @@ export default function SignupChoicePage() {
               </div>
               
               <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                Profile Loaded! 🎉
+                Profile Verified! 🎉
               </h3>
               
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-5 my-6">
@@ -278,6 +296,37 @@ export default function SignupChoicePage() {
               </p>
 
               <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Base App Error Modal */}
+      {showBaseModal && error && !baseProfile && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/60 z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 w-full max-w-md border border-gray-200 dark:border-gray-700 shadow-2xl">
+            <div className="text-center">
+              <div className="mb-4 flex justify-center">
+                <AlertCircle className="w-16 h-16 text-red-500" />
+              </div>
+              
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                Verification Failed
+              </h3>
+              
+              <p className="text-gray-700 dark:text-gray-300 mb-6">
+                {error}
+              </p>
+
+              <button
+                onClick={() => {
+                  setShowBaseModal(false);
+                  setError('');
+                }}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all"
+              >
+                Try Again
+              </button>
             </div>
           </div>
         </div>
