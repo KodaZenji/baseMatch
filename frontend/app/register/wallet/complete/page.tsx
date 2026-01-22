@@ -28,65 +28,89 @@ export default function CompleteWalletProfilePage() {
   const [farcasterData, setFarcasterData] = useState<{username: string, fid: string} | null>(null);
 
   // Consolidated logic for profile initialization
-  useEffect(() => {
-    if (!address) return;
+ 
+useEffect(() => {
+  if (!address) return;
 
-    console.log('🔍 Initializing profile for:', address, 'Source:', source);
+  console.log('🔍 Initializing profile for:', address, 'Source:', source);
 
-    const initializeData = () => {
-      let finalAvatar = '';
-      let isFarcaster = false;
+  const initializeData = () => {
+    let finalAvatar = '';
+    let isFarcaster = false;
+    let isBaseApp = false;
 
-      // 1. Handle Farcaster Import
-      if (source === 'farcaster') {
-        const stored = localStorage.getItem('farcasterProfile');
-        if (stored) {
-          try {
-            const profile = JSON.parse(stored);
-            console.log('✅ Found Farcaster data:', profile);
+    // 1. Handle Base App Import
+    if (source === 'baseapp') {
+      const stored = localStorage.getItem('baseProfile');
+      if (stored) {
+        try {
+          const profile = JSON.parse(stored);
+          console.log('✅ Found Base app profile data');
 
-            setFormData(prev => ({
-              ...prev,
-              name: profile.displayName || profile.username || '',
-              interests: profile.bio || '',
-            }));
+          setFormData(prev => ({
+            ...prev,
+            name: profile.displayName || profile.username || '',
+            interests: profile.bio || '',
+          }));
 
-            // Store Farcaster username and FID
-            setFarcasterData({
-              username: profile.username,
-              fid: profile.fid
-            });
-
-            const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
-            if (photoUrl && photoUrl.trim() !== '') {
-              finalAvatar = photoUrl;
-              isFarcaster = true;
-              setProfileSource('farcaster');
-            }
-            // Clear storage after successful extraction
-            localStorage.removeItem('farcasterProfile');
-          } catch (err) {
-            console.error('❌ Error parsing Farcaster profile:', err);
+          const photoUrl = profile.photoUrl || profile.pfpUrl || profile.pfp || '';
+          if (photoUrl && photoUrl.trim() !== '') {
+            finalAvatar = photoUrl;
+            isBaseApp = true;
+            setProfileSource('baseapp');
           }
+          // Clear storage after successful extraction
+          localStorage.removeItem('baseProfile');
+        } catch (err) {
+          console.error('❌ Error parsing Base profile:', err);
         }
       }
+    }
+    
+    // 2. Handle Farcaster Import (if not Base app)
+    if (!isBaseApp && source === 'farcaster') {
+      const stored = localStorage.getItem('farcasterProfile');
+      if (stored) {
+        try {
+          const profile = JSON.parse(stored);
+          console.log('✅ Found Farcaster data');
 
-      // 2. Generate Dicebear Fallback if no avatar was found from Farcaster
-      if (!finalAvatar) {
-        console.log('🎨 Using dicebear fallback');
-        const seed = address.substring(2, 10);
-        finalAvatar = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
-        setProfileSource(null);
+          setFormData(prev => ({
+            ...prev,
+            name: profile.displayName || profile.username || '',
+            interests: profile.bio || '',
+          }));
+
+          const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
+          if (photoUrl && photoUrl.trim() !== '') {
+            finalAvatar = photoUrl;
+            isFarcaster = true;
+            setProfileSource('farcaster');
+          }
+          // Clear storage after successful extraction
+          localStorage.removeItem('farcasterProfile');
+        } catch (err) {
+          console.error('❌ Error parsing Farcaster profile:', err);
+        }
       }
+    }
 
-      // 3. Batch state updates
-      setAvatarUrl(finalAvatar);
-      setAvatarLoaded(isFarcaster);
-    };
+    // 3. Generate Dicebear Fallback if no avatar was found
+    if (!finalAvatar) {
+      console.log('🎨 Using dicebear fallback');
+      const seed = address.substring(2, 10);
+      finalAvatar = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
+      setProfileSource(null);
+    }
 
-    initializeData();
-  }, [source, address]);
+    // 4. Batch state updates
+    setAvatarUrl(finalAvatar);
+    setAvatarLoaded(isFarcaster || isBaseApp);
+  };
 
+  initializeData();
+}, [source, address]);
+  
   // Dark mode initialization
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
