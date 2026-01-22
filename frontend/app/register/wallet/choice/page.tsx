@@ -5,18 +5,32 @@ import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { Edit3, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { SiFarcaster } from 'react-icons/si';
+import { sdk } from '@farcaster/miniapp-sdk';
 
 export default function SignupChoicePage() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   
   const [showFarcasterModal, setShowFarcasterModal] = useState(false);
+  const [showBaseModal, setShowBaseModal] = useState(false);
   const [fid, setFid] = useState('');
   const [username, setUsername] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState('');
   const [farcasterProfile, setFarcasterProfile] = useState<any>(null);
+  const [baseProfile, setBaseProfile] = useState<any>(null);
   const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
+  const [isInBaseApp, setIsInBaseApp] = useState(false);
+
+  // Check if running in Base app
+  useEffect(() => {
+    async function checkBaseApp() {
+      const inBaseApp = await sdk.isInMiniApp();
+      setIsInBaseApp(inBaseApp);
+      console.log('Running in Base app:', inBaseApp);
+    }
+    checkBaseApp();
+  }, []);
 
   // Dark mode initialization
   useEffect(() => {
@@ -30,6 +44,55 @@ export default function SignupChoicePage() {
     router.push('/');
     return null;
   }
+
+  const handleBaseAppSignup = async () => {
+    setShowBaseModal(true);
+    setError('');
+    setIsVerifying(true);
+
+    try {
+      // Get Base app context
+      const context = await sdk.context;
+      
+      console.log('Base app context:', context);
+
+      if (!context?.user) {
+        setError('Could not fetch Base profile. Please try another method.');
+        setIsVerifying(false);
+        return;
+      }
+
+      const user = context.user;
+
+      // Create profile from Base app data
+      const profile = {
+        displayName: user.displayName || user.username || 'Base User',
+        username: user.username || `user${user.fid}`,
+        bio: user.bio || '',
+        fid: user.fid,
+        photoUrl: user.pfpUrl || '',
+        pfpUrl: user.pfpUrl || '',
+        pfp: user.pfpUrl || '',
+      };
+
+      setBaseProfile(profile);
+
+      // Save to localStorage
+      localStorage.setItem('baseProfile', JSON.stringify(profile));
+      
+      console.log('✅ Base profile saved:', profile);
+
+      // Navigate to complete page
+      setTimeout(() => {
+        router.push('/register/wallet/complete?source=baseapp');
+      }, 1500);
+
+    } catch (error) {
+      console.error('Base app signup error:', error);
+      setError('Failed to fetch Base profile. Please try another signup method.');
+      setIsVerifying(false);
+    }
+  };
 
   const handleFarcasterVerify = async () => {
     if (!fid || !username) {
@@ -65,24 +128,18 @@ export default function SignupChoicePage() {
       if (data.verified && data.profile) {
         setFarcasterProfile(data.profile);
         
-        // UPDATED: Save complete profile to localStorage with FID
         localStorage.setItem('farcasterProfile', JSON.stringify({
           displayName: data.profile.displayName || data.profile.username,
           username: data.profile.username,
           bio: data.profile.bio || '',
-          fid: fid.trim(), // Use the FID from user input
+          fid: fid.trim(),
           photoUrl: data.profile.pfp || '',
           pfp_url: data.profile.pfp || '',
           pfp: data.profile.pfp || '',
         }));
         
-        console.log('✅ Farcaster profile saved to localStorage:', {
-          username: data.profile.username,
-          fid: fid.trim(),
-          displayName: data.profile.displayName
-        });
+        console.log('✅ Farcaster profile saved:', data.profile);
         
-        // Navigate to complete page after showing success
         setTimeout(() => {
           router.push('/register/wallet/complete?source=farcaster');
         }, 1500);
@@ -111,6 +168,27 @@ export default function SignupChoicePage() {
 
         <div className="space-y-4">
           
+          {/* Base App Button - Only show if in Base app */}
+          {isInBaseApp && (
+            <button 
+              onClick={handleBaseAppSignup}
+              className="w-full p-6 rounded-xl border-2 border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:border-blue-500 dark:hover:border-blue-500 transition-all shadow-sm hover:shadow-md"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4 text-left">
+                  <div className="w-8 h-8 bg-blue-600 dark:bg-blue-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                    B
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-gray-100">Use Base Profile</h3>
+                    <p className="text-sm text-gray-800 dark:text-gray-300">signup with BaseApp account</p>
+                  </div>
+                </div>
+                <span className="text-gray-500 dark:text-gray-400 text-xl">→</span>
+              </div>
+            </button>
+          )}
+
           {/* Farcaster Button */}
           <button 
             onClick={() => setShowFarcasterModal(true)}
@@ -156,6 +234,54 @@ export default function SignupChoicePage() {
           </button>
         </div>
       </div>
+
+      {/* Base App Success Modal */}
+      {showBaseModal && baseProfile && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/60 z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 w-full max-w-md border border-gray-200 dark:border-gray-700 shadow-2xl">
+            <div className="text-center">
+              <div className="mb-4 flex justify-center">
+                <CheckCircle className="w-16 h-16 text-blue-500" />
+              </div>
+              
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                Profile Loaded! 🎉
+              </h3>
+              
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-5 my-6">
+                <div className="flex items-center gap-4 mb-3">
+                  {baseProfile.photoUrl && (
+                    <img
+                      src={baseProfile.photoUrl}
+                      alt="Profile"
+                      className="w-16 h-16 rounded-full border-2 border-blue-300 dark:border-blue-600"
+                    />
+                  )}
+                  <div className="text-left">
+                    <p className="font-bold text-gray-900 dark:text-white text-lg">
+                      {baseProfile.displayName}
+                    </p>
+                    <p className="text-sm text-gray-800 dark:text-gray-300">
+                      @{baseProfile.username}
+                    </p>
+                    {baseProfile.fid && (
+                      <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-1">
+                        FID: {baseProfile.fid}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-700 dark:text-gray-400 mb-4 font-medium">
+                Redirecting to complete your profile...
+              </p>
+
+              <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Farcaster Verification Modal */}
       {showFarcasterModal && (
