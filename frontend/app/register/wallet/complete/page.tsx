@@ -302,7 +302,7 @@ export default function CompleteWalletProfilePage() {
         `inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border font-semibold ${
           profileSource === 'farcaster'
             ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700'
-            : 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 border-cyan-300 dark:border-cyan-700'
+            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
         }`
       }
     >
@@ -319,29 +319,30 @@ export default function CompleteWalletProfilePage() {
             </div>
           )}
 
-          <div className="flex justify-center">
-            {avatarUrl && (
-              <div className="text-center">
-                <img
-                  src={avatarUrl}
-                  alt="Profile"
-                  className="w-24 h-24 rounded-full border-4 border-purple-300 dark:border-purple-700 mb-2 shadow-lg"
-                  onError={(e) => {
-                    console.error('❌ Avatar failed to load, using dicebear fallback');
-                    if (address) {
-                      const seed = address.substring(2, 10);
-                      e.currentTarget.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
-                    }
-                  }}
-                />
-                <p className="text-xs text-gray-700 dark:text-gray-400 font-semibold">
-                  {(profileSource === 'farcaster' || profileSource === 'baseapp') && avatarLoaded
-                    ? `${profileSource === 'baseapp' ? 'Base' : 'Farcaster'} avatar` 
-                    : 'Generated avatar'}
-                </p>
-              </div>
-            )}
-          </div>
+         <div className="flex justify-center">
+  {avatarUrl && (
+    <div className="text-center">
+      <img
+        src={avatarUrl}
+        alt="Profile"
+        className={
+          `w-24 h-24 rounded-full border-4 mb-2 shadow-lg ${
+            profileSource === 'farcaster'
+              ? 'border-purple-300 dark:border-purple-700'
+              : 'border-blue-300 dark:border-blue-700'
+          }`
+        }
+        onError={(e) => {
+          console.error('❌ Avatar failed to load, using dicebear fallback');
+          if (address) {
+            const seed = address.substring(2, 10);
+            e.currentTarget.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
+          }
+        }}
+      />
+    </div>
+  )}
+</div>
 
           <div>
             <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Name *</label>
