@@ -329,7 +329,7 @@ export default function CompleteWalletProfilePage() {
           `w-24 h-24 rounded-full border-4 mb-2 shadow-lg ${
             profileSource === 'farcaster'
               ? 'border-purple-300 dark:border-purple-700'
-              : 'border-blue-300 dark:border-blue-700'
+              : 'border-blue-300 dark:border-blue-500'
           }`
         }
         onError={(e) => {
