@@ -296,13 +296,21 @@ export default function CompleteWalletProfilePage() {
         </h1>
         
         {(profileSource === 'farcaster' || profileSource === 'baseapp') && (
-          <div className="text-center mb-6">
-            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 font-semibold">
-              <Sparkles className="w-4 h-4" />
-              {profileSource === 'farcaster' ? 'Imported from Farcaster' : 'Imported from Base'}
-            </span>
-          </div>
-        )}
+  <div className="text-center mb-6">
+    <span
+      className={
+        `inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border font-semibold ${
+          profileSource === 'farcaster'
+            ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700'
+            : 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 border-cyan-300 dark:border-cyan-700'
+        }`
+      }
+    >
+      <Sparkles className="w-4 h-4" />
+      {profileSource === 'farcaster' ? 'Imported from Farcaster' : 'Imported from Base'}
+    </span>
+  </div>
+)}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
