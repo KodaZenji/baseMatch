@@ -183,38 +183,69 @@ useEffect(() => {
         throw new Error('Please enter a valid email address');
       }
 
-      console.log('📤 Submitting profile registration:', {
-        address,
-        name: formData.name,
-        hasAvatar: !!avatarUrl,
-        avatarSource: avatarUrl?.includes('dicebear') ? 'dicebear fallback' : profileSource || 'manual',
-        profileSource: profileSource || 'manual',
-        farcasterData: farcasterData,
-      });
+      // Get FID from localStorage if it exists
+let fid = null;
+let username = null;
 
-      const response = await fetch('/api/profile/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          address,
-          name: formData.name,
-          birthYear: birthYear,
-          gender: formData.gender,
-          interests: formData.interests,
-          email: formData.email,
-          photoUrl: avatarUrl,
-          profileSource: profileSource || 'manual',
-          farcasterVerified: profileSource === 'farcaster' && farcasterData !== null,
-          farcasterUsername: farcasterData?.username || null,
-          farcasterFid: farcasterData?.fid || null,
-        }),
-      });
+if (profileSource === 'baseapp') {
+  const baseProfile = localStorage.getItem('baseProfile');
+  if (baseProfile) {
+    try {
+      const parsed = JSON.parse(baseProfile);
+      fid = parsed.fid;
+      username = parsed.username;
+      localStorage.removeItem('baseProfile');
+    } catch (e) {
+      console.error('Error parsing baseProfile:', e);
+    }
+  }
+} else if (profileSource === 'farcaster') {
+  const farcasterProfile = localStorage.getItem('farcasterProfile');
+  if (farcasterProfile) {
+    try {
+      const parsed = JSON.parse(farcasterProfile);
+      fid = parsed.fid;
+      username = parsed.username;
+      localStorage.removeItem('farcasterProfile');
+    } catch (e) {
+      console.error('Error parsing farcasterProfile:', e);
+    }
+  }
+}
 
-      const data = await response.json();
+console.log('📤 Submitting profile registration:', {
+  address,
+  name: formData.name,
+  hasAvatar: !!avatarUrl,
+  avatarSource: avatarUrl?.includes('dicebear') ? 'dicebear fallback' : profileSource || 'manual',
+  profileSource: profileSource || 'manual',
+  fid: fid,
+  username: username,
+});
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
+const response = await fetch('/api/profile/register', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    address,
+    name: formData.name,
+    birthYear: birthYear,
+    gender: formData.gender,
+    interests: formData.interests,
+    email: formData.email,
+    photoUrl: avatarUrl,
+    profileSource: profileSource || 'manual',
+    farcasterFid: fid,
+    farcasterUsername: username,
+    farcasterVerified: !!(fid && username),
+  }),
+});
+
+const data = await response.json();
+
+if (!response.ok) {
+  throw new Error(data.error || 'Registration failed');
+}
 
       const mintData = {
         profile_id: data.userInfo?.profileId,
@@ -266,15 +297,14 @@ useEffect(() => {
           Complete Your Profile
         </h1>
         
-        {profileSource === 'farcaster' && (
-          <div className="text-center mb-6">
-            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 font-semibold">
-              <Sparkles className="w-4 h-4" />
-              Imported from Farcaster
-            </span>
-          </div>
-        )}
-
+        {(profileSource === 'farcaster' || profileSource === 'baseapp') && (
+  <div className="text-center mb-6">
+    <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 font-semibold">
+      <Sparkles className="w-4 h-4" />
+      {profileSource === 'farcaster' ? 'Imported from Farcaster' : 'Imported from Base'}
+    </span>
+  </div>
+)}
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-800 dark:text-red-300 px-4 py-3 rounded-lg font-medium">
@@ -298,10 +328,11 @@ useEffect(() => {
                     }
                   }}
                 />
-                {profileSource === 'farcaster' && avatarLoaded ? (
-                  <p className="text-[10px] text-gray-700 dark:text-gray-400 font-semibold">
-                    Farcaster avatar
-                  </p>
+                <p className="text-xs text-gray-700 dark:text-gray-400 font-semibold">
+  {(profileSource === 'farcaster' || profileSource === 'baseapp') && avatarLoaded
+    ? `${profileSource === 'baseapp' ? 'Base' : 'Farcaster'} avatar` 
+    : 'Generated avatar'}
+</p>
                 ) : (
                   <p className="text-[10px] text-gray-700 dark:text-gray-400 italic">
                     We generated a custom beautiful pixel art for you. Change it anytime in profile settings.
