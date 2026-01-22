@@ -158,120 +158,128 @@ export default function CompleteWalletProfilePage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+  e.preventDefault();
+  setError('');
+  setIsLoading(true);
 
-    try {
-      if (!address) throw new Error('Wallet not connected');
+  try {
+    if (!address) throw new Error('Wallet not connected');
 
-      if (!formData.name || !formData.birthYear || !formData.gender || !formData.interests || !formData.email) {
-        throw new Error('Please fill in all required fields');
-      }
+    if (!formData.name || !formData.birthYear || !formData.gender || !formData.interests || !formData.email) {
+      throw new Error('Please fill in all required fields');
+    }
 
-      const birthYear = parseInt(formData.birthYear);
-      const currentYear = new Date().getFullYear();
-      const calculatedAge = currentYear - birthYear;
-      if (isNaN(birthYear) || calculatedAge < 18 || calculatedAge > 120) {
-        throw new Error('Birth year must correspond to an age between 18 and 120');
-      }
+    const birthYear = parseInt(formData.birthYear);
+    const currentYear = new Date().getFullYear();
+    const calculatedAge = currentYear - birthYear;
+    if (isNaN(birthYear) || calculatedAge < 18 || calculatedAge > 120) {
+      throw new Error('Birth year must correspond to an age between 18 and 120');
+    }
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email)) {
-        throw new Error('Please enter a valid email address');
-      }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      throw new Error('Please enter a valid email address');
+    }
 
-      // Get FID from localStorage if it exists
-      let fid = null;
-      let username = null;
+    // Extract Farcaster data based on source
+    let farcasterData = {
+      farcasterVerified: false,
+      farcasterUsername: null,
+      farcasterFid: null,
+    };
 
-      if (profileSource === 'baseapp') {
-        const baseProfile = localStorage.getItem('baseProfile');
-        if (baseProfile) {
-          try {
-            const parsed = JSON.parse(baseProfile);
-            fid = parsed.fid;
-            username = parsed.username;
-            localStorage.removeItem('baseProfile');
-          } catch (e) {
-            console.error('Error parsing baseProfile:', e);
-          }
-        }
-      } else if (profileSource === 'farcaster') {
-        const farcasterProfile = localStorage.getItem('farcasterProfile');
-        if (farcasterProfile) {
-          try {
-            const parsed = JSON.parse(farcasterProfile);
-            fid = parsed.fid;
-            username = parsed.username;
-            localStorage.removeItem('farcasterProfile');
-          } catch (e) {
-            console.error('Error parsing farcasterProfile:', e);
-          }
+    if (source === 'baseapp') {
+      const storedBase = localStorage.getItem('baseProfile');
+      if (storedBase) {
+        try {
+          const baseProfile = JSON.parse(storedBase);
+          farcasterData = {
+            farcasterVerified: true,
+            farcasterUsername: baseProfile.username || null,
+            farcasterFid: baseProfile.fid ? String(baseProfile.fid) : null,
+          };
+          console.log('📤 Including Base app Farcaster data:', farcasterData);
+        } catch (err) {
+          console.error('❌ Error parsing baseProfile:', err);
         }
       }
+    } else if (source === 'farcaster') {
+      const storedFarcaster = localStorage.getItem('farcasterProfile');
+      if (storedFarcaster) {
+        try {
+          const farcasterProfile = JSON.parse(storedFarcaster);
+          farcasterData = {
+            farcasterVerified: true,
+            farcasterUsername: farcasterProfile.username || null,
+            farcasterFid: farcasterProfile.fid ? String(farcasterProfile.fid) : null,
+          };
+          console.log('📤 Including Farcaster data:', farcasterData);
+        } catch (err) {
+          console.error('❌ Error parsing farcasterProfile:', err);
+        }
+      }
+    }
 
-      console.log('📤 Submitting profile registration:', {
+    console.log('📤 Submitting profile registration:', {
+      address,
+      name: formData.name,
+      hasAvatar: !!avatarUrl,
+      avatarSource: avatarUrl?.includes('dicebear') ? 'dicebear fallback' : profileSource || 'manual',
+      profileSource: profileSource || 'manual',
+      ...farcasterData,
+    });
+
+    const response = await fetch('/api/profile/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         address,
         name: formData.name,
-        hasAvatar: !!avatarUrl,
-        avatarSource: avatarUrl?.includes('dicebear') ? 'dicebear fallback' : profileSource || 'manual',
-        profileSource: profileSource || 'manual',
-        fid: fid,
-        username: username,
-      });
-
-      const response = await fetch('/api/profile/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          address,
-          name: formData.name,
-          birthYear: birthYear,
-          gender: formData.gender,
-          interests: formData.interests,
-          email: formData.email,
-          photoUrl: avatarUrl,
-          profileSource: profileSource || 'manual',
-          farcasterFid: fid,
-          farcasterUsername: username,
-          farcasterVerified: !!(fid && username),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
-
-      const mintData = {
-        profile_id: data.userInfo?.profileId,
-        id: data.userInfo?.profileId,
-        address: address,
+        birthYear: birthYear,
+        gender: formData.gender,
+        interests: formData.interests,
         email: formData.email,
-        registerWithWalletPayload: {
-          name: formData.name,
-          birthYear: birthYear,
-          gender: formData.gender,
-          interests: formData.interests,
-          photoUrl: avatarUrl,
-        },
-        contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS,
-      };
+        photoUrl: avatarUrl,
+        profileSource: profileSource || 'manual',
+        farcasterVerified: farcasterData.farcasterVerified,
+        farcasterUsername: farcasterData.farcasterUsername,
+        farcasterFid: farcasterData.farcasterFid,
+      }),
+    });
 
-      localStorage.setItem('walletFirstMint', JSON.stringify(mintData));
-      console.log('✅ Profile data saved to localStorage for minting');
+    const data = await response.json();
 
-      router.push('/register/wallet/mint');
-    } catch (err) {
-      console.error('❌ Error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to complete profile');
-    } finally {
-      setIsLoading(false);
+    if (!response.ok) {
+      throw new Error(data.error || 'Registration failed');
     }
-  };
 
+    const mintData = {
+      profile_id: data.userInfo?.profileId,
+      id: data.userInfo?.profileId,
+      address: address,
+      email: formData.email,
+      registerWithWalletPayload: {
+        name: formData.name,
+        birthYear: birthYear,
+        gender: formData.gender,
+        interests: formData.interests,
+        photoUrl: avatarUrl,
+      },
+      contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS,
+    };
+
+    localStorage.setItem('walletFirstMint', JSON.stringify(mintData));
+    console.log('✅ Profile data saved to localStorage for minting');
+
+    router.push('/register/wallet/mint');
+  } catch (err) {
+    console.error('❌ Error:', err);
+    setError(err instanceof Error ? err.message : 'Failed to complete profile');
+  } finally {
+    setIsLoading(false);
+  }
+};
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 py-8 transition-colors">
       <div className="bg-white dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 w-full max-w-2xl border border-gray-200 dark:border-gray-700 my-4">
