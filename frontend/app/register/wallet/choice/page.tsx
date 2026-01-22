@@ -176,8 +176,8 @@ export default function SignupChoicePage() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 text-left">
-                  <div className="w-8 h-8 bg-blue-600 dark:bg-blue-500 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                    B
+                  <div className="w-8 h-8 rounded-lg text-blue-600 dark:text-blue-400">
+                    🟦
                   </div>
                   <div>
                     <h3 className="font-bold text-gray-900 dark:text-gray-100">Use Base Profile</h3>
