@@ -10,7 +10,7 @@ export default function CompleteWalletProfilePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { address, isConnected } = useAccount();
-  const source = searchParams.get('source'); // 'farcaster' or null
+  const source = searchParams.get('source'); // 'farcaster', 'baseapp', or null
 
   const [formData, setFormData] = useState({
     name: '',
@@ -25,92 +25,90 @@ export default function CompleteWalletProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [profileSource, setProfileSource] = useState<string | null>(null);
   const [avatarLoaded, setAvatarLoaded] = useState(false);
-  const [farcasterData, setFarcasterData] = useState<{username: string, fid: string} | null>(null);
 
   // Consolidated logic for profile initialization
- 
-useEffect(() => {
-  if (!address) return;
+  useEffect(() => {
+    if (!address) return;
 
-  console.log('🔍 Initializing profile for:', address, 'Source:', source);
+    console.log('🔍 Initializing profile for:', address, 'Source:', source);
 
-  const initializeData = () => {
-    let finalAvatar = '';
-    let isFarcaster = false;
-    let isBaseApp = false;
+    const initializeData = () => {
+      let finalAvatar = '';
+      let isFarcaster = false;
+      let isBaseApp = false;
 
-    // 1. Handle Base App Import
-    if (source === 'baseapp') {
-      const stored = localStorage.getItem('baseProfile');
-      if (stored) {
-        try {
-          const profile = JSON.parse(stored);
-          console.log('✅ Found Base app profile data');
+      // 1. Handle Base App Import
+      if (source === 'baseapp') {
+        const stored = localStorage.getItem('baseProfile');
+        if (stored) {
+          try {
+            const profile = JSON.parse(stored);
+            console.log('✅ Found Base app profile data');
 
-          setFormData(prev => ({
-            ...prev,
-            name: profile.displayName || profile.username || '',
-            interests: profile.bio || '',
-          }));
+            setFormData(prev => ({
+              ...prev,
+              name: profile.displayName || profile.username || '',
+              interests: profile.bio || '',
+            }));
 
-          const photoUrl = profile.photoUrl || profile.pfpUrl || profile.pfp || '';
-          if (photoUrl && photoUrl.trim() !== '') {
-            finalAvatar = photoUrl;
-            isBaseApp = true;
-            setProfileSource('baseapp');
+            const photoUrl = profile.photoUrl || profile.pfpUrl || profile.pfp || '';
+            if (photoUrl && photoUrl.trim() !== '') {
+              finalAvatar = photoUrl;
+              isBaseApp = true;
+              setProfileSource('baseapp');
+            }
+            // Clear storage after successful extraction
+            localStorage.removeItem('baseProfile');
+          } catch (err) {
+            console.error('❌ Error parsing Base profile:', err);
           }
-          // Clear storage after successful extraction
-          localStorage.removeItem('baseProfile');
-        } catch (err) {
-          console.error('❌ Error parsing Base profile:', err);
         }
       }
-    }
-    
-    // 2. Handle Farcaster Import (if not Base app)
-    if (!isBaseApp && source === 'farcaster') {
-      const stored = localStorage.getItem('farcasterProfile');
-      if (stored) {
-        try {
-          const profile = JSON.parse(stored);
-          console.log('✅ Found Farcaster data');
+      
+      // 2. Handle Farcaster Import (if not Base app)
+      if (!isBaseApp && source === 'farcaster') {
+        const stored = localStorage.getItem('farcasterProfile');
+        if (stored) {
+          try {
+            const profile = JSON.parse(stored);
+            console.log('✅ Found Farcaster data');
 
-          setFormData(prev => ({
-            ...prev,
-            name: profile.displayName || profile.username || '',
-            interests: profile.bio || '',
-          }));
+            setFormData(prev => ({
+              ...prev,
+              name: profile.displayName || profile.username || '',
+              interests: profile.bio || '',
+            }));
 
-          const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
-          if (photoUrl && photoUrl.trim() !== '') {
-            finalAvatar = photoUrl;
-            isFarcaster = true;
-            setProfileSource('farcaster');
+            const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
+            if (photoUrl && photoUrl.trim() !== '') {
+              finalAvatar = photoUrl;
+              isFarcaster = true;
+              setProfileSource('farcaster');
+            }
+            // Clear storage after successful extraction
+            localStorage.removeItem('farcasterProfile');
+          } catch (err) {
+            console.error('❌ Error parsing Farcaster profile:', err);
           }
-          // Clear storage after successful extraction
-          localStorage.removeItem('farcasterProfile');
-        } catch (err) {
-          console.error('❌ Error parsing Farcaster profile:', err);
         }
       }
-    }
 
-    // 3. Generate Dicebear Fallback if no avatar was found
-    if (!finalAvatar) {
-      console.log('🎨 Using dicebear fallback');
-      const seed = address.substring(2, 10);
-      finalAvatar = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
-      setProfileSource(null);
-    }
+      // 3. Generate Dicebear Fallback if no avatar was found
+      if (!finalAvatar) {
+        console.log('🎨 Using dicebear fallback');
+        const seed = address.substring(2, 10);
+        finalAvatar = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
+        setProfileSource(null);
+      }
 
-    // 4. Batch state updates
-    setAvatarUrl(finalAvatar);
-    setAvatarLoaded(isFarcaster || isBaseApp);
-  };
+      // 4. Batch state updates
+      setAvatarUrl(finalAvatar);
+      setAvatarLoaded(isFarcaster || isBaseApp);
+    };
 
-  initializeData();
-}, [source, address]);
-  
+    initializeData();
+  }, [source, address]);
+
   // Dark mode initialization
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -184,68 +182,68 @@ useEffect(() => {
       }
 
       // Get FID from localStorage if it exists
-let fid = null;
-let username = null;
+      let fid = null;
+      let username = null;
 
-if (profileSource === 'baseapp') {
-  const baseProfile = localStorage.getItem('baseProfile');
-  if (baseProfile) {
-    try {
-      const parsed = JSON.parse(baseProfile);
-      fid = parsed.fid;
-      username = parsed.username;
-      localStorage.removeItem('baseProfile');
-    } catch (e) {
-      console.error('Error parsing baseProfile:', e);
-    }
-  }
-} else if (profileSource === 'farcaster') {
-  const farcasterProfile = localStorage.getItem('farcasterProfile');
-  if (farcasterProfile) {
-    try {
-      const parsed = JSON.parse(farcasterProfile);
-      fid = parsed.fid;
-      username = parsed.username;
-      localStorage.removeItem('farcasterProfile');
-    } catch (e) {
-      console.error('Error parsing farcasterProfile:', e);
-    }
-  }
-}
+      if (profileSource === 'baseapp') {
+        const baseProfile = localStorage.getItem('baseProfile');
+        if (baseProfile) {
+          try {
+            const parsed = JSON.parse(baseProfile);
+            fid = parsed.fid;
+            username = parsed.username;
+            localStorage.removeItem('baseProfile');
+          } catch (e) {
+            console.error('Error parsing baseProfile:', e);
+          }
+        }
+      } else if (profileSource === 'farcaster') {
+        const farcasterProfile = localStorage.getItem('farcasterProfile');
+        if (farcasterProfile) {
+          try {
+            const parsed = JSON.parse(farcasterProfile);
+            fid = parsed.fid;
+            username = parsed.username;
+            localStorage.removeItem('farcasterProfile');
+          } catch (e) {
+            console.error('Error parsing farcasterProfile:', e);
+          }
+        }
+      }
 
-console.log('📤 Submitting profile registration:', {
-  address,
-  name: formData.name,
-  hasAvatar: !!avatarUrl,
-  avatarSource: avatarUrl?.includes('dicebear') ? 'dicebear fallback' : profileSource || 'manual',
-  profileSource: profileSource || 'manual',
-  fid: fid,
-  username: username,
-});
+      console.log('📤 Submitting profile registration:', {
+        address,
+        name: formData.name,
+        hasAvatar: !!avatarUrl,
+        avatarSource: avatarUrl?.includes('dicebear') ? 'dicebear fallback' : profileSource || 'manual',
+        profileSource: profileSource || 'manual',
+        fid: fid,
+        username: username,
+      });
 
-const response = await fetch('/api/profile/register', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    address,
-    name: formData.name,
-    birthYear: birthYear,
-    gender: formData.gender,
-    interests: formData.interests,
-    email: formData.email,
-    photoUrl: avatarUrl,
-    profileSource: profileSource || 'manual',
-    farcasterFid: fid,
-    farcasterUsername: username,
-    farcasterVerified: !!(fid && username),
-  }),
-});
+      const response = await fetch('/api/profile/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address,
+          name: formData.name,
+          birthYear: birthYear,
+          gender: formData.gender,
+          interests: formData.interests,
+          email: formData.email,
+          photoUrl: avatarUrl,
+          profileSource: profileSource || 'manual',
+          farcasterFid: fid,
+          farcasterUsername: username,
+          farcasterVerified: !!(fid && username),
+        }),
+      });
 
-const data = await response.json();
+      const data = await response.json();
 
-if (!response.ok) {
-  throw new Error(data.error || 'Registration failed');
-}
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
 
       const mintData = {
         profile_id: data.userInfo?.profileId,
@@ -298,13 +296,14 @@ if (!response.ok) {
         </h1>
         
         {(profileSource === 'farcaster' || profileSource === 'baseapp') && (
-  <div className="text-center mb-6">
-    <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 font-semibold">
-      <Sparkles className="w-4 h-4" />
-      {profileSource === 'farcaster' ? 'Imported from Farcaster' : 'Imported from Base'}
-    </span>
-  </div>
-)}
+          <div className="text-center mb-6">
+            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 font-semibold">
+              <Sparkles className="w-4 h-4" />
+              {profileSource === 'farcaster' ? 'Imported from Farcaster' : 'Imported from Base'}
+            </span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-800 dark:text-red-300 px-4 py-3 rounded-lg font-medium">
@@ -312,14 +311,13 @@ if (!response.ok) {
             </div>
           )}
 
-          {/* ---------- UPDATED AVATAR SECTION ---------- */}
           <div className="flex justify-center">
             {avatarUrl && (
               <div className="text-center">
                 <img
                   src={avatarUrl}
                   alt="Profile"
-                  className="w-24 h-24 rounded-full border-4 border-purple-300 dark:border-purple-700 mb-1 shadow-lg"
+                  className="w-24 h-24 rounded-full border-4 border-purple-300 dark:border-purple-700 mb-2 shadow-lg"
                   onError={(e) => {
                     console.error('❌ Avatar failed to load, using dicebear fallback');
                     if (address) {
@@ -329,21 +327,14 @@ if (!response.ok) {
                   }}
                 />
                 <p className="text-xs text-gray-700 dark:text-gray-400 font-semibold">
-  {(profileSource === 'farcaster' || profileSource === 'baseapp') && avatarLoaded
-    ? `${profileSource === 'baseapp' ? 'Base' : 'Farcaster'} avatar` 
-    : 'Generated avatar'}
-</p>
-                ) : (
-                  <p className="text-[10px] text-gray-700 dark:text-gray-400 italic">
-                    We generated a custom beautiful pixel art for you. Change it anytime in profile settings.
-                  </p>
-                )}
+                  {(profileSource === 'farcaster' || profileSource === 'baseapp') && avatarLoaded
+                    ? `${profileSource === 'baseapp' ? 'Base' : 'Farcaster'} avatar` 
+                    : 'Generated avatar'}
+                </p>
               </div>
             )}
           </div>
-          {/* ---------- END AVATAR SECTION ---------- */}
 
-          {/* Name */}
           <div>
             <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Name *</label>
             <input
@@ -356,7 +347,6 @@ if (!response.ok) {
             />
           </div>
 
-          {/* Birth Year */}
           <div>
             <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Birth Year *</label>
             <select
@@ -379,7 +369,6 @@ if (!response.ok) {
             </select>
           </div>
 
-          {/* Gender */}
           <div>
             <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Gender *</label>
             <select
@@ -395,7 +384,6 @@ if (!response.ok) {
             </select>
           </div>
 
-          {/* Interests */}
           <div>
             <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Interests *</label>
             <textarea
@@ -408,7 +396,6 @@ if (!response.ok) {
             />
           </div>
 
-          {/* Email */}
           <div>
             <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Email *</label>
             <input
