@@ -292,9 +292,124 @@ export default function CompleteWalletProfilePage() {
           </div>
         )}
 
-        {/* FORM OMITTED FOR BREVITY - identical to your previous code */}
+        {/* FORM */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* form fields here */}
+          {error && (
+            <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-800 dark:text-red-300 px-4 py-3 rounded-lg font-medium">
+              {error}
+            </div>
+          )}
+
+          {/* Avatar */}
+          <div className="flex justify-center">
+            {avatarUrl && (
+              <div className="text-center">
+                <img
+                  src={avatarUrl}
+                  alt="Profile"
+                  className="w-24 h-24 rounded-full border-4 border-purple-300 dark:border-purple-700 mb-2 shadow-lg"
+                  onError={(e) => {
+                    console.error('❌ Avatar failed to load, using dicebear fallback');
+                    if (address) {
+                      const seed = address.substring(2, 10);
+                      e.currentTarget.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
+                    }
+                  }}
+                />
+                <p className="text-xs text-gray-700 dark:text-gray-400 font-semibold">
+                  {(profileSource === 'farcaster' || profileSource === 'baseapp') && avatarLoaded
+                    ? profileSource === 'baseapp' ? 'Base app avatar' : 'Farcaster avatar'
+                    : 'Generated avatar'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Name *</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400"
+              placeholder="Your name"
+            />
+          </div>
+
+          {/* BirthYear */}
+          <div>
+            <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Birth Year *</label>
+            <select
+              value={formData.birthYear}
+              onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
+              required
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium"
+            >
+              <option value="">Select birth year</option>
+              {Array.from({ length: 83 }, (_, i) => {
+                const currentYear = new Date().getFullYear();
+                const year = currentYear - 18 - i;
+                const age = currentYear - year;
+                return (
+                  <option key={year} value={year}>
+                    {year} ({age} years old)
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* Gender */}
+          <div>
+            <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Gender *</label>
+            <select
+              value={formData.gender}
+              onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+              required
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium"
+            >
+              <option value="">Select gender</option>
+              <option value="Female">Female</option>
+              <option value="Male">Male</option>
+              <option value="Prefer not to say">Prefer not to say</option>
+            </select>
+          </div>
+
+          {/* Interests */}
+          <div>
+            <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Interests *</label>
+            <textarea
+              value={formData.interests}
+              onChange={(e) => setFormData({ ...formData, interests: e.target.value })}
+              required
+              rows={3}
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors resize-none font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400"
+              placeholder="Hiking, Photography, Crypto..."
+            />
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Email *</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400"
+              placeholder="your@email.com"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-bold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl text-lg"
+          >
+            {isLoading ? 'Processing...' : 'Continue to Mint →'}
+          </button>
         </form>
 
         <div className="mt-6 text-center">
