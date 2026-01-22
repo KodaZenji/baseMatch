@@ -68,7 +68,7 @@ export default function SignupChoicePage() {
       const profile = {
         displayName: user.displayName || user.username || 'Base User',
         username: user.username || `user${user.fid}`,
-        bio: user.bio || '',
+        bio: '',
         fid: user.fid,
         photoUrl: user.pfpUrl || '',
         pfpUrl: user.pfpUrl || '',
