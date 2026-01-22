@@ -10,7 +10,7 @@ export default function CompleteWalletProfilePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { address, isConnected } = useAccount();
-  const source = searchParams.get('source'); // 'farcaster', 'baseapp', or null
+  const source = searchParams.get('source'); // 'farcaster' or null
 
   const [formData, setFormData] = useState({
     name: '',
@@ -35,38 +35,9 @@ export default function CompleteWalletProfilePage() {
     const initializeData = () => {
       let finalAvatar = '';
       let isFarcaster = false;
-      let isBaseApp = false;
 
-      // 1. Handle Base App Import
-      if (source === 'baseapp') {
-        const stored = localStorage.getItem('baseProfile');
-        if (stored) {
-          try {
-            const profile = JSON.parse(stored);
-            console.log('✅ Found Base app profile data');
-
-            setFormData(prev => ({
-              ...prev,
-              name: profile.displayName || profile.username || '',
-              interests: profile.bio || '',
-            }));
-
-            const photoUrl = profile.photoUrl || profile.pfpUrl || profile.pfp || '';
-            if (photoUrl && photoUrl.trim() !== '') {
-              finalAvatar = photoUrl;
-              isBaseApp = true;
-              setProfileSource('baseapp');
-            }
-            // Clear storage after successful extraction
-            localStorage.removeItem('baseProfile');
-          } catch (err) {
-            console.error('❌ Error parsing Base profile:', err);
-          }
-        }
-      }
-      
-      // 2. Handle Farcaster Import (if not Base app)
-      if (!isBaseApp && source === 'farcaster') {
+      // 1. Handle Farcaster Import
+      if (source === 'farcaster') {
         const stored = localStorage.getItem('farcasterProfile');
         if (stored) {
           try {
@@ -93,7 +64,7 @@ export default function CompleteWalletProfilePage() {
         }
       }
 
-      // 3. Generate Dicebear Fallback if no avatar was found
+      // 2. Generate Dicebear Fallback if no avatar was found from Farcaster
       if (!finalAvatar) {
         console.log('🎨 Using dicebear fallback');
         const seed = address.substring(2, 10);
@@ -101,9 +72,9 @@ export default function CompleteWalletProfilePage() {
         setProfileSource(null);
       }
 
-      // 4. Batch state updates
+      // 3. Batch state updates
       setAvatarUrl(finalAvatar);
-      setAvatarLoaded(isFarcaster || isBaseApp);
+      setAvatarLoaded(isFarcaster);
     };
 
     initializeData();
@@ -158,128 +129,128 @@ export default function CompleteWalletProfilePage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError('');
-  setIsLoading(true);
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
 
-  try {
-    if (!address) throw new Error('Wallet not connected');
+    try {
+      if (!address) throw new Error('Wallet not connected');
 
-    if (!formData.name || !formData.birthYear || !formData.gender || !formData.interests || !formData.email) {
-      throw new Error('Please fill in all required fields');
-    }
+      if (!formData.name || !formData.birthYear || !formData.gender || !formData.interests || !formData.email) {
+        throw new Error('Please fill in all required fields');
+      }
 
-    const birthYear = parseInt(formData.birthYear);
-    const currentYear = new Date().getFullYear();
-    const calculatedAge = currentYear - birthYear;
-    if (isNaN(birthYear) || calculatedAge < 18 || calculatedAge > 120) {
-      throw new Error('Birth year must correspond to an age between 18 and 120');
-    }
+      const birthYear = parseInt(formData.birthYear);
+      const currentYear = new Date().getFullYear();
+      const calculatedAge = currentYear - birthYear;
+      if (isNaN(birthYear) || calculatedAge < 18 || calculatedAge > 120) {
+        throw new Error('Birth year must correspond to an age between 18 and 120');
+      }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      throw new Error('Please enter a valid email address');
-    }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        throw new Error('Please enter a valid email address');
+      }
 
-    // Extract Farcaster data based on source
-let farcasterData = {
-  farcasterVerified: false,
-  farcasterUsername: null as string | null,
-  farcasterFid: null as string | null,
-};
-    
-    if (source === 'baseapp') {
-      const storedBase = localStorage.getItem('baseProfile');
-      if (storedBase) {
-        try {
-          const baseProfile = JSON.parse(storedBase);
-          farcasterData = {
-            farcasterVerified: true,
-            farcasterUsername: baseProfile.username || null,
-            farcasterFid: baseProfile.fid ? String(baseProfile.fid) : null,
-          };
-          console.log('📤 Including Base app Farcaster data:', farcasterData);
-        } catch (err) {
-          console.error('❌ Error parsing baseProfile:', err);
+      // Extract Farcaster data based on source
+      let farcasterData = {
+        farcasterVerified: false,
+        farcasterUsername: null as string | null,
+        farcasterFid: null as number | null,
+      };
+
+      if (source === 'baseapp') {
+        const storedBase = localStorage.getItem('baseProfile');
+        if (storedBase) {
+          try {
+            const baseProfile = JSON.parse(storedBase);
+            farcasterData = {
+              farcasterVerified: true,
+              farcasterUsername: baseProfile.username || null,
+              farcasterFid: baseProfile.fid ? parseInt(baseProfile.fid) : null,
+            };
+            console.log('📤 Including Base app Farcaster data:', farcasterData);
+          } catch (err) {
+            console.error('❌ Error parsing baseProfile:', err);
+          }
+        }
+      } else if (source === 'farcaster') {
+        const storedFarcaster = localStorage.getItem('farcasterProfile');
+        if (storedFarcaster) {
+          try {
+            const farcasterProfile = JSON.parse(storedFarcaster);
+            farcasterData = {
+              farcasterVerified: true,
+              farcasterUsername: farcasterProfile.username || null,
+              farcasterFid: farcasterProfile.fid ? parseInt(farcasterProfile.fid) : null,
+            };
+            console.log('📤 Including Farcaster data:', farcasterData);
+          } catch (err) {
+            console.error('❌ Error parsing farcasterProfile:', err);
+          }
         }
       }
-    } else if (source === 'farcaster') {
-      const storedFarcaster = localStorage.getItem('farcasterProfile');
-      if (storedFarcaster) {
-        try {
-          const farcasterProfile = JSON.parse(storedFarcaster);
-          farcasterData = {
-            farcasterVerified: true,
-            farcasterUsername: farcasterProfile.username || null,
-            farcasterFid: farcasterProfile.fid ? String(farcasterProfile.fid) : null,
-          };
-          console.log('📤 Including Farcaster data:', farcasterData);
-        } catch (err) {
-          console.error('❌ Error parsing farcasterProfile:', err);
-        }
-      }
-    }
 
-    console.log('📤 Submitting profile registration:', {
-      address,
-      name: formData.name,
-      hasAvatar: !!avatarUrl,
-      avatarSource: avatarUrl?.includes('dicebear') ? 'dicebear fallback' : profileSource || 'manual',
-      profileSource: profileSource || 'manual',
-      ...farcasterData,
-    });
-
-    const response = await fetch('/api/profile/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      console.log('📤 Submitting profile registration:', {
         address,
         name: formData.name,
-        birthYear: birthYear,
-        gender: formData.gender,
-        interests: formData.interests,
-        email: formData.email,
-        photoUrl: avatarUrl,
+        hasAvatar: !!avatarUrl,
+        avatarSource: avatarUrl?.includes('dicebear') ? 'dicebear fallback' : profileSource || 'manual',
         profileSource: profileSource || 'manual',
-        farcasterVerified: farcasterData.farcasterVerified,
-        farcasterUsername: farcasterData.farcasterUsername,
-        farcasterFid: farcasterData.farcasterFid,
-      }),
-    });
+        ...farcasterData,
+      });
 
-    const data = await response.json();
+      const response = await fetch('/api/profile/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address,
+          name: formData.name,
+          birthYear: birthYear,
+          gender: formData.gender,
+          interests: formData.interests,
+          email: formData.email,
+          photoUrl: avatarUrl,
+          profileSource: profileSource || 'manual',
+          farcasterVerified: farcasterData.farcasterVerified,
+          farcasterUsername: farcasterData.farcasterUsername,
+          farcasterFid: farcasterData.farcasterFid,
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Registration failed');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      const mintData = {
+        profile_id: data.userInfo?.profileId,
+        id: data.userInfo?.profileId,
+        address: address,
+        email: formData.email,
+        registerWithWalletPayload: {
+          name: formData.name,
+          birthYear: birthYear,
+          gender: formData.gender,
+          interests: formData.interests,
+          photoUrl: avatarUrl,
+        },
+        contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS,
+      };
+
+      localStorage.setItem('walletFirstMint', JSON.stringify(mintData));
+      console.log('✅ Profile data saved to localStorage for minting');
+
+      router.push('/register/wallet/mint');
+    } catch (err) {
+      console.error('❌ Error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to complete profile');
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    const mintData = {
-      profile_id: data.userInfo?.profileId,
-      id: data.userInfo?.profileId,
-      address: address,
-      email: formData.email,
-      registerWithWalletPayload: {
-        name: formData.name,
-        birthYear: birthYear,
-        gender: formData.gender,
-        interests: formData.interests,
-        photoUrl: avatarUrl,
-      },
-      contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS,
-    };
-
-    localStorage.setItem('walletFirstMint', JSON.stringify(mintData));
-    console.log('✅ Profile data saved to localStorage for minting');
-
-    router.push('/register/wallet/mint');
-  } catch (err) {
-    console.error('❌ Error:', err);
-    setError(err instanceof Error ? err.message : 'Failed to complete profile');
-  } finally {
-    setIsLoading(false);
-  }
-};
-  
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 py-8 transition-colors">
       <div className="bg-white dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 w-full max-w-2xl border border-gray-200 dark:border-gray-700 my-4">
@@ -303,22 +274,14 @@ let farcasterData = {
           Complete Your Profile
         </h1>
         
-        {(profileSource === 'farcaster' || profileSource === 'baseapp') && (
-  <div className="text-center mb-6">
-    <span
-      className={
-        `inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border font-semibold ${
-          profileSource === 'farcaster'
-            ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700'
-            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
-        }`
-      }
-    >
-      <Sparkles className="w-4 h-4" />
-      {profileSource === 'farcaster' ? 'Imported from Farcaster' : 'Imported from Base'}
-    </span>
-  </div>
-)}
+        {profileSource === 'farcaster' && (
+          <div className="text-center mb-6">
+            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 font-semibold">
+              <Sparkles className="w-4 h-4" />
+              Imported from Farcaster
+            </span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
@@ -327,30 +290,29 @@ let farcasterData = {
             </div>
           )}
 
-         <div className="flex justify-center">
-  {avatarUrl && (
-    <div className="text-center">
-      <img
-        src={avatarUrl}
-        alt="Profile"
-        className={
-          `w-24 h-24 rounded-full border-4 mb-2 shadow-lg ${
-            profileSource === 'farcaster'
-              ? 'border-purple-300 dark:border-purple-700'
-              : 'border-blue-300 dark:border-blue-500'
-          }`
-        }
-        onError={(e) => {
-          console.error('❌ Avatar failed to load, using dicebear fallback');
-          if (address) {
-            const seed = address.substring(2, 10);
-            e.currentTarget.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
-          }
-        }}
-      />
-    </div>
-  )}
-</div>
+          <div className="flex justify-center">
+            {avatarUrl && (
+              <div className="text-center">
+                <img
+                  src={avatarUrl}
+                  alt="Profile"
+                  className="w-24 h-24 rounded-full border-4 border-purple-300 dark:border-purple-700 mb-2 shadow-lg"
+                  onError={(e) => {
+                    console.error('❌ Avatar failed to load, using dicebear fallback');
+                    if (address) {
+                      const seed = address.substring(2, 10);
+                      e.currentTarget.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
+                    }
+                  }}
+                />
+                <p className="text-xs text-gray-700 dark:text-gray-400 font-semibold">
+                  {profileSource === 'farcaster' && avatarLoaded
+                    ? 'Farcaster avatar' 
+                    : 'Generated avatar'}
+                </p>
+              </div>
+            )}
+          </div>
 
           <div>
             <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Name *</label>
