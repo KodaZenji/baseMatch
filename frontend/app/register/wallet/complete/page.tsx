@@ -10,7 +10,7 @@ export default function CompleteWalletProfilePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { address, isConnected } = useAccount();
-  const source = searchParams.get('source'); // 'farcaster' or null
+  const source = searchParams.get('source'); // 'farcaster', 'baseapp', or null
 
   const [formData, setFormData] = useState({
     name: '',
@@ -64,7 +64,35 @@ export default function CompleteWalletProfilePage() {
         }
       }
 
-      // 2. Generate Dicebear Fallback if no avatar was found from Farcaster
+      // 2. Handle Base App Import
+      if (source === 'baseapp') {
+        const stored = localStorage.getItem('baseProfile');
+        if (stored) {
+          try {
+            const profile = JSON.parse(stored);
+            console.log('✅ Found Base app data');
+
+            setFormData(prev => ({
+              ...prev,
+              name: profile.displayName || profile.username || '',
+              interests: profile.bio || '',
+            }));
+
+            const photoUrl = profile.photoUrl || profile.pfpUrl || profile.pfp || '';
+            if (photoUrl && photoUrl.trim() !== '') {
+              finalAvatar = photoUrl;
+              isFarcaster = true;
+              setProfileSource('baseapp');
+            }
+            // Clear storage after successful extraction
+            localStorage.removeItem('baseProfile');
+          } catch (err) {
+            console.error('❌ Error parsing Base profile:', err);
+          }
+        }
+      }
+
+      // 3. Generate Dicebear Fallback if no avatar was found
       if (!finalAvatar) {
         console.log('🎨 Using dicebear fallback');
         const seed = address.substring(2, 10);
@@ -72,7 +100,7 @@ export default function CompleteWalletProfilePage() {
         setProfileSource(null);
       }
 
-      // 3. Batch state updates
+      // 4. Batch state updates
       setAvatarUrl(finalAvatar);
       setAvatarLoaded(isFarcaster);
     };
@@ -274,11 +302,11 @@ export default function CompleteWalletProfilePage() {
           Complete Your Profile
         </h1>
         
-        {profileSource === 'farcaster' && (
+        {(profileSource === 'farcaster' || profileSource === 'baseapp') && (
           <div className="text-center mb-6">
             <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 font-semibold">
               <Sparkles className="w-4 h-4" />
-              Imported from Farcaster
+              {profileSource === 'baseapp' ? 'Imported from Base App' : 'Imported from Farcaster'}
             </span>
           </div>
         )}
@@ -306,8 +334,8 @@ export default function CompleteWalletProfilePage() {
                   }}
                 />
                 <p className="text-xs text-gray-700 dark:text-gray-400 font-semibold">
-                  {profileSource === 'farcaster' && avatarLoaded
-                    ? 'Farcaster avatar' 
+                  {(profileSource === 'farcaster' || profileSource === 'baseapp') && avatarLoaded
+                    ? profileSource === 'baseapp' ? 'Base app avatar' : 'Farcaster avatar'
                     : 'Generated avatar'}
                 </p>
               </div>
