@@ -182,12 +182,12 @@ export default function CompleteWalletProfilePage() {
     }
 
     // Extract Farcaster data based on source
-    let farcasterData = {
-      farcasterVerified: false,
-      farcasterUsername: null,
-      farcasterFid: null,
-    };
-
+let farcasterData = {
+  farcasterVerified: false,
+  farcasterUsername: null as string | null,
+  farcasterFid: null as string | null,
+};
+    
     if (source === 'baseapp') {
       const storedBase = localStorage.getItem('baseProfile');
       if (storedBase) {
