@@ -9,6 +9,8 @@ import DateStakeAcceptModal from './DateStakeAcceptModal';
 import RatingModal from './RatingModal';
 import ChatWindow from './ChatWindow';
 import { useProfile } from '@/hooks/useProfile';
+import { useProfileByAddress } from '@/hooks/useProfileByAddress';
+
 
 export default function Notifications() {
   const { address } = useAccount();
@@ -80,7 +82,7 @@ const [selectedChatProfile, setSelectedChatProfile] = useState<{ name: string } 
   };
 
   // Handle clicking message notification to open chat
-import { useProfileByAddress } from '@/hooks/useProfileByAddress';
+
 
 const handleMessageClick = async (notification: any) => {
     const senderAddress = notification.metadata?.sender_address || '';
