@@ -340,30 +340,38 @@ body {
    CHAT BUBBLES - X/TWITTER STYLE
    ============================================ */
 
-/* Current user messages - Blue like X */
-.dark .bg-blue-500,
-.dark .bg-blue-600,
-.dark [class*="bg-blue-"] {
+/* Only target chat message containers - VERY SPECIFIC */
+/* Current user messages - Blue like X (only in chat window) */
+.dark .space-y-4 > div.bg-blue-500,
+.dark .space-y-4 > div.bg-blue-600,
+.dark .space-y-3 > div.bg-blue-500,
+.dark .space-y-3 > div.bg-blue-600 {
   background: #1d9bf0 !important;
   color: white !important;
 }
 
-/* Other user messages - Grey for dark mode */
-.dark .bg-gray-100,
-.dark .bg-gray-200 {
+/* Other user messages - Grey for dark mode (only in chat window) */
+.dark .space-y-4 > div.bg-gray-100,
+.dark .space-y-4 > div.bg-gray-200,
+.dark .space-y-3 > div.bg-gray-100,
+.dark .space-y-3 > div.bg-gray-200 {
   background: #2f3336 !important;
   color: #e7e9ea !important;
 }
 
-/* Light mode - keep current user blue, other user light grey */
-.bg-blue-500,
-.bg-blue-600 {
+/* Light mode - only chat bubbles */
+.space-y-4 > div.bg-blue-500,
+.space-y-4 > div.bg-blue-600,
+.space-y-3 > div.bg-blue-500,
+.space-y-3 > div.bg-blue-600 {
   background: #1d9bf0 !important;
   color: white !important;
 }
 
-.bg-gray-100,
-.bg-gray-200 {
+.space-y-4 > div.bg-gray-100,
+.space-y-4 > div.bg-gray-200,
+.space-y-3 > div.bg-gray-100,
+.space-y-3 > div.bg-gray-200 {
   background: #eff3f4 !important;
   color: #0f1419 !important;
 }
@@ -377,19 +385,15 @@ body {
   margin-top: 0.75rem !important;
 }
 
-/* Chat message containers */
-.dark .rounded-2xl,
-.dark .rounded-xl,
-.dark .rounded-lg {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+/* Chat message bubble shadows only */
+.space-y-4 > div.rounded-2xl,
+.space-y-4 > div.rounded-xl,
+.space-y-4 > div.rounded-lg,
+.space-y-3 > div.rounded-2xl,
+.space-y-3 > div.rounded-xl,
+.space-y-3 > div.rounded-lg {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
 }
-
-.rounded-2xl,
-.rounded-xl,
-.rounded-lg {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
-}
-
 /* ============================================
    LINKS
    ============================================ */
