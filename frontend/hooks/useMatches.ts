@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useReadContract } from 'wagmi';
 import { MATCHING_ABI, CONTRACTS, PROFILE_NFT_ABI } from '@/lib/contracts';
 
-interface MatchProfile {
+export interface MatchProfile {
     address: string;
     name: string;
-    birthYear?: number;  // from blockchain/API
-    age?: number;        // precomputed for UI
+    birthYear: number;   // always defined
+    age: number;         // precomputed
     gender: string;
     interests: string;
     photoUrl: string;
@@ -17,10 +17,8 @@ export function useMatches(userAddress: string | undefined) {
     const [matches, setMatches] = useState<MatchProfile[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const isContractDeployed =
-        CONTRACTS.MATCHING && CONTRACTS.MATCHING.startsWith('0x') && CONTRACTS.MATCHING.length === 42;
-    const isProfileContractDeployed =
-        CONTRACTS.PROFILE_NFT && CONTRACTS.PROFILE_NFT.startsWith('0x') && CONTRACTS.PROFILE_NFT.length === 42;
+    const isContractDeployed = CONTRACTS.MATCHING && CONTRACTS.MATCHING.startsWith('0x') && CONTRACTS.MATCHING.length === 42;
+    const isProfileContractDeployed = CONTRACTS.PROFILE_NFT && CONTRACTS.PROFILE_NFT.startsWith('0x') && CONTRACTS.PROFILE_NFT.length === 42;
 
     const { data: matchAddresses, isLoading: matchesLoading } = useReadContract({
         address: isContractDeployed ? (CONTRACTS.MATCHING as `0x${string}`) : undefined,
@@ -39,55 +37,44 @@ export function useMatches(userAddress: string | undefined) {
         const fetchProfiles = async () => {
             try {
                 setLoading(true);
-
                 const matchArray = matchAddresses as `0x${string}`[];
                 const currentYear = new Date().getFullYear();
 
                 const profilePromises = matchArray.map(async (address) => {
                     try {
                         const response = await fetch(`/api/profile/${address}`);
-                        if (response.ok) {
-                            const profileData = await response.json();
+                        if (!response.ok) throw new Error('Failed to fetch profile');
 
-                            // Validate birthYear
-                            let birthYear: number | undefined = undefined;
-                            if (
-                                profileData.birthYear !== undefined &&
-                                profileData.birthYear !== null &&
-                                Number(profileData.birthYear) > 1900
-                            ) {
-                                birthYear = Number(profileData.birthYear);
-                            }
+                        const profileData = await response.json();
 
-                            // Precompute age for UI
-                            const age = birthYear ? currentYear - birthYear : undefined;
+                        // Ensure birthYear is a number
+                        const birthYear = Number(profileData.birthYear) || currentYear; // fallback if somehow 0
+                        const age = currentYear - birthYear;
 
-                            return {
-                                address,
-                                name: profileData.name || 'Unknown User',
-                                birthYear,
-                                age,
-                                gender: profileData.gender || '',
-                                interests: profileData.interests || '',
-                                photoUrl: profileData.photoUrl || '',
-                                matchedAt: Date.now(),
-                            };
-                        }
+                        return {
+                            address,
+                            name: profileData.name || 'Unknown User',
+                            birthYear,
+                            age,
+                            gender: profileData.gender || '',
+                            interests: profileData.interests || '',
+                            photoUrl: profileData.photoUrl || '',
+                            matchedAt: Date.now(),
+                        } as MatchProfile;
                     } catch (err) {
-                        console.warn(`Failed to fetch profile for match ${address}:`, err);
+                        console.warn(`Failed to fetch profile for ${address}:`, err);
+                        // Fallback user
+                        return {
+                            address,
+                            name: 'User',
+                            birthYear: currentYear,
+                            age: 0,
+                            gender: '',
+                            interests: 'Interests not loaded',
+                            photoUrl: '',
+                            matchedAt: Date.now(),
+                        } as MatchProfile;
                     }
-
-                    // Fallback profile
-                    return {
-                        address,
-                        name: 'User',
-                        birthYear: undefined,
-                        age: undefined,
-                        gender: '',
-                        interests: 'Interests not loaded',
-                        photoUrl: '',
-                        matchedAt: Date.now(),
-                    };
                 });
 
                 const matches = await Promise.all(profilePromises);
@@ -103,5 +90,5 @@ export function useMatches(userAddress: string | undefined) {
         fetchProfiles();
     }, [matchAddresses, isProfileContractDeployed, userAddress]);
 
-    return { matches, loading: loading || matchesLoading };
+    return { matches, loading };
 }
