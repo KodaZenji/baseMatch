@@ -301,10 +301,10 @@ export default function ProfileCard({
                         {isButtonDisabled ? (
                             <span className="flex items-center justify-center gap-2">
                                 <Loader className="animate-spin" size={18} />
-                                Expressing...
+                                Showing Interest...
                             </span>
                         ) : (
-                            'Express Interest'
+                            'Say Hi'
                         )}
                     </button>
                 </div>
