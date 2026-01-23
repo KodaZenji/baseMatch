@@ -5,7 +5,6 @@ import { MATCHING_ABI, CONTRACTS, PROFILE_NFT_ABI } from '@/lib/contracts';
 interface MatchProfile {
     address: string;
     name: string;
-    age: number;
     birthYear?: number;  
     gender: string;
     interests: string;
@@ -49,15 +48,14 @@ export function useMatches(userAddress: string | undefined) {
                         if (response.ok) {
                             const profileData = await response.json();
                             return {
-                                address,
-                                name: profileData.name || 'Unknown User',
-                                age: profileData.birthYear ? new Date().getFullYear() - profileData.birthYear : 0,
-birthYear: profileData.birthYear,
-                                gender: profileData.gender || '',
-                                interests: profileData.interests || '',
-                                photoUrl: profileData.photoUrl || '',
-                                matchedAt: Date.now(),
-                            };
+    address,
+    name: profileData.name || 'Unknown User',
+    birthYear: profileData.birthYear,  
+    gender: profileData.gender || '',
+    interests: profileData.interests || '',
+    photoUrl: profileData.photoUrl || '',
+    matchedAt: Date.now(),
+};
                         }
                     } catch (err) {
                         console.warn(`Failed to fetch profile for match ${address}:`, err);
@@ -65,15 +63,14 @@ birthYear: profileData.birthYear,
 
                     // Fallback if fetch fails
                     return {
-                        address,
-                        name: 'User',
-                        age: 0,
-                        birthYear: undefined,  // Added birthYear
-                        gender: '',
-                        interests: 'Interests not loaded',
-                        photoUrl: '',
-                        matchedAt: Date.now(),
-                    };
+    address,
+    name: 'User',
+    birthYear: undefined,  
+    gender: '',
+    interests: 'Interests not loaded',
+    photoUrl: '',
+    matchedAt: Date.now(),
+};
                 });
 
                 const matches = await Promise.all(profilePromises);
