@@ -52,7 +52,6 @@ export function useMatches(userAddress: string | undefined) {
                                 address,
                                 name: profileData.name || 'Unknown User',
                                 age: profileData.birthYear ? new Date().getFullYear() - profileData.birthYear : 0,
-                                birthYear: profileData.birthYear,
                                 gender: profileData.gender || '',
                                 interests: profileData.interests || '',
                                 photoUrl: profileData.photoUrl || '',
