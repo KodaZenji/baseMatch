@@ -1,3 +1,7 @@
+
+// frontend/app/api/achievements/auto-mint/route.ts
+// FIXED: Use date_history table as source of truth for total dates
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, createWalletClient, http } from 'viem';
 import { base } from 'viem/chains';
@@ -139,7 +143,7 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     const publicClient = createPublicClient({
       chain: base,
-      transport: http(`https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`),
+      transport: http(`https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`),
     });
 
     const privateKeyStr = process.env.ADMIN_PRIVATE_KEY;
@@ -163,7 +167,7 @@ export async function POST(request: NextRequest) {
     const walletClient = createWalletClient({
       account: adminAccount,
       chain: base,
-      transport: http(`https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`),
+      transport: http(`https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`),
     });
 
     const achievementAddress = process.env.NEXT_PUBLIC_ACHIEVEMENT_ADDRESS as `0x${string}`;
