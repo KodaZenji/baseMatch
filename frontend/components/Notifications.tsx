@@ -80,17 +80,35 @@ export default function Notifications() {
   };
 
   // Handle clicking message notification to open chat
-  const handleMessageClick = (notification: any) => {
+const handleMessageClick = async (notification: any) => {
     const senderAddress = notification.metadata?.sender_address || '';
-    const senderName = notification.metadata?.sender_name || 'User';
+    
+    if (!senderAddress) return;
 
-    if (senderAddress) {
-      setSelectedChatMessage({ address: senderAddress, name: senderName });
-      setShowChatWindow(true);
-      handleMarkAsRead(notification.id);
+    // Fetch the sender's profile to get their name
+    try {
+        const response = await fetch(`/api/profile/${senderAddress}`);
+        if (response.ok) {
+            const profileData = await response.json();
+            const senderName = profileData.name || 'User';
+            
+            setSelectedChatMessage({ address: senderAddress, name: senderName });
+            setShowChatWindow(true);
+            handleMarkAsRead(notification.id);
+        } else {
+            // Fallback if profile fetch fails
+            setSelectedChatMessage({ address: senderAddress, name: 'User' });
+            setShowChatWindow(true);
+            handleMarkAsRead(notification.id);
+        }
+    } catch (error) {
+        console.error('Failed to fetch sender profile:', error);
+        // Fallback to showing chat with "User" as name
+        setSelectedChatMessage({ address: senderAddress, name: 'User' });
+        setShowChatWindow(true);
+        handleMarkAsRead(notification.id);
     }
-  };
-
+};
   // Handle closing chat window
   const handleChatClose = () => {
     setShowChatWindow(false);
