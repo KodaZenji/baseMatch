@@ -12,7 +12,9 @@ import { CONTRACTS, MATCHING_ABI } from '@/lib/contracts';
 export default function Matches() {
     const { address } = useAccount();
     const { writeContract } = useWriteContract();
-    const { matches, loading: matchesLoading } = useMatches(address);
+    const { matches: rawMatches, loading: matchesLoading } = useMatches(address);
+
+    const [matches, setMatches] = useState<typeof rawMatches>([]);
     const [showGiftingModal, setShowGiftingModal] = useState(false);
     const [showChatWindow, setShowChatWindow] = useState(false);
     const [selectedRecipient, setSelectedRecipient] = useState({ address: '', name: '' });
@@ -21,25 +23,19 @@ export default function Matches() {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [matchToDelete, setMatchToDelete] = useState<{ address: string; name: string } | null>(null);
 
-    // DEBUG: Log match data
+    // Fix: compute age from birthYear here
     useEffect(() => {
-        console.log('=== MATCHES DEBUG ===');
-        console.log('Your address:', address);
-        console.log('Matches loading:', matchesLoading);
-        console.log('Number of matches:', matches?.length);
-        console.log('Match data:', matches);
-
-        if (matches && matches.length > 0) {
-            matches.forEach((match, i) => {
-                console.log(`Match ${i}:`, {
-    address: match.address,
-    name: match.name,
-    birthYear: match.birthYear,  
-    interests: match.interests
-});
-            });
+        if (rawMatches && rawMatches.length > 0) {
+            const updatedMatches = rawMatches.map((m) => ({
+                ...m,
+                birthYear: Number(m.birthYear), // ensure number
+                age: new Date().getFullYear() - Number(m.birthYear),
+            }));
+            setMatches(updatedMatches);
+        } else {
+            setMatches([]);
         }
-    }, [matches, matchesLoading, address]);
+    }, [rawMatches]);
 
     const handleGiftClick = (recipientAddress: string, recipientName: string) => {
         setSelectedRecipient({ address: recipientAddress, name: recipientName });
@@ -53,8 +49,6 @@ export default function Matches() {
 
     const handleRemoveMatch = (matchAddress: string, matchName: string) => {
         if (!address) return;
-        
-        // Show custom confirm modal instead of native confirm
         setMatchToDelete({ address: matchAddress, name: matchName });
         setShowDeleteConfirm(true);
     };
@@ -64,28 +58,20 @@ export default function Matches() {
 
         setShowDeleteConfirm(false);
         setRemovingMatch(matchToDelete.address);
-        
+
         try {
-            // Step 1: Delete from database
             const response = await fetch('/api/profile/remove-match', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'x-user-address': address.toLowerCase(),
                 },
-                body: JSON.stringify({
-                    matchedUserAddress: matchToDelete.address.toLowerCase(),
-                }),
+                body: JSON.stringify({ matchedUserAddress: matchToDelete.address.toLowerCase() }),
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to remove match from database');
-            }
-
+            if (!response.ok) throw new Error('Failed to remove match from database');
             const data = await response.json();
-            console.log('Match removed from database:', data);
 
-            // Step 2: Call blockchain to remove match
             if (data.blockchainRemovalRequired && CONTRACTS.MATCHING) {
                 try {
                     writeContract({
@@ -94,15 +80,13 @@ export default function Matches() {
                         functionName: 'removeMatch',
                         args: [matchToDelete.address.toLowerCase() as `0x${string}`],
                     });
-                    console.log('Blockchain removeMatch transaction sent');
-                } catch (blockchainError) {
-                    console.error('Blockchain removal error:', blockchainError);
-                    alert('Database deletion succeeded but blockchain update failed. Please try again.');
+                } catch (err) {
+                    console.error('Blockchain removal error:', err);
+                    alert('Database deletion succeeded but blockchain update failed.');
                     return;
                 }
             }
 
-            // Refetch matches to update the UI
             window.location.reload();
         } catch (error) {
             console.error('Error removing match:', error);
@@ -134,8 +118,6 @@ export default function Matches() {
                 </div>
             </div>
 
-
-            {/* Warning for Unknown Users */}
             {matches && matches.some(m => m.name === 'Unknown User' || m.name === 'User') && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
                     <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={20} />
@@ -143,7 +125,6 @@ export default function Matches() {
                         <div className="font-semibold text-yellow-900">Some profiles couldn't be loaded</div>
                         <div className="text-sm text-yellow-800 mt-1">
                             This happens when the API fails to fetch profile data from the blockchain.
-                            Check the browser console for error messages.
                         </div>
                     </div>
                 </div>
@@ -153,30 +134,17 @@ export default function Matches() {
                 <div className="text-center py-12 space-y-3">
                     <Heart className="w-24 h-24 text-gray-300 mx-auto" />
                     <h3 className="text-xl font-medium text-gray-900">No matches yet</h3>
-                    <p className="text-gray-500">
-                        Express interest in profiles to find your matches!
-                    </p>
-                    <p className="text-xs text-gray-400 font-mono">
-                        Your address: {address || 'Not connected'}
-                    </p>
+                    <p className="text-gray-500">Express interest in profiles to find your matches!</p>
+                    <p className="text-xs text-gray-400 font-mono">Your address: {address || 'Not connected'}</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {matches.map((match) => (
                         <div key={match.address} className="relative">
                             <ProfileCard
-    profile={{
-        wallet_address: match.address,
-        name: match.name,
-        birthYear: match.birthYear,
-        age: match.age,          // <-- add this line
-        gender: match.gender,
-        interests: match.interests,
-        photo_url: match.photoUrl,
-        photoUrl: match.photoUrl,
-    }}
-    onGift={() => handleGiftClick(match.address, match.name)}
-/>
+                                profile={match}
+                                onGift={() => handleGiftClick(match.address, match.name)}
+                            />
                             <div className="absolute top-4 right-4 flex gap-2 z-10">
                                 <button
                                     onClick={() => handleChatClick(match.address, match.name)}
@@ -198,7 +166,6 @@ export default function Matches() {
                 </div>
             )}
 
-            {/* Gifting Modal */}
             <GiftingModal
                 isOpen={showGiftingModal}
                 onClose={() => setShowGiftingModal(false)}
@@ -206,7 +173,6 @@ export default function Matches() {
                 recipientName={selectedRecipient.name}
             />
 
-            {/* Chat Window */}
             {showChatWindow && address && selectedChatMatch && (
                 <ChatWindow
                     user1Address={address}
@@ -218,13 +184,10 @@ export default function Matches() {
                 />
             )}
 
-            {/* Custom Delete Confirmation Modal */}
             {showDeleteConfirm && matchToDelete && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6">
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
-                            Remove Match?
-                        </h3>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Remove Match?</h3>
                         <p className="text-gray-600 dark:text-gray-300 mb-6">
                             Are you sure you want to remove <span className="font-semibold">{matchToDelete.name}</span> from your matches? This cannot be undone.
                         </p>
