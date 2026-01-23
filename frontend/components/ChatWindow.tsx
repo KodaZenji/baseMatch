@@ -244,21 +244,21 @@ export default function ChatWindow({
                                                 onTouchEnd={handleTouchEnd}
                                                 onTouchMove={handleTouchEnd}
                                                 className={`
-                                                    max-w-xs px-4 py-2 rounded-lg cursor-pointer select-none
-                                                    ${isCurrentUser
-                                                        ? 'bg-gradient-to-r from-pink-500 to-purple-600 dark:from-[#1d9bf0] dark:to-[#1d9bf0] text-white rounded-br-none dark:rounded-br-sm dark:rounded-2xl'
-                                                        : 'bg-gray-200 dark:bg-[#eff3f4] text-gray-900 dark:text-gray-900 rounded-bl-none dark:rounded-bl-sm dark:rounded-2xl'
-                                                    } 
-                                                    ${isDeleting ? 'opacity-50' : ''}
-                                                    ${showDeleteButton ? 'scale-95' : ''}
-                                                    transition-transform
-                                                `}
+    max-w-xs px-4 py-2 rounded-2xl cursor-pointer select-none shadow-sm
+    ${isCurrentUser
+        ? 'bg-gradient-to-r from-pink-500 to-purple-600 dark:bg-[#1d9bf0] text-white rounded-br-sm'
+        : 'bg-gray-200 dark:bg-[#2f3336] text-gray-900 dark:text-[#e7e9ea] rounded-bl-sm'
+    } 
+    ${isDeleting ? 'opacity-50' : ''}
+    ${showDeleteButton ? 'scale-95' : ''}
+    transition-transform
+`}
                                             >
                                                 <p className="break-words">{msg.decrypted_text || '[Decrypting...]'}</p>
                                                 <p
                                                     className={`text-xs mt-1 ${
-                                                        isCurrentUser ? 'text-pink-100 dark:text-blue-100' : 'text-gray-500'
-                                                    }`}
+    isCurrentUser ? 'text-pink-100 dark:text-blue-100' : 'text-gray-500 dark:text-gray-400'
+}`}
                                                 >
                                                     {new Date(msg.created_at).toLocaleTimeString([], {
                                                         hour: '2-digit',
