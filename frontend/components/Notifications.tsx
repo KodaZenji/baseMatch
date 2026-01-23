@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useNotifications } from '@/hooks/useNotifications';
@@ -33,7 +34,18 @@ export default function Notifications() {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showChatWindow, setShowChatWindow] = useState(false);
   const [selectedChatMatchAddress, setSelectedChatMatchAddress] = useState<string | null>(null);
-const [selectedChatProfile, setSelectedChatProfile] = useState<{ name: string } | null>(null);
+  const [selectedChatProfile, setSelectedChatProfile] = useState<{ name: string } | null>(null);
+  
+  // NEW: Call the hook at the component level
+  const { profile: senderProfile, loading: senderProfileLoading } = useProfileByAddress(selectedChatMatchAddress || '');
+
+  // NEW: Effect to update chat profile when sender profile loads
+  useEffect(() => {
+    if (selectedChatMatchAddress && !senderProfileLoading && senderProfile) {
+      setSelectedChatProfile({ name: senderProfile.name || 'User' });
+    }
+  }, [selectedChatMatchAddress, senderProfile, senderProfileLoading]);
+
   // Updated state for accepting stakes
   const [selectedStakeToAccept, setSelectedStakeToAccept] = useState<{
     stakeId: string;
@@ -81,26 +93,19 @@ const [selectedChatProfile, setSelectedChatProfile] = useState<{ name: string } 
     }
   };
 
-  // Handle clicking message notification to open chat
-
-
-const handleMessageClick = async (notification: any) => {
+  // UPDATED: Simplified handler - just set the address and let the hook/effect handle the rest
+  const handleMessageClick = (notification: any) => {
     const senderAddress = notification.metadata?.sender_address || '';
+    const senderName = notification.metadata?.sender_name || 'User';
+    
     if (!senderAddress) return;
 
+    // Set initial name from notification metadata (fallback)
+    setSelectedChatProfile({ name: senderName });
     setSelectedChatMatchAddress(senderAddress);
-
-    try {
-        const profileData = await useProfileByAddress(senderAddress);
-        setSelectedChatProfile({ name: profileData?.name || 'User' });
-    } catch (error) {
-        console.error('Failed to fetch sender profile:', error);
-        setSelectedChatProfile({ name: 'User' });
-    }
-
     setShowChatWindow(true);
     handleMarkAsRead(notification.id);
-};  // Handle closing chat window
+  };
   
   // Handle accepting a stake from notification
   const handleAcceptStake = (notification: any) => {
@@ -601,19 +606,19 @@ const handleMessageClick = async (notification: any) => {
 
       {/* Chat Window */}
       {showChatWindow && address && selectedChatMatchAddress && (
-  <ChatWindow
-    user1Address={address}
-    user2Address={selectedChatMatchAddress}
-    user1Name={profile?.name || "You"}
-    user2Name={selectedChatProfile?.name || "User"}
-    currentUserAddress={address}
-    onClose={() => {
-        setShowChatWindow(false);
-        setSelectedChatMatchAddress(null);
-        setSelectedChatProfile(null);
-    }}
-  />
-)}
+        <ChatWindow
+          user1Address={address}
+          user2Address={selectedChatMatchAddress}
+          user1Name={profile?.name || "You"}
+          user2Name={selectedChatProfile?.name || "User"}
+          currentUserAddress={address}
+          onClose={() => {
+            setShowChatWindow(false);
+            setSelectedChatMatchAddress(null);
+            setSelectedChatProfile(null);
+          }}
+        />
+      )}
 
       {/* Date Stake Accept Modal */}
       {showAcceptStakeModal && selectedStakeToAccept && (
