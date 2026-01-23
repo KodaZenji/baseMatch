@@ -11,7 +11,8 @@ export default function ProfileCard({
     profile,
     onGift,
     onExpressInterest,
-    isPending: isPendingProp
+    isPending: isPendingProp,
+    hideExpressInterest = false
 }: {
     profile: any;
     onGift?: () => void;
