@@ -6,7 +6,7 @@ interface MatchProfile {
     address: string;
     name: string;
     age: number;
-    birthYear?: number;
+    birthYear?: number;  
     gender: string;
     interests: string;
     photoUrl: string;
@@ -51,7 +51,8 @@ export function useMatches(userAddress: string | undefined) {
                             return {
                                 address,
                                 name: profileData.name || 'Unknown User',
-                                age: profileData.birthYear ? new Date().getFullYear() - profileData.birthYear : 0,
+                                age: profileData.age || 0,
+                                birthYear: profileData.birthYear,  
                                 gender: profileData.gender || '',
                                 interests: profileData.interests || '',
                                 photoUrl: profileData.photoUrl || '',
@@ -67,6 +68,7 @@ export function useMatches(userAddress: string | undefined) {
                         address,
                         name: 'User',
                         age: 0,
+                        birthYear: undefined,  // Added birthYear
                         gender: '',
                         interests: 'Interests not loaded',
                         photoUrl: '',
