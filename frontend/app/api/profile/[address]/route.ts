@@ -43,14 +43,14 @@ export async function GET(
         });
 
         const profile = {
-            tokenId: (profileData as any).tokenId?.toString() || '0',
+            tokenId: String((profileData as any).tokenId || 0),
             name: (profileData as any).name || '',
-            birthYear: (profileData as any).birthYear || 0,
+            birthYear: Number((profileData as any).birthYear || 0),
             gender: (profileData as any).gender || '',
             interests: (profileData as any).interests || '',
             photoUrl: (profileData as any).photoUrl || '',
             email: (profileData as any).email || '',
-            exists: (profileData as any).exists || false,
+            exists: Boolean((profileData as any).exists || false),
         };
 
         // Return the profile data
