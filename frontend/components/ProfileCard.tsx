@@ -304,7 +304,7 @@ export default function ProfileCard({
                                 Showing Interest...
                             </span>
                         ) : (
-                            'Say Hi'
+                            'Like'
                         )}
                     </button>
                 </div>
