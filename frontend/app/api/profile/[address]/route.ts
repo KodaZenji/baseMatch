@@ -1,3 +1,4 @@
+
 import { NextResponse, NextRequest } from 'next/server';
 import { CONTRACTS, PROFILE_NFT_ABI } from '@/lib/contracts';
 import { createPublicClient, http } from 'viem';
@@ -42,10 +43,21 @@ export async function GET(
             args: [address as `0x${string}`],
         });
 
+        // The contract stores age, not birthYear
+        // We need to convert age to birthYear for consistency
+        const contractAgeOrBirthYear = Number((profileData as any).birthYear || 0);
+        const currentYear = new Date().getFullYear();
+        
+        // If the value is > 100, it's already a birth year (e.g., 1998)
+        // If it's <= 100, it's an age (e.g., 28), so convert to birth year
+        const birthYear = contractAgeOrBirthYear > 100 
+            ? contractAgeOrBirthYear 
+            : (contractAgeOrBirthYear > 0 ? currentYear - contractAgeOrBirthYear : 0);
+
         const profile = {
             tokenId: String((profileData as any).tokenId || 0),
             name: (profileData as any).name || '',
-            birthYear: Number((profileData as any).birthYear || 0),
+            birthYear: birthYear,
             gender: (profileData as any).gender || '',
             interests: (profileData as any).interests || '',
             photoUrl: (profileData as any).photoUrl || '',
