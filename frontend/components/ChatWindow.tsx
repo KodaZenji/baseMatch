@@ -321,17 +321,19 @@ export default function ChatWindow({
             </div>
 
             {showDateModal && (
-                <DateStakeModal
-                    matchedUserAddress={otherUserAddress}
-                    matchedUserName={otherUserName}
-                    onClose={() => setShowDateModal(false)}
-                    onSuccess={() => {
-                        setShowDateModal(false);
-                        setSuccessMessage('✅ Date staked! Waiting for your match to confirm.');
-                        setTimeout(() => setSuccessMessage(''), 4000);
-                    }}
-                />
-            )}
+    <DateStakeModal
+        matchedUserAddress={otherUserAddress}
+        matchedUserName={otherUserName}
+        currentUserAddress={currentUserAddress}
+        currentUserName={currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user1Name : user2Name}
+        onClose={() => setShowDateModal(false)}
+        onSuccess={() => {
+            setShowDateModal(false);
+            setSuccessMessage('✅ Date staked! Waiting for your match to confirm.');
+            setTimeout(() => setSuccessMessage(''), 4000);
+        }}
+    />
+)}
         </div>
     );
 }
