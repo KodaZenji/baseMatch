@@ -17,6 +17,7 @@ export default function ProfileCard({
     onGift?: () => void;
     onExpressInterest?: (address: string) => Promise<void>;
     isPending?: boolean;
+    hideExpressInterest?: boolean;
 }) {
     const { address } = useAccount();
     const [avatarUrl, setAvatarUrl] = useState('');
@@ -283,31 +284,32 @@ export default function ProfileCard({
                         </span>
                     )}
                 </div>
-                
                 <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base mb-4 line-clamp-2">{profile.interests}</p>
 
-                <div className="flex space-x-3">
-                    <button
-                        onClick={handleExpressInterest}
-                        disabled={isButtonDisabled}
-                        className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 
-                            dark:from-blue-500 dark:to-purple-500 text-white 
-                            py-2.5 sm:py-3 rounded-xl font-semibold 
-                            transition-all duration-200
-                            hover:opacity-90 hover:shadow-lg hover:shadow-purple-500/50 hover:scale-[1.02]
-                            active:scale-[0.98] active:shadow-md
-                            disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                    >
-                        {isButtonDisabled ? (
-                            <span className="flex items-center justify-center gap-2">
-                                <Loader className="animate-spin" size={18} />
-                                Showing Interest...
-                            </span>
-                        ) : (
-                            'Like'
-                        )}
-                    </button>
-                </div>
+{!hideExpressInterest && (
+    <div className="flex space-x-3">
+        <button
+            onClick={handleExpressInterest}
+            disabled={isButtonDisabled}
+            className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 
+                dark:from-blue-500 dark:to-purple-500 text-white 
+                py-2.5 sm:py-3 rounded-xl font-semibold 
+                transition-all duration-200
+                hover:opacity-90 hover:shadow-lg hover:shadow-purple-500/50 hover:scale-[1.02]
+                active:scale-[0.98] active:shadow-md
+                disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+        >
+            {isButtonDisabled ? (
+                <span className="flex items-center justify-center gap-2">
+                    <Loader className="animate-spin" size={18} />
+                    Showing Interest..
+                </span>
+            ) : (
+                'Like'
+            )}
+        </button>
+    </div>
+)}
             </div>
 
             {/* Image Preview Modal - Card format, mobile-friendly close */}
