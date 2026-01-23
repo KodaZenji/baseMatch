@@ -1,8 +1,10 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from '@/hooks/useChat';
 import DateStakeModal from './DateStakeModal';
+import Image from 'next/image';
 
 interface ChatWindowProps {
     user1Address: string;
@@ -34,10 +36,30 @@ export default function ChatWindow({
     const [successMessage, setSuccessMessage] = useState('');
     const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
     const [longPressMessageId, setLongPressMessageId] = useState<string | null>(null);
+    const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const isInitialLoadRef = useRef(true);
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    const otherUserName = currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user2Name : user1Name;
+    const otherUserAddress = currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user2Address : user1Address;
+
+    // Fetch other user's profile for avatar
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const response = await fetch(`/api/profile/${otherUserAddress}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setOtherUserProfile(data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch profile:', err);
+            }
+        };
+        fetchProfile();
+    }, [otherUserAddress]);
 
     useEffect(() => {
         if (isInitialLoadRef.current && messages.length > 0) {
@@ -84,7 +106,7 @@ export default function ChatWindow({
         setDeletingMessageId(messageId);
         setLongPressMessageId(null);
         const success = await deleteMessage(messageId);
-
+        
         if (success) {
             setSuccessMessage('Message deleted');
             setTimeout(() => setSuccessMessage(''), 2000);
@@ -103,7 +125,7 @@ export default function ChatWindow({
             if (navigator.vibrate) {
                 navigator.vibrate(50);
             }
-        }, 500);
+        }, 500); 
     };
 
     const handleTouchEnd = () => {
@@ -113,20 +135,36 @@ export default function ChatWindow({
         }
     };
 
-    const otherUserName = currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user2Name : user1Name;
-    const otherUserAddress = currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user2Address : user1Address;
-    const currentUserName = currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user1Name : user2Name;
-
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
-                {/* FIXED HEADER - Mobile responsive */}
-                <div className="border-b border-gray-200 p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+                {/* FIXED HEADER */}
+                <div className="border-b border-gray-200 dark:border-gray-700 p-4">
                     <div className="flex justify-between items-start gap-2">
-                        <div className="flex-1 min-w-0">
-                            <h2 className="text-xl font-bold text-gray-900 truncate">{otherUserName}</h2>
-                            <p className="text-xs text-gray-500 truncate">{otherUserAddress}</p>
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                            {/* Avatar */}
+                            <div className="flex-shrink-0">
+                                {otherUserProfile?.photoUrl ? (
+                                    <Image
+                                        src={otherUserProfile.photoUrl}
+                                        alt={otherUserName}
+                                        width={40}
+                                        height={40}
+                                        className="rounded-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold">
+                                        {otherUserName.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="flex-1 min-w-0">
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">{otherUserName}</h2>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{otherUserAddress}</p>
+                            </div>
                         </div>
+                        
                         <div className="flex gap-2 items-center flex-shrink-0">
                             <button
                                 onClick={() => setShowDateModal(true)}
@@ -140,7 +178,7 @@ export default function ChatWindow({
                             </button>
                             <button
                                 onClick={onClose}
-                                className="text-gray-400 hover:text-gray-600 text-3xl sm:text-2xl leading-none p-1 -mr-1 min-w-[32px] flex items-center justify-center"
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-3xl sm:text-2xl leading-none p-1 -mr-1 min-w-[32px] flex items-center justify-center"
                                 aria-label="Close"
                             >
                                 ×
@@ -149,27 +187,27 @@ export default function ChatWindow({
                     </div>
                 </div>
 
-                <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 text-xs text-blue-700">
+                <div className="bg-blue-50 dark:bg-blue-900/30 border-b border-blue-200 dark:border-blue-800 px-4 py-2 text-xs text-blue-700 dark:text-blue-300">
                     🔒 End-to-end encrypted - Only you and your match can read these messages
                 </div>
 
-                <div
+                <div 
                     ref={messagesContainerRef}
                     onScroll={handleScroll}
-                    className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
+                    className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-800"
                     style={{ display: 'flex', flexDirection: 'column-reverse' }}
                 >
                     <div ref={messagesEndRef} />
-
+                    
                     {loading && messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
-                            <div className="text-gray-500 text-center">
+                            <div className="text-gray-500 dark:text-gray-400 text-center">
                                 <div className="mb-2">Loading messages...</div>
                             </div>
                         </div>
                     ) : messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
-                            <div className="text-gray-500 text-center">
+                            <div className="text-gray-500 dark:text-gray-400 text-center">
                                 <div className="mb-2">No messages yet</div>
                                 <div className="text-sm">Start the conversation! 💬</div>
                             </div>
@@ -180,14 +218,14 @@ export default function ChatWindow({
                                 const isCurrentUser = msg.sender_address.toLowerCase() === currentUserAddress.toLowerCase();
                                 const isDeleting = deletingMessageId === msg.id;
                                 const showDeleteButton = longPressMessageId === msg.id;
-
+                                
                                 return (
                                     <div
                                         key={msg.id}
                                         className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} group`}
                                     >
                                         <div className="relative flex items-center gap-2">
-                                            {/* Delete button - shows on hover (desktop) or long-press (mobile) */}
+                                            {/* Delete button */}
                                             {isCurrentUser && !isDeleting && (
                                                 <button
                                                     onClick={() => handleDeleteMessage(msg.id)}
@@ -200,7 +238,7 @@ export default function ChatWindow({
                                                     🗑️
                                                 </button>
                                             )}
-
+                                            
                                             <div
                                                 onTouchStart={() => isCurrentUser && !isDeleting && handleTouchStart(msg.id)}
                                                 onTouchEnd={handleTouchEnd}
@@ -208,8 +246,8 @@ export default function ChatWindow({
                                                 className={`
                                                     max-w-xs px-4 py-2 rounded-lg cursor-pointer select-none
                                                     ${isCurrentUser
-                                                        ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-br-none'
-                                                        : 'bg-gray-200 text-gray-900 rounded-bl-none'
+                                                        ? 'bg-gradient-to-r from-pink-500 to-purple-600 dark:from-[#1d9bf0] dark:to-[#1d9bf0] text-white rounded-br-none dark:rounded-br-sm dark:rounded-2xl'
+                                                        : 'bg-gray-200 dark:bg-[#eff3f4] text-gray-900 dark:text-gray-900 rounded-bl-none dark:rounded-bl-sm dark:rounded-2xl'
                                                     } 
                                                     ${isDeleting ? 'opacity-50' : ''}
                                                     ${showDeleteButton ? 'scale-95' : ''}
@@ -218,8 +256,9 @@ export default function ChatWindow({
                                             >
                                                 <p className="break-words">{msg.decrypted_text || '[Decrypting...]'}</p>
                                                 <p
-                                                    className={`text-xs mt-1 ${isCurrentUser ? 'text-pink-100' : 'text-gray-500'
-                                                        }`}
+                                                    className={`text-xs mt-1 ${
+                                                        isCurrentUser ? 'text-pink-100 dark:text-blue-100' : 'text-gray-500'
+                                                    }`}
                                                 >
                                                     {new Date(msg.created_at).toLocaleTimeString([], {
                                                         hour: '2-digit',
@@ -236,7 +275,7 @@ export default function ChatWindow({
 
                     {hasMore && (
                         <div className="text-center py-2">
-                            <button
+                            <button 
                                 onClick={loadMore}
                                 disabled={loading}
                                 className="text-sm text-purple-600 hover:text-purple-700 disabled:opacity-50"
@@ -249,16 +288,17 @@ export default function ChatWindow({
 
                 {(error || sendError || successMessage) && (
                     <div
-                        className={`px-4 py-3 text-sm ${successMessage
+                        className={`px-4 py-3 text-sm ${
+                            successMessage
                                 ? 'bg-green-100 border border-green-300 text-green-700'
                                 : 'bg-red-100 border border-red-300 text-red-700'
-                            }`}
+                        }`}
                     >
                         {successMessage || error || sendError}
                     </div>
                 )}
 
-                <div className="border-t border-gray-200 p-4 bg-white">
+                <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
                     <form onSubmit={handleSendMessage} className="flex gap-2">
                         <input
                             type="text"
@@ -267,7 +307,7 @@ export default function ChatWindow({
                             placeholder="Type your message..."
                             disabled={isSending}
                             maxLength={1000}
-                            className="flex-1 text-gray-800 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-pink-500 disabled:bg-gray-100"
+                            className="flex-1 text-gray-800 dark:text-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-pink-500 disabled:bg-gray-100 dark:disabled:bg-gray-700"
                         />
                         <button
                             type="submit"
@@ -284,12 +324,10 @@ export default function ChatWindow({
                 <DateStakeModal
                     matchedUserAddress={otherUserAddress}
                     matchedUserName={otherUserName}
-                    currentUserAddress={currentUserAddress}
-                    currentUserName={currentUserName}
                     onClose={() => setShowDateModal(false)}
                     onSuccess={() => {
                         setShowDateModal(false);
-                        setSuccessMessage('✅ Date staked! Waiting for your match to accept and lock in the meeting!');
+                        setSuccessMessage('✅ Date staked! Waiting for your match to confirm.');
                         setTimeout(() => setSuccessMessage(''), 4000);
                     }}
                 />
