@@ -165,18 +165,17 @@ export default function Matches() {
                     {matches.map((match) => (
                         <div key={match.address} className="relative">
                             <ProfileCard
-                                profile={{
-                                    wallet_address: match.address,
-                                    name: match.name,
-                                    age: match.age,
-                                    birthYear: match.birthYear,
-                                    gender: match.gender,
-                                    interests: match.interests,
-                                    photo_url: match.photoUrl,
-                                    photoUrl: match.photoUrl,
-                                }}
-                                onGift={() => handleGiftClick(match.address, match.name)}
-                            />
+    profile={{
+        wallet_address: match.address,
+        name: match.name,
+        birthYear: match.birthYear,  
+        gender: match.gender,
+        interests: match.interests,
+        photo_url: match.photoUrl,
+        photoUrl: match.photoUrl,
+    }}
+    onGift={() => handleGiftClick(match.address, match.name)}
+/>
                             <div className="absolute top-4 right-4 flex gap-2 z-10">
                                 <button
                                     onClick={() => handleChatClick(match.address, match.name)}
