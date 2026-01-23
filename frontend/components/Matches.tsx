@@ -32,11 +32,11 @@ export default function Matches() {
         if (matches && matches.length > 0) {
             matches.forEach((match, i) => {
                 console.log(`Match ${i}:`, {
-                    address: match.address,
-                    name: match.name,
-                    age: match.age,
-                    interests: match.interests
-                });
+    address: match.address,
+    name: match.name,
+    birthYear: match.birthYear,  
+    interests: match.interests
+});
             });
         }
     }, [matches, matchesLoading, address]);
