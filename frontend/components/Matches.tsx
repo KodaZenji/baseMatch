@@ -168,7 +168,8 @@ export default function Matches() {
     profile={{
         wallet_address: match.address,
         name: match.name,
-        birthYear: match.birthYear,  
+        birthYear: match.birthYear,
+        age: match.age,          // <-- add this line
         gender: match.gender,
         interests: match.interests,
         photo_url: match.photoUrl,
