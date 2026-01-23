@@ -175,6 +175,7 @@ export default function Matches() {
         photoUrl: match.photoUrl,
     }}
     onGift={() => handleGiftClick(match.address, match.name)}
+                                hideExpressInterest={true}
 />
                             <div className="absolute top-4 right-4 flex gap-2 z-10">
                                 <button
