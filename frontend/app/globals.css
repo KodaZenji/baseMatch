@@ -337,6 +337,60 @@ body {
 }
 
 /* ============================================
+   CHAT BUBBLES - X/TWITTER STYLE
+   ============================================ */
+
+/* Current user messages - Blue like X */
+.dark .bg-blue-500,
+.dark .bg-blue-600,
+.dark [class*="bg-blue-"] {
+  background: #1d9bf0 !important;
+  color: white !important;
+}
+
+/* Other user messages - Grey for dark mode */
+.dark .bg-gray-100,
+.dark .bg-gray-200 {
+  background: #2f3336 !important;
+  color: #e7e9ea !important;
+}
+
+/* Light mode - keep current user blue, other user light grey */
+.bg-blue-500,
+.bg-blue-600 {
+  background: #1d9bf0 !important;
+  color: white !important;
+}
+
+.bg-gray-100,
+.bg-gray-200 {
+  background: #eff3f4 !important;
+  color: #0f1419 !important;
+}
+
+/* Add spacing between chat bubbles */
+.space-y-4 > * + * {
+  margin-top: 1rem !important;
+}
+
+.space-y-3 > * + * {
+  margin-top: 0.75rem !important;
+}
+
+/* Chat message containers */
+.dark .rounded-2xl,
+.dark .rounded-xl,
+.dark .rounded-lg {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.rounded-2xl,
+.rounded-xl,
+.rounded-lg {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* ============================================
    LINKS
    ============================================ */
 
