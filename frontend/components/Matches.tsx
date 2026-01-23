@@ -3,15 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useWriteContract } from 'wagmi';
 import { useMatches } from '@/hooks/useMatches';
-import { useProfile } from '@/hooks/useProfile';
 import ProfileCard from './ProfileCard';
 import GiftingModal from './GiftingModal';
 import ChatWindow from './ChatWindow';
 import { Trash2, AlertCircle, Heart, Users } from 'lucide-react';
 import { CONTRACTS, MATCHING_ABI } from '@/lib/contracts';
+
 export default function Matches() {
     const { address } = useAccount();
-    const { profile: currentUserProfile } = useProfile(address);
     const { writeContract } = useWriteContract();
     const { matches, loading: matchesLoading } = useMatches(address);
     const [showGiftingModal, setShowGiftingModal] = useState(false);
@@ -19,6 +18,8 @@ export default function Matches() {
     const [selectedRecipient, setSelectedRecipient] = useState({ address: '', name: '' });
     const [selectedChatMatch, setSelectedChatMatch] = useState<{ address: string; name: string } | null>(null);
     const [removingMatch, setRemovingMatch] = useState<string | null>(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [matchToDelete, setMatchToDelete] = useState<{ address: string; name: string } | null>(null);
 
     // DEBUG: Log match data
     useEffect(() => {
@@ -33,58 +34,12 @@ export default function Matches() {
                 console.log(`Match ${i}:`, {
                     address: match.address,
                     name: match.name,
-                    age: match.birthYear,
+                    age: match.age,
                     interests: match.interests
                 });
             });
         }
     }, [matches, matchesLoading, address]);
-
-    // Check for achievements when matches are loaded or change
-    useEffect(() => {
-        if (address && matches && matches.length > 0 && !matchesLoading) {
-            checkAchievements();
-        }
-    }, [matches, address, matchesLoading]);
-
-    const checkAchievements = async () => {
-        if (!address) return;
-
-        try {
-            console.log('🏆 Checking achievements for user...');
-            const response = await fetch('/api/achievements/auto-mint', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    userAddress: address,
-                }),
-            });
-
-            if (!response.ok) {
-                console.error('Failed to check achievements:', response.statusText);
-                return;
-            }
-
-            const data = await response.json();
-
-            if (data.mintedAchievements && data.mintedAchievements.length > 0) {
-                const successfulMints = data.mintedAchievements.filter(
-                    (a: any) => a.status === 'success'
-                );
-
-                if (successfulMints.length > 0) {
-                    console.log('🎉 New achievements unlocked:', successfulMints);
-                    // You could show a toast notification here
-                }
-            }
-
-            console.log('Achievement check stats:', data.stats);
-        } catch (error) {
-            console.error('Failed to check achievements:', error);
-        }
-    };
 
     const handleGiftClick = (recipientAddress: string, recipientName: string) => {
         setSelectedRecipient({ address: recipientAddress, name: recipientName });
@@ -96,11 +51,20 @@ export default function Matches() {
         setShowChatWindow(true);
     };
 
-    const handleRemoveMatch = async (matchAddress: string) => {
+    const handleRemoveMatch = (matchAddress: string, matchName: string) => {
         if (!address) return;
-        if (!confirm('Are you sure you want to remove this match?')) return;
+        
+        // Show custom confirm modal instead of native confirm
+        setMatchToDelete({ address: matchAddress, name: matchName });
+        setShowDeleteConfirm(true);
+    };
 
-        setRemovingMatch(matchAddress);
+    const confirmDelete = async () => {
+        if (!address || !matchToDelete) return;
+
+        setShowDeleteConfirm(false);
+        setRemovingMatch(matchToDelete.address);
+        
         try {
             // Step 1: Delete from database
             const response = await fetch('/api/profile/remove-match', {
@@ -110,7 +74,7 @@ export default function Matches() {
                     'x-user-address': address.toLowerCase(),
                 },
                 body: JSON.stringify({
-                    matchedUserAddress: matchAddress.toLowerCase(),
+                    matchedUserAddress: matchToDelete.address.toLowerCase(),
                 }),
             });
 
@@ -128,7 +92,7 @@ export default function Matches() {
                         address: CONTRACTS.MATCHING as `0x${string}`,
                         abi: MATCHING_ABI,
                         functionName: 'removeMatch',
-                        args: [matchAddress.toLowerCase() as `0x${string}`],
+                        args: [matchToDelete.address.toLowerCase() as `0x${string}`],
                     });
                     console.log('Blockchain removeMatch transaction sent');
                 } catch (blockchainError) {
@@ -145,6 +109,7 @@ export default function Matches() {
             alert('Failed to remove match. Please try again.');
         } finally {
             setRemovingMatch(null);
+            setMatchToDelete(null);
         }
     };
 
@@ -203,6 +168,7 @@ export default function Matches() {
                                 profile={{
                                     wallet_address: match.address,
                                     name: match.name,
+                                    age: match.age,
                                     birthYear: match.birthYear,
                                     gender: match.gender,
                                     interests: match.interests,
@@ -219,7 +185,7 @@ export default function Matches() {
                                     Chat
                                 </button>
                                 <button
-                                    onClick={() => handleRemoveMatch(match.address)}
+                                    onClick={() => handleRemoveMatch(match.address, match.name)}
                                     disabled={removingMatch === match.address}
                                     className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                                     title="Remove match"
@@ -245,11 +211,42 @@ export default function Matches() {
                 <ChatWindow
                     user1Address={address}
                     user2Address={selectedChatMatch.address}
-                    user1Name={currentUserProfile?.name || "You"}
+                    user1Name="You"
                     user2Name={selectedChatMatch.name}
                     currentUserAddress={address}
                     onClose={() => setShowChatWindow(false)}
                 />
+            )}
+
+            {/* Custom Delete Confirmation Modal */}
+            {showDeleteConfirm && matchToDelete && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+                            Remove Match?
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-300 mb-6">
+                            Are you sure you want to remove <span className="font-semibold">{matchToDelete.name}</span> from your matches? This cannot be undone.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowDeleteConfirm(false);
+                                    setMatchToDelete(null);
+                                }}
+                                className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg font-semibold hover:opacity-90"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:opacity-90"
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
