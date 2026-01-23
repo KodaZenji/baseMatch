@@ -67,62 +67,6 @@ body {
 }
 
 /* ============================================
-   CHAT WINDOW SPECIFIC STYLES
-   ============================================ */
-
-/* Chat message bubbles - Current user (blue like X) */
-.dark [class*="from-pink-500"][class*="to-purple-600"],
-.dark [class*="from-[#1d9bf0]"][class*="to-[#1d9bf0]"] {
-  background: #1d9bf0 !important;
-  color: white !important;
-  border-radius: 18px !important;
-  border-bottom-right-radius: 4px !important;
-  padding: 10px 16px !important;
-}
-
-/* Chat message bubbles - Other user (light gray) */
-.dark [class*="bg-gray-200"],
-.dark [class*="bg-[#eff3f4]"] {
-  background: #2f3336 !important;
-  color: #e7e9ea !important;
-  border-radius: 18px !important;
-  border-bottom-left-radius: 4px !important;
-  padding: 10px 16px !important;
-}
-
-/* Chat container background */
-.dark [class*="bg-gray-50"][class*="dark:bg-gray-800"] {
-  background: #15202b !important;
-}
-
-/* Chat window main container */
-.dark [class*="bg-white"][class*="dark:bg-gray-900"] {
-  background: #15202b !important;
-}
-
-/* Chat input field */
-.dark .dark\:bg-gray-800 {
-  background: #273340 !important;
-  border-color: #38444d !important;
-}
-
-/* Chat header */
-.dark .border-gray-200.dark\:border-gray-700 {
-  border-color: #38444d !important;
-  background: #1e2732 !important;
-}
-
-/* Message timestamp color for current user */
-.dark .text-pink-100,
-.dark .dark\:text-blue-100 {
-  color: rgba(255, 255, 255, 0.7) !important;
-}
-
-/* Message spacing */
-.dark .space-y-3 > div {
-  margin-bottom: 8px !important;
-}
-/* ============================================
    CARDS AND CONTAINERS
    ============================================ */
 
