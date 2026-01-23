@@ -2,53 +2,84 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount, useWriteContract } from 'wagmi';
-import { useMatches } from '@/hooks/useMatches';
 import ProfileCard from './ProfileCard';
 import GiftingModal from './GiftingModal';
-import ChatWindow from './ChatWindow';
 import { Trash2, AlertCircle, Heart, Users } from 'lucide-react';
 import { CONTRACTS, MATCHING_ABI } from '@/lib/contracts';
 
 export default function Matches() {
     const { address } = useAccount();
     const { writeContract } = useWriteContract();
-    const { matches: rawMatches, loading: matchesLoading } = useMatches(address);
 
-    const [matches, setMatches] = useState<typeof rawMatches>([]);
+    const [matches, setMatches] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const [showGiftingModal, setShowGiftingModal] = useState(false);
-    const [showChatWindow, setShowChatWindow] = useState(false);
     const [selectedRecipient, setSelectedRecipient] = useState({ address: '', name: '' });
-    const [selectedChatMatch, setSelectedChatMatch] = useState<{ address: string; name: string } | null>(null);
     const [removingMatch, setRemovingMatch] = useState<string | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [matchToDelete, setMatchToDelete] = useState<{ address: string; name: string } | null>(null);
 
-    // Fix: compute age from birthYear here
+    // Fetch matches from blockchain + profile API
     useEffect(() => {
-        if (rawMatches && rawMatches.length > 0) {
-            const updatedMatches = rawMatches.map((m) => ({
-                ...m,
-                birthYear: Number(m.birthYear), // ensure number
-                age: new Date().getFullYear() - Number(m.birthYear),
-            }));
-            setMatches(updatedMatches);
-        } else {
-            setMatches([]);
-        }
-    }, [rawMatches]);
+        if (!address) return;
+
+        const fetchMatches = async () => {
+            try {
+                setLoading(true);
+
+                // 1️⃣ Fetch match addresses from blockchain
+                const response = await fetch(`/api/matches/${address}`);
+                const matchAddresses: string[] = await response.json(); // assume array of addresses
+
+                // 2️⃣ Fetch profile data for each match
+                const profilePromises = matchAddresses.map(async (addr) => {
+                    try {
+                        const res = await fetch(`/api/profile/${addr}`);
+                        if (!res.ok) throw new Error('Profile fetch failed');
+                        const profileData = await res.json();
+
+                        return {
+                            address: addr,
+                            name: profileData.name || 'Unknown User',
+                            birthYear: Number(profileData.birthYear), // ✅ convert to number
+                            gender: profileData.gender || '',
+                            interests: profileData.interests || '',
+                            photoUrl: profileData.photoUrl || '',
+                            matchedAt: Date.now(),
+                        };
+                    } catch (err) {
+                        console.warn(`Failed to fetch profile ${addr}:`, err);
+                        return {
+                            address: addr,
+                            name: 'User',
+                            birthYear: 0, // fallback birthYear
+                            gender: '',
+                            interests: 'Interests not loaded',
+                            photoUrl: '',
+                            matchedAt: Date.now(),
+                        };
+                    }
+                });
+
+                const matchProfiles = await Promise.all(profilePromises);
+                setMatches(matchProfiles);
+            } catch (error) {
+                console.error('Error fetching matches:', error);
+                setMatches([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchMatches();
+    }, [address]);
 
     const handleGiftClick = (recipientAddress: string, recipientName: string) => {
         setSelectedRecipient({ address: recipientAddress, name: recipientName });
         setShowGiftingModal(true);
     };
 
-    const handleChatClick = (matchAddress: string, matchName: string) => {
-        setSelectedChatMatch({ address: matchAddress, name: matchName });
-        setShowChatWindow(true);
-    };
-
     const handleRemoveMatch = (matchAddress: string, matchName: string) => {
-        if (!address) return;
         setMatchToDelete({ address: matchAddress, name: matchName });
         setShowDeleteConfirm(true);
     };
@@ -62,42 +93,38 @@ export default function Matches() {
         try {
             const response = await fetch('/api/profile/remove-match', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-user-address': address.toLowerCase(),
-                },
+                headers: { 'Content-Type': 'application/json', 'x-user-address': address.toLowerCase() },
                 body: JSON.stringify({ matchedUserAddress: matchToDelete.address.toLowerCase() }),
             });
 
-            if (!response.ok) throw new Error('Failed to remove match from database');
+            if (!response.ok) throw new Error('Failed to remove match');
+
             const data = await response.json();
 
             if (data.blockchainRemovalRequired && CONTRACTS.MATCHING) {
                 try {
-                    writeContract({
+                    await writeContract({
                         address: CONTRACTS.MATCHING as `0x${string}`,
                         abi: MATCHING_ABI,
                         functionName: 'removeMatch',
                         args: [matchToDelete.address.toLowerCase() as `0x${string}`],
                     });
                 } catch (err) {
-                    console.error('Blockchain removal error:', err);
-                    alert('Database deletion succeeded but blockchain update failed.');
-                    return;
+                    console.error('Blockchain removal failed:', err);
                 }
             }
 
-            window.location.reload();
-        } catch (error) {
-            console.error('Error removing match:', error);
-            alert('Failed to remove match. Please try again.');
+            // Remove locally
+            setMatches((prev) => prev.filter((m) => m.address !== matchToDelete.address));
+        } catch (err) {
+            console.error(err);
         } finally {
             setRemovingMatch(null);
             setMatchToDelete(null);
         }
     };
 
-    if (matchesLoading) {
+    if (loading) {
         return (
             <div className="flex justify-center items-center h-64">
                 <div className="text-gray-500">Loading matches...</div>
@@ -114,21 +141,9 @@ export default function Matches() {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                     <Users size={16} />
-                    {matches?.length || 0} matches
+                    {matches.length} matches
                 </div>
             </div>
-
-            {matches && matches.some(m => m.name === 'Unknown User' || m.name === 'User') && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-                    <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={20} />
-                    <div>
-                        <div className="font-semibold text-yellow-900">Some profiles couldn't be loaded</div>
-                        <div className="text-sm text-yellow-800 mt-1">
-                            This happens when the API fails to fetch profile data from the blockchain.
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {!matches || matches.length === 0 ? (
                 <div className="text-center py-12 space-y-3">
@@ -140,28 +155,11 @@ export default function Matches() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {matches.map((match) => (
-                        <div key={match.address} className="relative">
-                            <ProfileCard
-                                profile={match}
-                                onGift={() => handleGiftClick(match.address, match.name)}
-                            />
-                            <div className="absolute top-4 right-4 flex gap-2 z-10">
-                                <button
-                                    onClick={() => handleChatClick(match.address, match.name)}
-                                    className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-3 py-2 rounded-lg font-semibold hover:opacity-90 text-sm"
-                                >
-                                    Chat
-                                </button>
-                                <button
-                                    onClick={() => handleRemoveMatch(match.address, match.name)}
-                                    disabled={removingMatch === match.address}
-                                    className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-                                    title="Remove match"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            </div>
-                        </div>
+                        <ProfileCard
+                            key={match.address}
+                            profile={match}
+                            onGift={() => handleGiftClick(match.address, match.name)}
+                        />
                     ))}
                 </div>
             )}
@@ -173,30 +171,18 @@ export default function Matches() {
                 recipientName={selectedRecipient.name}
             />
 
-            {showChatWindow && address && selectedChatMatch && (
-                <ChatWindow
-                    user1Address={address}
-                    user2Address={selectedChatMatch.address}
-                    user1Name="You"
-                    user2Name={selectedChatMatch.name}
-                    currentUserAddress={address}
-                    onClose={() => setShowChatWindow(false)}
-                />
-            )}
-
             {showDeleteConfirm && matchToDelete && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6">
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Remove Match?</h3>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+                            Remove Match?
+                        </h3>
                         <p className="text-gray-600 dark:text-gray-300 mb-6">
-                            Are you sure you want to remove <span className="font-semibold">{matchToDelete.name}</span> from your matches? This cannot be undone.
+                            Are you sure you want to remove <span className="font-semibold">{matchToDelete.name}</span>? This cannot be undone.
                         </p>
                         <div className="flex gap-3">
                             <button
-                                onClick={() => {
-                                    setShowDeleteConfirm(false);
-                                    setMatchToDelete(null);
-                                }}
+                                onClick={() => setShowDeleteConfirm(false)}
                                 className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg font-semibold hover:opacity-90"
                             >
                                 Cancel
