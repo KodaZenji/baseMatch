@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from '@/hooks/useChat';
 import DateStakeModal from './DateStakeModal';
-import Image from 'next/image';
 import styles from './ChatWindow.module.css';
 
 interface ChatWindowProps {
@@ -155,18 +154,20 @@ export default function ChatWindow({
                 <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center flex-shrink-0">
                     <div className="flex items-center gap-3 min-w-0">
                         {otherUserProfile?.photoUrl ? (
-                            <Image
-                                src={otherUserProfile.photoUrl}
-                                alt={otherUserName}
-                                width={40}
-                                height={40}
-                                className="rounded-full object-cover"
-                            />
-                        ) : (
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold">
-                                {otherUserName.charAt(0).toUpperCase()}
-                            </div>
-                        )}
+    <img
+        src={otherUserProfile.photoUrl}
+        alt={otherUserName}
+        className="rounded-full object-cover w-10 h-10 flex-shrink-0"
+        onError={(e) => {
+            console.error('Chat avatar failed to load:', otherUserProfile.photoUrl);
+            e.currentTarget.style.display = 'none';
+        }}
+    />
+) : (
+    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold flex-shrink-0">
+        {otherUserName.charAt(0).toUpperCase()}
+    </div>
+)}                        )}
                         <div className="min-w-0">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">{otherUserName}</h2>
                             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{otherUserAddress}</p>
