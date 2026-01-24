@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -137,8 +136,8 @@ export default function ChatWindow({
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-4 pb-4 px-4 z-50">
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-2xl w-full h-[95vh] flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-2xl w-full h-[calc(100vh-2rem)] flex flex-col">
                 {/* FIXED HEADER */}
                 <div className="border-b border-gray-200 dark:border-gray-700 p-4">
                     <div className="flex justify-between items-start gap-2">
@@ -195,10 +194,10 @@ export default function ChatWindow({
                 <div 
                     ref={messagesContainerRef}
                     onScroll={handleScroll}
-                    className={`flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-800 ${styles.chatContainer}`}
+                    className={`flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-3 bg-gray-50 dark:bg-gray-800 ${styles.chatContainer}`}
                     style={{ display: 'flex', flexDirection: 'column-reverse' }}
                 >
-                    <div ref={messagesEndRef} />
+                    <div ref={messagesEndRef} className="h-2" />
                     
                     {loading && messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
