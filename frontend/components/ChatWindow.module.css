@@ -40,9 +40,20 @@
 /* Padding for message list */
 .messagesList {
     padding-bottom: 0.5rem !important;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
-/* Optional: smooth scrolling */
+/* Smooth scrolling */
 .chatContainer {
     scroll-behavior: smooth !important;
+}
+
+/* Mobile keyboard adjustments */
+@media (max-width: 768px) {
+    .chatContainer {
+        /* Ensure smooth scrolling on mobile */
+        -webkit-overflow-scrolling: touch;
+    }
 }
