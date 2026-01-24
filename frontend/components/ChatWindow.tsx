@@ -138,11 +138,21 @@ export default function ChatWindow({
         if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     };
 
+    // Handle key down for input
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (messageText.trim() && !isSending) {
+                handleSendMessage(e as any);
+            }
+        }
+    };
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50">
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-2xl w-full h-[calc(100vh-2rem)] flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-hidden">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-2xl w-full max-h-[85vh] md:max-h-[90vh] flex flex-col">
                 {/* HEADER */}
-                <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center">
+                <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center flex-shrink-0">
                     <div className="flex items-center gap-3 min-w-0">
                         {otherUserProfile?.photoUrl ? (
                             <Image
@@ -179,7 +189,7 @@ export default function ChatWindow({
                 </div>
 
                 {/* SYSTEM INFO */}
-                <div className="bg-blue-50 dark:bg-blue-900/30 border-b border-blue-200 dark:border-blue-800 px-4 py-2 text-xs text-blue-700 dark:text-blue-300">
+                <div className="bg-blue-50 dark:bg-blue-900/30 border-b border-blue-200 dark:border-blue-800 px-4 py-2 text-xs text-blue-700 dark:text-blue-300 flex-shrink-0">
                     🔒 End-to-end encrypted
                 </div>
 
@@ -189,83 +199,88 @@ export default function ChatWindow({
                     onScroll={handleScroll}
                     className={`flex-1 overflow-y-auto px-4 py-2 ${styles.chatContainer}`}
                 >
-                    <div ref={messagesEndRef} />
-                    {loading && messages.length === 0 ? (
-                        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">Loading messages...</div>
-                    ) : messages.length === 0 ? (
-                        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-                            No messages yet 💬
-                        </div>
-                    ) : (
-                        messages.map((msg) => {
-                            const isCurrentUser = msg.sender_address.toLowerCase() === currentUserAddress.toLowerCase();
-                            const isDeleting = deletingMessageId === msg.id;
-                            const showDeleteButton = longPressMessageId === msg.id;
-                            return (
-                                <div key={msg.id} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} group`}>
-                                    <div className="relative flex items-center gap-2">
-                                        {isCurrentUser && !isDeleting && (
-                                            <button
-                                                onClick={() => handleDeleteMessage(msg.id)}
-                                                className={`text-red-500 hover:text-red-700 text-lg flex-shrink-0 transition-opacity ${showDeleteButton ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                                            >
-                                                🗑️
-                                            </button>
-                                        )}
-                                        <div
-                                            onTouchStart={() => isCurrentUser && !isDeleting && handleTouchStart(msg.id)}
-                                            onTouchEnd={handleTouchEnd}
-                                            onTouchMove={handleTouchEnd}
-                                            className={`max-w-xs px-4 py-2 rounded-2xl cursor-pointer select-none shadow-sm ${
-                                                isCurrentUser ? styles.chatBubbleCurrent : styles.chatBubbleOther
-                                            } ${isDeleting ? 'opacity-50' : ''} ${showDeleteButton ? 'scale-95' : ''} transition-transform`}
-                                        >
-                                            <p className="break-words">{msg.decrypted_text || '[Decrypting...]'}</p>
-                                            <p className={`text-xs mt-1 ${isCurrentUser ? 'text-pink-100 dark:text-white/70' : 'text-gray-500 dark:text-gray-400'}`}>
-                                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </p>
-                                        </div>
+                    <div className={styles.messagesList}>
+                        {loading && messages.length === 0 ? (
+                            <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">Loading messages...</div>
+                        ) : messages.length === 0 ? (
+                            <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                                No messages yet 💬
+                            </div>
+                        ) : (
+                            <>
+                                {hasMore && (
+                                    <div className="text-center py-2 mb-2">
+                                        <button onClick={loadMore} disabled={loading} className="text-sm text-purple-600 hover:text-purple-700 disabled:opacity-50">
+                                            {loading ? 'Loading...' : '↑ Load older messages'}
+                                        </button>
                                     </div>
-                                </div>
-                            );
-                        })
-                    )}
-                    {hasMore && (
-                        <div className="text-center py-2">
-                            <button onClick={loadMore} disabled={loading} className="text-sm text-purple-600 hover:text-purple-700 disabled:opacity-50">
-                                {loading ? 'Loading...' : '↑ Load older messages'}
-                            </button>
-                        </div>
-                    )}
+                                )}
+                                {messages.map((msg) => {
+                                    const isCurrentUser = msg.sender_address.toLowerCase() === currentUserAddress.toLowerCase();
+                                    const isDeleting = deletingMessageId === msg.id;
+                                    const showDeleteButton = longPressMessageId === msg.id;
+                                    return (
+                                        <div key={msg.id} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-2 group`}>
+                                            <div className="relative flex items-center gap-2">
+                                                {isCurrentUser && !isDeleting && (
+                                                    <button
+                                                        onClick={() => handleDeleteMessage(msg.id)}
+                                                        className={`text-red-500 hover:text-red-700 text-lg flex-shrink-0 transition-opacity ${showDeleteButton ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                )}
+                                                <div
+                                                    onTouchStart={() => isCurrentUser && !isDeleting && handleTouchStart(msg.id)}
+                                                    onTouchEnd={handleTouchEnd}
+                                                    onTouchMove={handleTouchEnd}
+                                                    className={`max-w-xs px-4 py-2 rounded-2xl cursor-pointer select-none shadow-sm ${
+                                                        isCurrentUser ? styles.chatBubbleCurrent : styles.chatBubbleOther
+                                                    } ${isDeleting ? 'opacity-50' : ''} ${showDeleteButton ? 'scale-95' : ''} transition-transform`}
+                                                >
+                                                    <p className="break-words">{msg.decrypted_text || '[Decrypting...]'}</p>
+                                                    <p className={`text-xs mt-1 ${isCurrentUser ? 'text-pink-100 dark:text-white/70' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </>
+                        )}
+                    </div>
+                    <div ref={messagesEndRef} />
                 </div>
 
+                {/* ERROR / SUCCESS */}
+                {(error || sendError || successMessage) && (
+                    <div className={`px-4 py-2 text-sm flex-shrink-0 ${successMessage ? 'bg-green-100 border-t border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300' : 'bg-red-100 border-t border-red-300 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300'}`}>
+                        {successMessage || error || sendError}
+                    </div>
+                )}
+
                 {/* INPUT */}
-                <div className="sticky bottom-0 z-10 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-2">
+                <div className="border-t border-gray-200 dark:border-gray-700 p-3 flex-shrink-0 bg-white dark:bg-gray-900">
                     <form onSubmit={handleSendMessage} className="flex gap-2">
                         <input
                             type="text"
                             value={messageText}
                             onChange={(e) => setMessageText(e.target.value)}
+                            onKeyDown={handleKeyDown}
                             placeholder="Type a message..."
                             disabled={isSending}
-                            className="flex-1 px-4 py-2 rounded-full border border-gray-300 dark:border-gray-600 focus:outline-none dark:bg-gray-800 dark:text-white"
+                            className="flex-1 px-4 py-2 rounded-full border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-800 dark:text-white disabled:opacity-50"
                         />
                         <button
                             type="submit"
                             disabled={isSending || !messageText.trim()}
-                            className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white disabled:opacity-50"
+                            className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white disabled:opacity-50 hover:opacity-90 transition-opacity flex-shrink-0"
                         >
                             ➤
                         </button>
                     </form>
                 </div>
-
-                {/* ERROR / SUCCESS */}
-                {(error || sendError || successMessage) && (
-                    <div className={`px-4 py-3 text-sm ${successMessage ? 'bg-green-100 border-green-300 text-green-700' : 'bg-red-100 border-red-300 text-red-700'}`}>
-                        {successMessage || error || sendError}
-                    </div>
-                )}
             </div>
 
             {showDateModal && (
