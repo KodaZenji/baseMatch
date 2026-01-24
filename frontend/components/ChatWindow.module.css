@@ -17,3 +17,20 @@
     background: #2f3336 !important;
     color: #e7e9ea !important;
 }
+
+.chatContainer::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chatContainer::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chatContainer::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+:global(.dark) .chatContainer::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+}
