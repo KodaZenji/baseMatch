@@ -167,7 +167,7 @@ export default function ChatWindow({
     <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold flex-shrink-0">
         {otherUserName.charAt(0).toUpperCase()}
     </div>
-)}                        )}
+)}                       
                         <div className="min-w-0">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">{otherUserName}</h2>
                             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{otherUserAddress}</p>
