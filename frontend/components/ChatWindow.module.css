@@ -1,3 +1,4 @@
+/* Chat bubbles */
 .chatBubbleCurrent {
     background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%) !important;
     color: white !important;
@@ -18,23 +19,30 @@
     color: #e7e9ea !important;
 }
 
+/* Chat container scrollbar */
 .chatContainer::-webkit-scrollbar {
-    width: 6px;
+    width: 6px !important;
 }
 
 .chatContainer::-webkit-scrollbar-track {
-    background: transparent;
+    background: transparent !important;
 }
 
 .chatContainer::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.2) !important;
+    border-radius: 3px !important;
 }
 
 :global(.dark) .chatContainer::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.1) !important;
 }
 
+/* Padding for message list */
 .messagesList {
-    padding-bottom: 0.5rem;
+    padding-bottom: 0.5rem !important;
+}
+
+/* Optional: smooth scrolling */
+.chatContainer {
+    scroll-behavior: smooth !important;
 }
