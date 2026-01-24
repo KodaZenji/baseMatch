@@ -37,6 +37,7 @@ export default function ChatWindow({
     const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
     const [longPressMessageId, setLongPressMessageId] = useState<string | null>(null);
     const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const isInitialLoadRef = useRef(true);
@@ -61,10 +62,24 @@ export default function ChatWindow({
         fetchProfile();
     }, [otherUserAddress]);
 
+    // Initial load scroll
     useEffect(() => {
         if (isInitialLoadRef.current && messages.length > 0) {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+            messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
             isInitialLoadRef.current = false;
+        }
+    }, [messages]);
+
+    // Smart auto-scroll only if user is at bottom
+    useEffect(() => {
+        const container = messagesContainerRef.current;
+        if (!container) return;
+        
+        const isAtBottom =
+            container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+
+        if (isAtBottom && messages.length > 0) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
     }, [messages]);
 
@@ -121,10 +136,7 @@ export default function ChatWindow({
     const handleTouchStart = (messageId: string) => {
         longPressTimerRef.current = setTimeout(() => {
             setLongPressMessageId(messageId);
-            // Haptic feedback if available
-            if (navigator.vibrate) {
-                navigator.vibrate(50);
-            }
+            if (navigator.vibrate) navigator.vibrate(50);
         }, 500); 
     };
 
@@ -194,83 +206,73 @@ export default function ChatWindow({
                 <div 
                     ref={messagesContainerRef}
                     onScroll={handleScroll}
-                    className={`flex-1 overflow-y-auto px-4 pb-2 space-y-2 bg-gray-50 dark:bg-gray-800 ${styles.chatContainer}`}
-                    style={{ display: 'flex', flexDirection: 'column-reverse' }}
+                    className={`flex-1 overflow-y-auto flex flex-col px-4 pb-2 space-y-2 bg-gray-50 dark:bg-gray-800 ${styles.chatContainer}`}
                 >
-                    <div ref={messagesEndRef} />
-                    
                     {loading && messages.length === 0 ? (
-                        <div className="flex items-center justify-center h-full">
-                            <div className="text-gray-500 dark:text-gray-400 text-center">
-                                <div className="mb-2">Loading messages...</div>
-                            </div>
+                        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                            Loading messages...
                         </div>
                     ) : messages.length === 0 ? (
-                        <div className="flex items-center justify-center h-full">
-                            <div className="text-gray-500 dark:text-gray-400 text-center">
-                                <div className="mb-2">No messages yet</div>
-                                <div className="text-sm">Start the conversation! 💬</div>
-                            </div>
+                        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 text-center">
+                            <div>No messages yet</div>
+                            <div className="text-sm">Start the conversation! 💬</div>
                         </div>
                     ) : (
-                        <>
-                            {messages.slice().reverse().map((msg) => {
-                                const isCurrentUser = msg.sender_address.toLowerCase() === currentUserAddress.toLowerCase();
-                                const isDeleting = deletingMessageId === msg.id;
-                                const showDeleteButton = longPressMessageId === msg.id;
-                                
-                                return (
-                                    <div
-                                        key={msg.id}
-                                        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} group`}
-                                    >
-                                        <div className="relative flex items-center gap-2">
-                                            {/* Delete button */}
-                                            {isCurrentUser && !isDeleting && (
-                                                <button
-                                                    onClick={() => handleDeleteMessage(msg.id)}
-                                                    className={`
-                                                        text-red-500 hover:text-red-700 text-lg flex-shrink-0 transition-opacity
-                                                        ${showDeleteButton ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
-                                                    `}
-                                                    title="Delete message"
-                                                >
-                                                    🗑️
-                                                </button>
-                                            )}
-                                            
-                                            <div
-                                                onTouchStart={() => isCurrentUser && !isDeleting && handleTouchStart(msg.id)}
-                                                onTouchEnd={handleTouchEnd}
-                                                onTouchMove={handleTouchEnd}
+                        messages.map((msg) => {
+                            const isCurrentUser = msg.sender_address.toLowerCase() === currentUserAddress.toLowerCase();
+                            const isDeleting = deletingMessageId === msg.id;
+                            const showDeleteButton = longPressMessageId === msg.id;
+                            
+                            return (
+                                <div
+                                    key={msg.id}
+                                    className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} group`}
+                                >
+                                    <div className="relative flex items-center gap-2">
+                                        {isCurrentUser && !isDeleting && (
+                                            <button
+                                                onClick={() => handleDeleteMessage(msg.id)}
                                                 className={`
-                                                    max-w-xs px-4 py-2 rounded-2xl cursor-pointer select-none shadow-sm
-                                                    ${isCurrentUser
-                                                        ? `${styles.chatBubbleCurrent} rounded-br-sm`
-                                                        : `${styles.chatBubbleOther} rounded-bl-sm`
-                                                    } 
-                                                    ${isDeleting ? 'opacity-50' : ''}
-                                                    ${showDeleteButton ? 'scale-95' : ''}
-                                                    transition-transform
+                                                    text-red-500 hover:text-red-700 text-lg flex-shrink-0 transition-opacity
+                                                    ${showDeleteButton ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
                                                 `}
+                                                title="Delete message"
                                             >
-                                                <p className="break-words">{msg.decrypted_text || '[Decrypting...]'}</p>
-                                                <p
-                                                    className={`text-xs mt-1 ${
-                                                        isCurrentUser ? 'text-pink-100 dark:text-white dark:opacity-70' : 'text-gray-500 dark:text-gray-400'
-                                                    }`}
-                                                >
-                                                    {new Date(msg.created_at).toLocaleTimeString([], {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit',
-                                                    })}
-                                                </p>
-                                            </div>
+                                                🗑️
+                                            </button>
+                                        )}
+                                        
+                                        <div
+                                            onTouchStart={() => isCurrentUser && !isDeleting && handleTouchStart(msg.id)}
+                                            onTouchEnd={handleTouchEnd}
+                                            onTouchMove={handleTouchEnd}
+                                            className={`
+                                                max-w-xs px-4 py-2 rounded-2xl cursor-pointer select-none shadow-sm
+                                                ${isCurrentUser
+                                                    ? `${styles.chatBubbleCurrent} rounded-br-sm`
+                                                    : `${styles.chatBubbleOther} rounded-bl-sm`
+                                                } 
+                                                ${isDeleting ? 'opacity-50' : ''}
+                                                ${showDeleteButton ? 'scale-95' : ''}
+                                                transition-transform
+                                            `}
+                                        >
+                                            <p className="break-words">{msg.decrypted_text || '[Decrypting...]'}</p>
+                                            <p className={`text-xs mt-1 ${
+                                                isCurrentUser
+                                                    ? 'text-pink-100 dark:text-white dark:opacity-70'
+                                                    : 'text-gray-500 dark:text-gray-400'
+                                            }`}>
+                                                {new Date(msg.created_at).toLocaleTimeString([], {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                })}
+                                            </p>
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </>
+                                </div>
+                            );
+                        })
                     )}
 
                     {hasMore && (
@@ -284,6 +286,8 @@ export default function ChatWindow({
                             </button>
                         </div>
                     )}
+
+                    <div ref={messagesEndRef} />
                 </div>
 
                 {(error || sendError || successMessage) && (
