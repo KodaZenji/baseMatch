@@ -137,8 +137,8 @@ export default function ChatWindow({
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-4 pb-4 px-4 z-50">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-2xl w-full h-[95vh] flex flex-col">
                 {/* FIXED HEADER */}
                 <div className="border-b border-gray-200 dark:border-gray-700 p-4">
                     <div className="flex justify-between items-start gap-2">
@@ -195,7 +195,7 @@ export default function ChatWindow({
                 <div 
                     ref={messagesContainerRef}
                     onScroll={handleScroll}
-                    className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-800"
+                    className={`flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-800 ${styles.chatContainer}`}
                     style={{ display: 'flex', flexDirection: 'column-reverse' }}
                 >
                     <div ref={messagesEndRef} />
@@ -258,7 +258,7 @@ export default function ChatWindow({
                                                 <p className="break-words">{msg.decrypted_text || '[Decrypting...]'}</p>
                                                 <p
                                                     className={`text-xs mt-1 ${
-                                                        isCurrentUser ? 'text-pink-100 dark:text-blue-100' : 'text-gray-500 dark:text-gray-400'
+                                                        isCurrentUser ? 'text-pink-100 dark:text-white dark:opacity-70' : 'text-gray-500 dark:text-gray-400'
                                                     }`}
                                                 >
                                                     {new Date(msg.created_at).toLocaleTimeString([], {
