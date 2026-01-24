@@ -38,21 +38,20 @@ export default function ChatWindow({
     const [longPressMessageId, setLongPressMessageId] = useState<string | null>(null);
     const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
 
+    const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    const otherUserName =
-        currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user2Name : user1Name;
-    const otherUserAddress =
-        currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user2Address : user1Address;
+    const otherUserName = currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user2Name : user1Name;
+    const otherUserAddress = currentUserAddress.toLowerCase() === user1Address.toLowerCase() ? user2Address : user1Address;
 
-    // Fetch other user's profile for avatar
+    // Fetch other user's profile
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const response = await fetch(`/api/profile/${otherUserAddress}`);
-                if (response.ok) {
-                    const data = await response.json();
+                const res = await fetch(`/api/profile/${otherUserAddress}`);
+                if (res.ok) {
+                    const data = await res.json();
                     setOtherUserProfile(data);
                 }
             } catch (err) {
@@ -62,35 +61,20 @@ export default function ChatWindow({
         fetchProfile();
     }, [otherUserAddress]);
 
-    // Scroll to bottom on new messages only if user is near bottom
+    // Scroll to bottom on new message, unless user is reading older messages
     useEffect(() => {
         const container = messagesContainerRef.current;
         if (!container) return;
 
-        const threshold = 150; // px from bottom to auto-scroll
-        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+        const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
 
-        if (isNearBottom) {
-            container.scrollTop = container.scrollHeight;
+        if (distanceFromBottom < 100) {
+            // User is near bottom, auto scroll
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
     }, [messages]);
 
-    // Scroll handler for loading older messages
-    const handleScroll = async () => {
-        const container = messagesContainerRef.current;
-        if (!container || loading || !hasMore) return;
-
-        if (container.scrollTop < 50) {
-            const oldScrollHeight = container.scrollHeight;
-            await loadMore();
-            // Keep scroll position stable
-            if (messagesContainerRef.current) {
-                const newScrollHeight = messagesContainerRef.current.scrollHeight;
-                messagesContainerRef.current.scrollTop = newScrollHeight - oldScrollHeight;
-            }
-        }
-    };
-
+    // Handle send
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         setSendError(null);
@@ -103,15 +87,29 @@ export default function ChatWindow({
         const success = await sendMessage(messageText);
         if (success) {
             setMessageText('');
-            setSendError(null);
-
-            // Scroll to bottom after sending
-            messagesContainerRef.current?.scrollTo({ top: messagesContainerRef.current.scrollHeight, behavior: 'smooth' });
         } else {
-            setSendError('Failed to send message. Please try again.');
+            setSendError('Failed to send message');
         }
     };
 
+    // Load more messages when scrolling to top
+    const handleScroll = () => {
+        const container = messagesContainerRef.current;
+        if (!container || loading || !hasMore) return;
+
+        if (container.scrollTop < 50) {
+            const oldScrollHeight = container.scrollHeight;
+            loadMore();
+            setTimeout(() => {
+                if (messagesContainerRef.current) {
+                    const newScrollHeight = messagesContainerRef.current.scrollHeight;
+                    messagesContainerRef.current.scrollTop = newScrollHeight - oldScrollHeight;
+                }
+            }, 100); // slight delay for messages prepending
+        }
+    };
+
+    // Delete
     const handleDeleteMessage = async (messageId: string) => {
         if (!confirm('Delete this message? This cannot be undone.')) return;
 
@@ -129,19 +127,15 @@ export default function ChatWindow({
         setDeletingMessageId(null);
     };
 
-    // Long press handlers for mobile
+    // Long press for mobile
     const handleTouchStart = (messageId: string) => {
         longPressTimerRef.current = setTimeout(() => {
             setLongPressMessageId(messageId);
-            if (navigator.vibrate) navigator.vibrate(50);
+            navigator.vibrate?.(50);
         }, 500);
     };
-
     const handleTouchEnd = () => {
-        if (longPressTimerRef.current) {
-            clearTimeout(longPressTimerRef.current);
-            longPressTimerRef.current = null;
-        }
+        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     };
 
     return (
@@ -149,7 +143,7 @@ export default function ChatWindow({
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-2xl w-full h-[calc(100vh-2rem)] flex flex-col">
                 {/* HEADER */}
                 <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                         {otherUserProfile?.photoUrl ? (
                             <Image
                                 src={otherUserProfile.photoUrl}
@@ -163,7 +157,7 @@ export default function ChatWindow({
                                 {otherUserName.charAt(0).toUpperCase()}
                             </div>
                         )}
-                        <div className="flex flex-col min-w-0">
+                        <div className="min-w-0">
                             <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">{otherUserName}</h2>
                             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{otherUserAddress}</p>
                         </div>
@@ -171,79 +165,63 @@ export default function ChatWindow({
                     <div className="flex gap-2 items-center">
                         <button
                             onClick={() => setShowDateModal(true)}
-                            className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-3 py-1.5 rounded-lg font-semibold hover:opacity-90 transition-opacity text-xs sm:text-sm"
+                            className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-3 py-1.5 rounded-lg font-semibold hover:opacity-90 transition-opacity text-xs sm:text-sm leading-tight"
                         >
-                            💕 Go on a Date
+                            💕 Date
                         </button>
                         <button
                             onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-3xl sm:text-2xl leading-none p-1 -mr-1"
-                            aria-label="Close"
+                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-3xl sm:text-2xl leading-none p-1 -mr-1 flex items-center justify-center"
                         >
                             ×
                         </button>
                     </div>
                 </div>
 
-                {/* INFO */}
+                {/* SYSTEM INFO */}
                 <div className="bg-blue-50 dark:bg-blue-900/30 border-b border-blue-200 dark:border-blue-800 px-4 py-2 text-xs text-blue-700 dark:text-blue-300">
-                    🔒 End-to-end encrypted - Only you and your match can read these messages
+                    🔒 End-to-end encrypted
                 </div>
 
                 {/* MESSAGES */}
                 <div
                     ref={messagesContainerRef}
                     onScroll={handleScroll}
-                    className={`flex-1 overflow-y-auto px-4 pb-2 ${styles.chatContainer}`}
-                    style={{ display: 'flex', flexDirection: 'column' }}
+                    className={`flex-1 overflow-y-auto px-4 py-2 ${styles.chatContainer}`}
                 >
+                    <div ref={messagesEndRef} />
                     {loading && messages.length === 0 ? (
-                        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-                            Loading messages...
-                        </div>
+                        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">Loading messages...</div>
                     ) : messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-                            Start the conversation! 💬
+                            No messages yet 💬
                         </div>
                     ) : (
                         messages.map((msg) => {
-                            const isCurrentUser =
-                                msg.sender_address.toLowerCase() === currentUserAddress.toLowerCase();
+                            const isCurrentUser = msg.sender_address.toLowerCase() === currentUserAddress.toLowerCase();
                             const isDeleting = deletingMessageId === msg.id;
                             const showDeleteButton = longPressMessageId === msg.id;
-
                             return (
                                 <div key={msg.id} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} group`}>
                                     <div className="relative flex items-center gap-2">
-                                        {/* Delete */}
                                         {isCurrentUser && !isDeleting && (
                                             <button
                                                 onClick={() => handleDeleteMessage(msg.id)}
-                                                className={`text-red-500 hover:text-red-700 text-lg flex-shrink-0 transition-opacity ${
-                                                    showDeleteButton ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                                                }`}
-                                                title="Delete message"
+                                                className={`text-red-500 hover:text-red-700 text-lg flex-shrink-0 transition-opacity ${showDeleteButton ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                                             >
                                                 🗑️
                                             </button>
                                         )}
-
                                         <div
                                             onTouchStart={() => isCurrentUser && !isDeleting && handleTouchStart(msg.id)}
                                             onTouchEnd={handleTouchEnd}
                                             onTouchMove={handleTouchEnd}
                                             className={`max-w-xs px-4 py-2 rounded-2xl cursor-pointer select-none shadow-sm ${
-                                                isCurrentUser ? `${styles.chatBubbleCurrent} rounded-br-sm` : `${styles.chatBubbleOther} rounded-bl-sm`
+                                                isCurrentUser ? styles.chatBubbleCurrent : styles.chatBubbleOther
                                             } ${isDeleting ? 'opacity-50' : ''} ${showDeleteButton ? 'scale-95' : ''} transition-transform`}
                                         >
                                             <p className="break-words">{msg.decrypted_text || '[Decrypting...]'}</p>
-                                            <p
-                                                className={`text-xs mt-1 ${
-                                                    isCurrentUser
-                                                        ? 'text-pink-100 dark:text-white dark:opacity-70'
-                                                        : 'text-gray-500 dark:text-gray-400'
-                                                }`}
-                                            >
+                                            <p className={`text-xs mt-1 ${isCurrentUser ? 'text-pink-100 dark:text-white/70' : 'text-gray-500 dark:text-gray-400'}`}>
                                                 {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </p>
                                         </div>
@@ -252,54 +230,42 @@ export default function ChatWindow({
                             );
                         })
                     )}
-
                     {hasMore && (
                         <div className="text-center py-2">
-                            <button
-                                onClick={loadMore}
-                                disabled={loading}
-                                className="text-sm text-purple-600 hover:text-purple-700 disabled:opacity-50"
-                            >
+                            <button onClick={loadMore} disabled={loading} className="text-sm text-purple-600 hover:text-purple-700 disabled:opacity-50">
                                 {loading ? 'Loading...' : '↑ Load older messages'}
                             </button>
                         </div>
                     )}
                 </div>
 
-                {/* ERROR / SUCCESS */}
-                {(error || sendError || successMessage) && (
-                    <div
-                        className={`px-4 py-3 text-sm ${
-                            successMessage
-                                ? 'bg-green-100 border border-green-300 text-green-700'
-                                : 'bg-red-100 border border-red-300 text-red-700'
-                        }`}
-                    >
-                        {successMessage || error || sendError}
-                    </div>
-                )}
-
                 {/* INPUT */}
-                <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
+                <div className="sticky bottom-0 z-10 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-2">
                     <form onSubmit={handleSendMessage} className="flex gap-2">
                         <input
                             type="text"
                             value={messageText}
                             onChange={(e) => setMessageText(e.target.value)}
-                            placeholder="Type your message..."
+                            placeholder="Type a message..."
                             disabled={isSending}
-                            maxLength={1000}
-                            className="flex-1 text-gray-800 dark:text-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-pink-500 disabled:bg-gray-100 dark:disabled:bg-gray-700"
+                            className="flex-1 px-4 py-2 rounded-full border border-gray-300 dark:border-gray-600 focus:outline-none dark:bg-gray-800 dark:text-white"
                         />
                         <button
                             type="submit"
                             disabled={isSending || !messageText.trim()}
-                            className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                            className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white disabled:opacity-50"
                         >
-                            {isSending ? 'Sending...' : 'Send'}
+                            ➤
                         </button>
                     </form>
                 </div>
+
+                {/* ERROR / SUCCESS */}
+                {(error || sendError || successMessage) && (
+                    <div className={`px-4 py-3 text-sm ${successMessage ? 'bg-green-100 border-green-300 text-green-700' : 'bg-red-100 border-red-300 text-red-700'}`}>
+                        {successMessage || error || sendError}
+                    </div>
+                )}
             </div>
 
             {showDateModal && (
