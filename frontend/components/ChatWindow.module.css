@@ -1,0 +1,19 @@
+.chatBubbleCurrent {
+    background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%) !important;
+    color: white !important;
+}
+
+:global(.dark) .chatBubbleCurrent {
+    background: #1d9bf0 !important;
+    color: white !important;
+}
+
+.chatBubbleOther {
+    background: #e5e7eb !important;
+    color: #111827 !important;
+}
+
+:global(.dark) .chatBubbleOther {
+    background: #2f3336 !important;
+    color: #e7e9ea !important;
+}
