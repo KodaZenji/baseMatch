@@ -194,10 +194,10 @@ export default function ChatWindow({
                 <div 
                     ref={messagesContainerRef}
                     onScroll={handleScroll}
-                    className={`flex-1 overflow-y-auto px-4 pt-0 pb-2 space-y-2 bg-gray-50 dark:bg-gray-800 ${styles.chatContainer}`}
+                    className={`flex-1 overflow-y-auto px-4 pb-2 space-y-2 bg-gray-50 dark:bg-gray-800 ${styles.chatContainer}`}
                     style={{ display: 'flex', flexDirection: 'column-reverse' }}
                 >
-                    <div ref={messagesEndRef} className="h-2" />
+                    <div ref={messagesEndRef} />
                     
                     {loading && messages.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
