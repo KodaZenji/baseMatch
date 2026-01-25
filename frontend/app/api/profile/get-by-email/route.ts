@@ -1,4 +1,4 @@
-/app/api/profile/get-by-email/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase.server';
 
