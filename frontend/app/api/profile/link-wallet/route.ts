@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       nonce,
       issuedAt,
       name,
-      age,
+      birthYear,  
       gender,
       interests
     } = await req.json();
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
         wallet_address: normalizedWallet,
         wallet_verified: true,
         ...(name && { name }),
-        ...(age && { age: parseInt(age) }),
+        ...(birthYear && { birthYear: parseInt(birthYear) }),  // ✅ Changed from age
         ...(gender && { gender }),
         ...(interests && { interests })
       })
