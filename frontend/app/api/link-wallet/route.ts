@@ -5,7 +5,7 @@ export async function POST(req: Request) {
   try {
 
     // Expect 'id' (UUID), wallet address, and profile details from the client
-    const { id, wallet_address, name, age, gender, interests } = await req.json();
+    const { id, wallet_address, name, birthYear, gender, interests } = await req.json();
 
     // Validate input
     if (!id || !wallet_address) {
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
         wallet_address: normalizedWallet,
         wallet_verified: true, // Setting the verified flag as requested
         ...(name && { name }),
-        ...(age && { age: parseInt(age) }),
+        ...(birthYear && { birthYear: parseInt(birthYear) }),
         ...(gender && { gender }),
         ...(interests && { interests })
       })
