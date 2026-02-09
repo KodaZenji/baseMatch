@@ -1,0 +1,200 @@
+import { NextResponse } from 'next/server';
+import { supabaseClient } from '@/lib/supabase/client';
+
+function getCheckInWindow(): 'morning' | 'night' | null {
+  const hour = new Date().getUTCHours();
+  if (hour >= 6 && hour < 18) return 'morning';
+  if (hour >= 18 || hour < 6) return 'night';
+  return null;
+}
+
+function getWindowFromTimestamp(timestamp: string): 'morning' | 'night' {
+  const hour = new Date(timestamp).getUTCHours();
+  return (hour >= 6 && hour < 18) ? 'morning' : 'night';
+}
+
+function canCheckIn(lastCheckIn: string | null, lastWindow: string | null, currentWindow: string): boolean {
+  if (!lastCheckIn) return true;
+  
+  // Can't check in twice in same window
+  if (lastWindow === currentWindow) return false;
+  
+  // Must be at least 12 hours since last check-in
+  const lastTime = new Date(lastCheckIn).getTime();
+  const now = new Date().getTime();
+  const hoursSince = (now - lastTime) / (1000 * 60 * 60);
+  
+  return hoursSince >= 12;
+}
+
+export async function POST(request: Request) {
+  try {
+    const { walletAddress } = await request.json();
+    
+    if (!walletAddress) {
+      return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
+    }
+    
+    const window = getCheckInWindow();
+    if (!window) {
+      return NextResponse.json({ error: 'Invalid check-in window' }, { status: 400 });
+    }
+    
+    // Get participant
+    const { data: participant, error: participantError } = await supabaseClient
+      .from('leaderboard_participants')
+      .select('*')
+      .eq('wallet_address', walletAddress)
+      .single();
+    
+    if (participantError || !participant) {
+      return NextResponse.json({ 
+        error: 'Not joined leaderboard yet. Visit /race to join.',
+        needsJoin: true 
+      }, { status: 404 });
+    }
+    
+    // Check if user has invited at least 1 person
+    if (participant.invite_count < 1) {
+      return NextResponse.json({
+        error: 'You must invite at least 1 person before you can check in',
+        requiresInvite: true,
+        inviteCount: 0
+      }, { status: 403 });
+    }
+    
+    // Check if can check in
+    if (!canCheckIn(participant.last_check_in, participant.last_check_in_window, window)) {
+      const lastCheckTime = new Date(participant.last_check_in!);
+      const nextCheckTime = new Date(lastCheckTime.getTime() + 12 * 60 * 60 * 1000);
+      const minutesRemaining = Math.max(0, Math.ceil((nextCheckTime.getTime() - Date.now()) / (1000 * 60)));
+      
+      return NextResponse.json({
+        error: 'Already checked in this window',
+        canCheckIn: false,
+        nextCheckInMinutes: minutesRemaining,
+        lastWindow: participant.last_check_in_window
+      }, { status: 429 });
+    }
+    
+    // Calculate points
+    const { data: pointsData } = await supabaseClient
+      .rpc('lb_calculate_checkin_points', { invite_count: participant.invite_count });
+    
+    const points = pointsData || (10 + Math.min(participant.invite_count, 10) ** 2);
+    
+    // Get current check-in number
+    const { count } = await supabaseClient
+      .from('leaderboard_checkins')
+      .select('*', { count: 'exact', head: true })
+      .eq('participant_id', participant.id);
+    
+    const checkInNumber = (count || 0) + 1;
+    
+    // Create check-in record
+    const { error: checkInError } = await supabaseClient
+      .from('leaderboard_checkins')
+      .insert({
+        participant_id: participant.id,
+        window,
+        points,
+        auto_generated: false,
+        invite_count_at_checkin: participant.invite_count,
+        check_in_number: checkInNumber
+      });
+    
+    if (checkInError) {
+      console.error('Check-in insert error:', checkInError);
+      return NextResponse.json({ error: checkInError.message }, { status: 500 });
+    }
+    
+    // Update participant stats
+    const { data: updated, error: updateError } = await supabaseClient
+      .from('leaderboard_participants')
+      .update({
+        total_points: participant.total_points + points,
+        last_check_in: new Date().toISOString(),
+        last_check_in_window: window,
+        check_in_streak: participant.check_in_streak + 1
+      })
+      .eq('id', participant.id)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('Update participant error:', updateError);
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+    
+    // Log activity
+    await supabaseClient
+      .from('leaderboard_activity_log')
+      .insert({
+        participant_id: participant.id,
+        action_type: 'checkin',
+        action_data: { window, points, check_in_number: checkInNumber }
+      });
+    
+    return NextResponse.json({
+      success: true,
+      points,
+      totalPoints: updated.total_points,
+      streak: updated.check_in_streak,
+      checkInNumber,
+      window,
+      nextWindow: window === 'morning' ? 'night' : 'morning'
+    });
+    
+  } catch (error: any) {
+    console.error('Check-in error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// GET check-in status
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const walletAddress = searchParams.get('wallet');
+  
+  if (!walletAddress) {
+    return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
+  }
+  
+  const { data: participant } = await supabaseClient
+    .from('leaderboard_participants')
+    .select('*')
+    .eq('wallet_address', walletAddress)
+    .single();
+  
+  if (!participant) {
+    return NextResponse.json({ 
+      error: 'Not joined leaderboard',
+      needsJoin: true 
+    }, { status: 404 });
+  }
+  
+  const window = getCheckInWindow();
+  const canCheck = canCheckIn(participant.last_check_in, participant.last_check_in_window, window!);
+  
+  let minutesUntilNext = 0;
+  if (participant.last_check_in) {
+    const lastCheckTime = new Date(participant.last_check_in);
+    const nextCheckTime = new Date(lastCheckTime.getTime() + 12 * 60 * 60 * 1000);
+    minutesUntilNext = Math.max(0, Math.ceil((nextCheckTime.getTime() - Date.now()) / (1000 * 60)));
+  }
+  
+  const checkInValue = 10 + Math.min(participant.invite_count, 10) ** 2;
+  
+  return NextResponse.json({
+    canCheckIn: canCheck,
+    currentWindow: window,
+    nextCheckInMinutes: minutesUntilNext,
+    checkInValue,
+    totalPoints: participant.total_points,
+    streak: participant.check_in_streak,
+    inviteCount: participant.invite_count,
+    needsInvite: participant.invite_count < 1,
+    autoCheckEnabled: participant.auto_check_enabled,
+    autoCheckExpiry: participant.auto_check_expiry
+  });
+}
