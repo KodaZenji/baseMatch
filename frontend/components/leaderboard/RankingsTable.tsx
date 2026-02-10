@@ -49,7 +49,7 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
             Men's Leaderboard
           </button>
           <button
-            onClick={() => setGender('feminine')}
+            onClick={() => setGender('female')}
             className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all ${
               gender === 'female'
                 ? 'bg-pink-600 text-white shadow-lg'
@@ -92,7 +92,7 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
               </span>
             ) : (
               <span className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold">
-                ❌ #{myRank.rank_in_gender}
+                 #{myRank.rank_in_gender}
               </span>
             )}
           </div>
