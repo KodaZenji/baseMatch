@@ -57,10 +57,11 @@ function ExploreMenu({ isOpen, onClose, setActiveTab }: {
 
   if (!isOpen) return null;
 
-  const handleNavClick = (tab: 'browse' | 'matches' | 'profile' | |'race') => {
+  const handleNavClick = (tab: 'browse' | 'matches' | 'profile' | 'notifications' | 'race') => {
     setActiveTab(tab);
     onClose();
   };
+
 
   return (
     <>
