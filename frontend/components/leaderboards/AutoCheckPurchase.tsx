@@ -12,7 +12,7 @@ interface AutoCheckPurchaseProps {
 export function AutoCheckPurchase({ walletAddress, participant }: AutoCheckPurchaseProps) {
   const [processing, setProcessing] = useState<string | null>(null);
   
-
+  // Your treasury wallet (where payments go)
   const TREASURY_WALLET = process.env.NEXT_PUBLIC_TREASURY_WALLET || '';
   
   const packages = [
@@ -53,21 +53,36 @@ export function AutoCheckPurchase({ walletAddress, participant }: AutoCheckPurch
       
       console.log('Payment initiated:', payment);
       
-      // Check payment status
-      const status = await getPaymentStatus({
-        id: payment.id,
-        testnet: false,
-      });
+      // Poll for payment status
+      const pollStatus = async () => {
+        try {
+          const status = await getPaymentStatus({
+            id: payment.id,
+            testnet: false,
+          });
+          
+          console.log('Payment status:', status);
+          
+          if (status.status === 'completed') {
+            // Record the purchase
+            await recordPurchase(duration, payment.id);
+          } else if (status.status === 'failed') {
+            alert('Payment failed. Please try again.');
+            setProcessing(null);
+          } else {
+            // Status is 'pending' - poll again after 1 second
+            setTimeout(pollStatus, 1000);
+          }
+        } catch (error) {
+          console.error('Status check error:', error);
+          // Retry after 1 second
+          setTimeout(pollStatus, 1000);
+        }
+      };
       
-      console.log('Payment status:', status);
+      // Start polling
+      pollStatus();
       
-      if (status.status === 'completed' || status.status === 'confirmed') {
-        // Record the purchase
-        await recordPurchase(duration, payment.id);
-      } else {
-        alert('Payment is pending. Please check back shortly.');
-        setProcessing(null);
-      }
     } catch (error) {
       console.error('Payment error:', error);
       alert(`Payment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
