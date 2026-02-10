@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
-import { supabaseClient } from '@/lib/supabase/client';
+import { createClient } from '@supabase/supabase-js';
+
+// Use service role key for admin operations
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(request: Request) {
   try {
@@ -24,7 +30,7 @@ export async function POST(request: Request) {
     }
 
     // 1️⃣ Get user's profile
-    const { data: profile, error: profileError } = await supabaseClient
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select(`
         id,
@@ -47,9 +53,9 @@ export async function POST(request: Request) {
     }
 
     // 2️⃣ Check if user already joined leaderboard
-    const { data: existing } = await supabaseClient
+    const { data: existing } = await supabase
       .from('leaderboard_participants')
-      .select('*, profiles!inner(*)')
+      .select('*')
       .eq('profile_id', profile.id)
       .single();
 
@@ -58,12 +64,12 @@ export async function POST(request: Request) {
         success: true,
         alreadyJoined: true,
         participant: existing,
-        referralLink: `${process.env.NEXT_PUBLIC_BASE_URL}/invite/${existing.referral_code}`
+        referralLink: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://basematch.app'}/race?ref=${existing.referral_code}`
       });
     }
 
     // 3️⃣ Generate new referral code
-    const { data: codeData, error: codeError } = await supabaseClient
+    const { data: codeData, error: codeError } = await supabase
       .rpc('lb_generate_referral_code');
     
     if (codeError || !codeData) {
@@ -77,31 +83,34 @@ export async function POST(request: Request) {
     const newReferralCode = codeData;
 
     // 4️⃣ Lookup referrer if referralCode exists
+    let referredBy: string | null = null;
     let referrerId: string | null = null;
+    
     if (referralCode) {
-      const { data: referrer } = await supabaseClient
+      const { data: referrer } = await supabase
         .from('leaderboard_participants')
-        .select('id, wallet_address, invite_count')
+        .select('id, referral_code, invite_count')
         .eq('referral_code', referralCode)
         .single();
 
       if (referrer) {
+        referredBy = referralCode;
         referrerId = referrer.id;
-        console.log(`User referred by: ${referrer.wallet_address} (current invites: ${referrer.invite_count})`);
+        console.log(`User referred by code: ${referralCode} (inviter has ${referrer.invite_count} invites)`);
       } else {
         console.warn(`Invalid referral code provided: ${referralCode}`);
       }
     }
 
-    // 5️⃣ Insert participant with proper referred_by
-    const { data: participant, error: createError } = await supabaseClient
+    // 5️⃣ Insert participant
+    const { data: participant, error: createError } = await supabase
       .from('leaderboard_participants')
       .insert({
         profile_id: profile.id,
         wallet_address: walletAddress,
         referral_code: newReferralCode,
-        referred_by: referrerId,
-        invite_count: 0, // ✅ Explicitly initialize to 0
+        referred_by: referredBy, // Store the referral CODE, not ID
+        invite_count: 0,
         total_points: 0,
         check_in_streak: 0
       })
@@ -119,7 +128,7 @@ export async function POST(request: Request) {
     // 6️⃣ If referred, create invite relationship + increment invite_count
     if (referrerId) {
       // Create invite record
-      const { error: inviteError } = await supabaseClient
+      const { error: inviteError } = await supabase
         .from('leaderboard_invites')
         .insert({
           inviter_id: referrerId,
@@ -128,32 +137,24 @@ export async function POST(request: Request) {
       
       if (inviteError) {
         console.error('Invite record error:', inviteError);
-        // Don't fail the whole request, just log it
       }
 
-      // ✅ Increment invite count using RPC
-      const { error: incrementError } = await supabaseClient
-        .rpc('increment_invite_count', { participant_id: referrerId });
+      // ✅ Increment invite count
+      const { data: referrerData } = await supabase
+        .from('leaderboard_participants')
+        .select('invite_count')
+        .eq('id', referrerId)
+        .single();
       
-      if (incrementError) {
-        console.error('Increment invite count error:', incrementError);
-        // Fallback: manual increment
-        const { data: referrerData } = await supabaseClient
+      if (referrerData) {
+        await supabase
           .from('leaderboard_participants')
-          .select('invite_count')
-          .eq('id', referrerId)
-          .single();
-        
-        if (referrerData) {
-          await supabaseClient
-            .from('leaderboard_participants')
-            .update({ invite_count: (referrerData.invite_count || 0) + 1 })
-            .eq('id', referrerId);
-        }
+          .update({ invite_count: (referrerData.invite_count || 0) + 1 })
+          .eq('id', referrerId);
       }
 
       // Log invite activity
-      await supabaseClient
+      await supabase
         .from('leaderboard_activity_log')
         .insert({
           participant_id: referrerId,
@@ -166,7 +167,7 @@ export async function POST(request: Request) {
     }
 
     // 7️⃣ Log join activity
-    await supabaseClient
+    await supabase
       .from('leaderboard_activity_log')
       .insert({
         participant_id: participant.id,
@@ -186,8 +187,8 @@ export async function POST(request: Request) {
         ...participant,
         profile
       },
-      referralLink: `${process.env.NEXT_PUBLIC_BASE_URL}/invite/${newReferralCode}`,
-      needsInvite: participant.invite_count < 1, // Will be true for new users
+      referralLink: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://basematch.app'}/race?ref=${newReferralCode}`,
+      needsInvite: participant.invite_count < 1,
       message: referrerId 
         ? 'Successfully joined! You can check in once you invite 1 person.' 
         : 'Successfully joined! Share your referral link and invite 1 person to unlock check-ins.'
