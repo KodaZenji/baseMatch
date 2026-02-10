@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 interface RankingsTableProps {
-  gender: 'masculine' | 'feminine';
-  setGender: (gender: 'masculine' | 'feminine') => void;
+  gender: 'male' | 'female';
+  setGender: (gender: 'male' | 'female') => void;
   myWallet: string;
 }
 
@@ -46,7 +46,7 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
           >
-            👨 Men's Leaderboard
+            Men's Leaderboard
           </button>
           <button
             onClick={() => setGender('feminine')}
@@ -56,7 +56,7 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
           >
-            👩 Women's Leaderboard
+            Women's Leaderboard
           </button>
         </div>
       </div>
