@@ -29,10 +29,23 @@ function canCheckIn(lastCheckIn: string | null, lastWindow: string | null, curre
 
 export async function POST(request: Request) {
   try {
-    const { walletAddress } = await request.json();
+    const body = await request.json();
+    const walletAddress = body.walletAddress?.trim().toLowerCase();
     
+    // ✅ Validate wallet address exists and is properly formatted
     if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'Wallet address is required',
+        code: 'MISSING_ADDRESS'
+      }, { status: 400 });
+    }
+    
+    // ✅ Validate Ethereum address format
+    if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return NextResponse.json({ 
+        error: 'Invalid wallet address format',
+        code: 'INVALID_ADDRESS_FORMAT'
+      }, { status: 400 });
     }
     
     const window = getCheckInWindow();
@@ -54,12 +67,14 @@ export async function POST(request: Request) {
       }, { status: 404 });
     }
     
-    // Check if user has invited at least 1 person
+    // ✅ Check if user has invited at least 1 person
     if (participant.invite_count < 1) {
       return NextResponse.json({
         error: 'You must invite at least 1 person before you can check in',
         requiresInvite: true,
-        inviteCount: 0
+        inviteCount: participant.invite_count || 0,
+        referralCode: participant.referral_code,
+        referralLink: `${process.env.NEXT_PUBLIC_BASE_URL}/invite/${participant.referral_code}`
       }, { status: 403 });
     }
     
@@ -147,17 +162,31 @@ export async function POST(request: Request) {
     
   } catch (error: any) {
     console.error('Check-in error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ 
+      error: error.message || 'An unexpected error occurred',
+      code: 'UNKNOWN_ERROR'
+    }, { status: 500 });
   }
 }
 
 // GET check-in status
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const walletAddress = searchParams.get('wallet');
+  const walletAddress = searchParams.get('wallet')?.trim().toLowerCase();
   
   if (!walletAddress) {
-    return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
+    return NextResponse.json({ 
+      error: 'Wallet address required',
+      code: 'MISSING_ADDRESS'
+    }, { status: 400 });
+  }
+  
+  // Validate address format
+  if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+    return NextResponse.json({ 
+      error: 'Invalid wallet address format',
+      code: 'INVALID_ADDRESS_FORMAT'
+    }, { status: 400 });
   }
   
   const { data: participant } = await supabaseClient
@@ -195,6 +224,8 @@ export async function GET(request: Request) {
     inviteCount: participant.invite_count,
     needsInvite: participant.invite_count < 1,
     autoCheckEnabled: participant.auto_check_enabled,
-    autoCheckExpiry: participant.auto_check_expiry
+    autoCheckExpiry: participant.auto_check_expiry,
+    referralCode: participant.referral_code,
+    referralLink: `${process.env.NEXT_PUBLIC_BASE_URL}/invite/${participant.referral_code}`
   });
 }
