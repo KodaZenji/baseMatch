@@ -17,6 +17,8 @@ import { FaXTwitter } from 'react-icons/fa6';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BaseAppAutoConnect } from '@/components/BaseAppAutoConnect';
+import Race from '@/components/leaderboard/Race';
+import { Trophy } from 'lucide-react';
 
 // Dark Mode Toggle Component
 function DarkModeToggle({ isDark, onToggle }: { isDark: boolean; onToggle: () => void }) {
@@ -39,7 +41,7 @@ function DarkModeToggle({ isDark, onToggle }: { isDark: boolean; onToggle: () =>
 function ExploreMenu({ isOpen, onClose, setActiveTab }: { 
   isOpen: boolean; 
   onClose: () => void;
-  setActiveTab: (tab: 'browse' | 'matches' | 'profile' | 'notifications') => void;
+  setActiveTab: (tab: 'browse' | 'matches' | 'profile' | 'notifications' | 'race') => void;
 }) {
   // Prevent any automatic opening
   useEffect(() => {
@@ -55,7 +57,7 @@ function ExploreMenu({ isOpen, onClose, setActiveTab }: {
 
   if (!isOpen) return null;
 
-  const handleNavClick = (tab: 'browse' | 'matches' | 'profile' | 'notifications') => {
+  const handleNavClick = (tab: 'browse' | 'matches' | 'profile' | |'race') => {
     setActiveTab(tab);
     onClose();
   };
@@ -104,6 +106,25 @@ function ExploreMenu({ isOpen, onClose, setActiveTab }: {
               <Users className="w-5 h-5" />
               <span className="font-medium">Matches</span>
             </button>
+            <button
+              onClick={() => handleNavClick('race')}
+              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/10 dark:to-orange-900/10 border border-yellow-200 dark:border-yellow-700"
+            >
+              <Trophy className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+              <div className="text-left">
+                <span className="font-bold block">Founding Race</span>
+                <span className="text-xs text-yellow-600 dark:text-yellow-400">Win NFTs 🏆</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleNavClick('profile')}
+              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200"
+            >
+              <LayoutDashboard className="w-5 h-5" />
+              <span className="font-medium">Dashboard</span>
+            </button>
+
 
             <button
               onClick={() => handleNavClick('profile')}
@@ -226,16 +247,16 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const { profile, isLoading } = useProfile();
   
-  const [activeTab, setActiveTab] = useState<'browse' | 'matches' | 'profile' | 'notifications'>(() => {
-    if (typeof window !== 'undefined') {
-      const savedTab = localStorage.getItem('activeTab');
-      if (savedTab === 'profile' || savedTab === 'browse' || savedTab === 'matches' || savedTab === 'notifications') {
-        localStorage.removeItem('activeTab');
-        return savedTab;
-      }
+  const [activeTab, setActiveTab] = useState<'browse' | 'matches' | 'profile' | 'notifications' | 'race'>(() => {
+  if (typeof window !== 'undefined') {
+    const savedTab = localStorage.getItem('activeTab');
+    if (savedTab === 'profile' || savedTab === 'browse' || savedTab === 'matches' || savedTab === 'notifications' || savedTab === 'race') {
+      localStorage.removeItem('activeTab');
+      return savedTab;
     }
-    return 'browse';
-  });
+  }
+  return 'browse';
+});
   
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -647,6 +668,20 @@ export default function Home() {
             >
               Matches
             </button>
+             <button
+        onClick={() => setActiveTab('race')}
+        className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
+          activeTab === 'race'
+            ? 'border-pink-500 text-indigo-600 dark:text-indigo-400'
+            : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+        }`}
+      >
+        <span className="flex items-center gap-1">
+          Race
+          <Trophy className="w-4 h-4 text-yellow-500" />
+        </span>
+      </button>
+      
             <button
               onClick={() => setActiveTab('profile')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'profile'
@@ -675,12 +710,12 @@ export default function Home() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'browse' && <BrowseProfiles />}
-        {activeTab === 'matches' && <Matches />}
-        {activeTab === 'profile' && <Dashboard />}
-        {activeTab === 'notifications' && <Notifications />}
-      </main>
-
+  {activeTab === 'browse' && <BrowseProfiles />}
+  {activeTab === 'matches' && <Matches />}
+  {activeTab === 'race' && <Race />}
+  {activeTab === 'profile' && <Dashboard />}
+  {activeTab === 'notifications' && <Notifications />}
+</main>
       {/* Mobile Bottom Navigation */}
 <nav className="mobile-bottom-nav">
   <button
@@ -705,6 +740,16 @@ export default function Home() {
   >
     <Heart className="w-5 h-5" />
 
+  </button>
+  <button
+    onClick={() => setActiveTab('race')}
+    className={`mobile-nav-btn ${
+      activeTab === 'race' 
+        ? 'text-pink-500 dark:text-pink-400' 
+        : 'text-gray-500 dark:text-gray-400'
+    }`}
+  >
+    <Trophy className="w-5 h-5" />
   </button>
   
   <button
