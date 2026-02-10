@@ -13,7 +13,7 @@ export default function Race() {
   
   const [participant, setParticipant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [gender, setGender] = useState<'masculine' | 'feminine'>('masculine');
+  const [gender, setGender] = useState<'male' | 'female'>('male');
   
   useEffect(() => {
     if (address) {
