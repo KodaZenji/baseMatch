@@ -39,9 +39,9 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
       <div className="p-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         <div className="flex gap-3">
           <button
-            onClick={() => setGender('masculine')}
+            onClick={() => setGender('male')}
             className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all ${
-              gender === 'masculine'
+              gender === 'male'
                 ? 'bg-blue-600 text-white shadow-lg'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
@@ -51,7 +51,7 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
           <button
             onClick={() => setGender('feminine')}
             className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all ${
-              gender === 'feminine'
+              gender === 'female'
                 ? 'bg-pink-600 text-white shadow-lg'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}
@@ -181,7 +181,7 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
                           {user.name || `${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}`}
                         </p>
                         {user.farcaster_username && (
-                          <p className="text-xs text-gray-500">@{user.farcaster_username}</p>
+                          <p className="text-xs text-gray-500">{user.farcaster_username}</p>
                         )}
                       </div>
                     </div>
