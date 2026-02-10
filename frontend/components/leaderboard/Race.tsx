@@ -168,13 +168,13 @@ export default function Race() {
   
   // Successfully joined - show main interface
   return (
+return (
     <div className="max-w-7xl mx-auto">
       
       {/* Header */}
       <div className="text-center mb-8">
         <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-full font-bold text-sm mb-4">
-          <Trophy className="w-4 h-4" />
-          FOUNDING MEMBER RACE
+          🏆 FOUNDING MEMBER RACE
         </div>
         <h1 className="text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
           BaseMatch Founding Race
@@ -183,26 +183,43 @@ export default function Race() {
           Top 100 on each leaderboard win founding member NFTs
         </p>
         <p className="text-sm text-gray-500 dark:text-gray-500">
-          Race ends: <span className="font-semibold text-red-600 dark:text-red-400">TBD</span>
+          Race ends: <span className="font-semibold text-red-600 dark:text-red-400">February 28, 2026 at 11:59 PM EST</span>
         </p>
       </div>
       
-      {/* Onboarding notice for new users */}
-      {participant && participant.invite_count === 0 && (
-        <div className="mb-6 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-2 border-purple-200 dark:border-purple-700 rounded-xl p-6">
-          <div className="flex items-start gap-4">
-            <CheckCircle className="w-6 h-6 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-1" />
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-purple-900 dark:text-purple-100 mb-2">
-                Welcome to the Race! 🎉
-              </h3>
-              <p className="text-purple-700 dark:text-purple-300 mb-3">
-                You've successfully joined! To start earning points through check-ins, you need to <span className="font-bold">invite at least 1 person</span> using your referral link below.
-              </p>
-              <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3">
-                <p className="text-sm text-purple-600 dark:text-purple-400">
-                  👉 <span className="font-semibold">Next step:</span> Share your invite link to unlock daily check-ins
-                </p>
+      {/* NEW: How to Start Banner */}
+      {participant && participant.invite_count < 1 && (
+        <div className="mb-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl p-6 shadow-lg">
+          <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
+            <span>🎯</span>
+            <span>Getting Started</span>
+          </h3>
+          <div className="grid md:grid-cols-3 gap-4 text-sm">
+            <div className="flex items-start gap-3">
+              <div className="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">
+                1
+              </div>
+              <div>
+                <p className="font-semibold mb-1">✅ You're In!</p>
+                <p className="text-white/90">You've joined the leaderboard</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="bg-yellow-400 text-gray-900 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">
+                2
+              </div>
+              <div>
+                <p className="font-semibold mb-1">👉 Invite 1 Friend</p>
+                <p className="text-white/90">Share your link to unlock check-ins</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">
+                3
+              </div>
+              <div>
+                <p className="font-semibold mb-1">📈 Start Earning</p>
+                <p className="text-white/90">Check in every 12 hours for points</p>
               </div>
             </div>
           </div>
@@ -236,31 +253,25 @@ export default function Race() {
       {/* Info Section */}
       <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-2xl p-6">
         <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100 mb-3">
-          📋 How It Works
+          How It Works
         </h3>
         <div className="grid md:grid-cols-3 gap-4 text-sm">
-          <div className="bg-white/50 dark:bg-black/20 rounded-lg p-4">
-            <p className="font-semibold text-blue-700 dark:text-blue-300 mb-2">
-              1️⃣ Invite Friends
-            </p>
+          <div>
+            <p className="font-semibold text-blue-700 dark:text-blue-300 mb-1">1. Invite to Unlock</p>
             <p className="text-blue-600 dark:text-blue-400">
-              Share your invite link. You need <span className="font-bold">at least 1 invite</span> to unlock check-ins. Each additional friend boosts your check-in points.
+              Invite 1 person to unlock check-ins. More invites = bigger point multiplier.
             </p>
           </div>
-          <div className="bg-white/50 dark:bg-black/20 rounded-lg p-4">
-            <p className="font-semibold text-blue-700 dark:text-blue-300 mb-2">
-              2️⃣ Check In Daily
-            </p>
+          <div>
+            <p className="font-semibold text-blue-700 dark:text-blue-300 mb-1">2. Check In Daily</p>
             <p className="text-blue-600 dark:text-blue-400">
-              Check in every 12 hours (morning/night) to earn points. Formula: <span className="font-mono text-xs">10 + invites²</span>
+              Check in every 12 hours (morning & night) to earn points. Miss a window, lose those points forever.
             </p>
           </div>
-          <div className="bg-white/50 dark:bg-black/20 rounded-lg p-4">
-            <p className="font-semibold text-blue-700 dark:text-blue-300 mb-2">
-              3️⃣ Win NFT
-            </p>
+          <div>
+            <p className="font-semibold text-blue-700 dark:text-blue-300 mb-1">3. Win NFT</p>
             <p className="text-blue-600 dark:text-blue-400">
-              Top 100 on your gender's leaderboard win a founding member NFT with exclusive perks.
+              Top 100 on your gender's leaderboard win a founding member NFT with lifetime benefits.
             </p>
           </div>
         </div>
