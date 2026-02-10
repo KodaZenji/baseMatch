@@ -1,8 +1,36 @@
 'use client';
 
 import { useState } from 'react';
-import { BasePayButton } from '@base-org/account-ui/react'; // ← ADD /react
-import type { PaymentOptions, PaymentResult } from '@base-org/account-ui/react';
+import { BasePayButton } from '@base-org/account-ui/react';
+
+type PaymentOptions = {
+  amount: string;
+  to: string;
+  testnet?: boolean;
+  payerInfo?: {
+    requests: Array<{
+      type: 'email' | 'name' | 'physicalAddress';
+      optional: boolean;
+    }>;
+    callbackURL?: string;
+  };
+};
+
+type PaymentResult = {
+  success: boolean;
+  transactionHash: string;
+  blockNumber?: number;
+  error?: string;
+  userInfo?: {
+    email?: string;
+    name?: {
+      firstName: string;
+      lastName: string;
+    };
+    physicalAddress?: any;
+  };
+  payerInfoResponses?: any;
+};
 
 interface AutoCheckPurchaseProps {
   walletAddress: string;
@@ -100,7 +128,7 @@ export function AutoCheckPurchase({ walletAddress, participant }: AutoCheckPurch
           const paymentOptions: PaymentOptions = {
             amount: pkg.price,
             to: TREASURY_WALLET,
-            testnet: false, // MAINNET (you said it's on mainnet)
+            testnet: false, // MAINNET
           };
           
           return (
