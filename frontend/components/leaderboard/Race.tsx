@@ -15,7 +15,7 @@ export default function Race() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasProfile, setHasProfile] = useState(false);
-  const [gender, setGender] = useState<'masculine' | 'feminine'>('masculine');
+  const [gender, setGender] = useState<'male' | 'female'>('male');
   
   const [referralCodeInput, setReferralCodeInput] = useState('');
   const [showReferralInput, setShowReferralInput] = useState(false);
@@ -179,7 +179,7 @@ export default function Race() {
           Top 100 on each leaderboard win founding member NFTs
         </p>
         <p className="text-sm text-gray-500 dark:text-gray-500">
-          Race ends: <span className="font-semibold text-red-600 dark:text-red-400">February 28, 2026 at 11:59 PM EST</span>
+          Race ends: <span className="font-semibold text-red-600 dark:text-red-400">TBD</span>
         </p>
       </div>
       
@@ -187,7 +187,7 @@ export default function Race() {
       {showReferralInput && participant && !participant.referred_by && (
         <div className="mb-6 bg-gradient-to-br from-[#0052FF]/5 to-purple-500/5 dark:from-[#0052FF]/10 dark:to-purple-500/10 border-2 border-[#0052FF]/30 dark:border-[#0052FF]/50 rounded-2xl p-6">
           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-            💎 Got a Referral Code?
+             Got a Referral Code?
           </h3>
           <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
             If someone referred you, enter their code below to give them credit!
@@ -221,7 +221,7 @@ export default function Race() {
       {participant && (participant.invite_count || 0) < 1 && (
         <div className="mb-6 bg-gradient-to-r from-[#0052FF] to-[#5B8DEE] text-white rounded-2xl p-6 shadow-lg shadow-[#0052FF]/20">
           <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
-            <span>🎯</span>
+            <span></span>
             <span>Getting Started</span>
           </h3>
           <div className="grid md:grid-cols-3 gap-4 text-sm">
