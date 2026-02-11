@@ -138,25 +138,24 @@ export function CheckInButton({ walletAddress }: CheckInButtonProps) {
       
       {status.canCheckIn ? (
         <div>
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-4 mb-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              Current window: <span className="font-semibold capitalize">{status.currentWindow}</span>
-            </p>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              +{status.checkInValue} points
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Based on {status.inviteCount} invite{status.inviteCount !== 1 ? 's' : ''}
-            </p>
-          </div>
-          
+          <div className="bg-gradient-to-r from-[#0052FF]/10 to-[#5B8DEE]/10 dark:from-[#0052FF]/20 dark:to-[#5B8DEE]/20 rounded-lg p-4 mb-4 border border-[#0052FF]/20">
+  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+    Current window: <span className="font-semibold capitalize">{status.currentWindow}</span>
+  </p>
+  <p className="text-2xl font-bold text-[#0052FF] dark:text-[#5B8DEE]">
+    +{status.checkInValue} points
+  </p>
+  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+    Based on {status.inviteCount} invite{status.inviteCount !== 1 ? 's' : ''}
+  </p>
+</div>          
           <button
-            onClick={handleCheckIn}
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            {loading ? 'Checking in...' : '✅ Check In Now'}
-          </button>
+  onClick={handleCheckIn}
+  disabled={loading}
+  className="w-full bg-gradient-to-r from-[#0052FF] to-[#5B8DEE] hover:from-[#0041CC] hover:to-[#4A7BD9] text-white font-bold py-3 px-6 rounded-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg shadow-[#0052FF]/20"
+>
+  {loading ? 'Checking in...' : '✅ Check In Now'}
+</button>
         </div>
       ) : (
         <div>
