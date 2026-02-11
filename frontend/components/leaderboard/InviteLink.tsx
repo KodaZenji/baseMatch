@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Share2, Copy, Check } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
 
 interface InviteLinkProps {
   participant: any;
@@ -10,35 +10,27 @@ interface InviteLinkProps {
 export function InviteLink({ participant }: InviteLinkProps) {
   const [copied, setCopied] = useState(false);
   
-  if (!participant) return null;
+  if (!participant || !participant.referral_code) {
+    return (
+      <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-6 border border-gray-300 dark:border-gray-700">
+        <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+          Loading your referral code...
+        </p>
+      </div>
+    );
+  }
   
-  const inviteLink = `${window.location.origin}/race?ref=${participant.referral_code}`;
+  const referralCode = participant.referral_code;
   const inviteCount = participant.invite_count || 0;
   const needsInvite = inviteCount < 1;
   
-  async function copyLink() {
+  async function copyCode() {
     try {
-      await navigator.clipboard.writeText(inviteLink);
+      await navigator.clipboard.writeText(referralCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      alert('Failed to copy link');
-    }
-  }
-  
-  async function shareLink() {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Join BaseMatch Founding Race',
-          text: 'Join me in the BaseMatch founding member race! Top 100 win NFTs.',
-          url: inviteLink
-        });
-      } catch (error) {
-        // User cancelled
-      }
-    } else {
-      copyLink();
+      alert('Failed to copy code');
     }
   }
   
@@ -55,51 +47,59 @@ export function InviteLink({ participant }: InviteLinkProps) {
             ⚠️ Action Required
           </div>
           <p className="text-sm font-semibold text-yellow-900 dark:text-yellow-100">
-            Invite 1 person to unlock check-ins!
+            Share your code to unlock check-ins!
           </p>
         </div>
       )}
       
       <h3 className="text-xl font-bold mb-2">
-        {needsInvite ? '🎯 Your Invite Mission' : 'Your Invite Link'}
+        {needsInvite ? '🎯 Your Invite Code' : 'Your Referral Code'}
       </h3>
       
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
         {needsInvite 
-          ? 'Share this link with a friend to unlock daily check-ins'
+          ? 'Share this code with a friend to unlock daily check-ins'
           : 'Keep inviting to boost your check-in points!'
         }
       </p>
       
-      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 mb-4 break-all text-sm font-mono">
-        {inviteLink}
+      {/* Referral Code Display - BASE COLORS */}
+      <div className="bg-gradient-to-br from-[#0052FF]/10 to-[#5B8DEE]/10 dark:from-[#0052FF]/20 dark:to-[#5B8DEE]/20 rounded-lg p-4 mb-4 border-2 border-[#0052FF]/30 dark:border-[#0052FF]/50">
+        <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 text-center">Your Code:</p>
+        <p className="text-3xl font-bold text-center tracking-widest text-[#0052FF] dark:text-[#5B8DEE] font-mono select-all">
+          {referralCode}
+        </p>
       </div>
       
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={copyLink}
-          className="flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold py-2 px-4 rounded-lg transition-colors"
-        >
-          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          {copied ? 'Copied!' : 'Copy'}
-        </button>
-        
-        <button
-          onClick={shareLink}
-          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-        >
-          <Share2 className="w-4 h-4" />
-          Share
-        </button>
+      {/* Copy Button - BASE BLUE */}
+      <button
+        onClick={copyCode}
+        className="w-full flex items-center justify-center gap-2 bg-[#0052FF] hover:bg-[#0041CC] text-white font-bold py-3 px-4 rounded-lg transition-colors mb-4 shadow-lg shadow-[#0052FF]/20"
+      >
+        {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+        {copied ? 'Copied!' : 'Copy Code'}
+      </button>
+      
+      {/* Instructions */}
+      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 mb-4">
+        <p className="text-xs text-gray-700 dark:text-gray-300 font-semibold mb-2">
+          📝 How your friend joins:
+        </p>
+        <ol className="text-xs text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
+          <li>Tell them to visit <span className="font-bold">basematch.app</span></li>
+          <li>Go to the <span className="font-bold">Race</span> tab</li>
+          <li>Enter your code: <span className="font-mono font-bold bg-[#0052FF]/10 dark:bg-[#0052FF]/20 text-[#0052FF] dark:text-[#5B8DEE] px-1 rounded">{referralCode}</span></li>
+        </ol>
       </div>
       
-      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+      {/* Stats */}
+      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600 dark:text-gray-400">
             People you've invited:
           </span>
           <span className={`font-bold text-lg ${
-            needsInvite ? 'text-yellow-600 dark:text-yellow-400' : 'text-blue-600 dark:text-blue-400'
+            needsInvite ? 'text-yellow-600 dark:text-yellow-400' : 'text-[#0052FF] dark:text-[#5B8DEE]'
           }`}>
             {inviteCount}
           </span>
