@@ -178,6 +178,9 @@ export default function Race() {
         <p className="text-gray-600 dark:text-gray-400 text-lg mb-2">
           Top 100 on each leaderboard win founding member NFTs
         </p>
+        <p className="text-gray-600 dark:text-gray-400 text-lg mb-2">
+          Top 5 on each leaderboard split 50 USDC
+        </p>
         <p className="text-sm text-gray-500 dark:text-gray-500">
           Race ends: <span className="font-semibold text-red-600 dark:text-red-400">TBD</span>
         </p>
@@ -280,14 +283,14 @@ export default function Race() {
       
       {/* Info Section */}
       <div className="mt-8 bg-gradient-to-br from-[#0052FF]/5 to-[#5B8DEE]/5 dark:from-[#0052FF]/10 dark:to-[#5B8DEE]/10 border border-[#0052FF]/20 dark:border-[#0052FF]/30 rounded-2xl p-6">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
           How It Works
         </h3>
         <div className="grid md:grid-cols-3 gap-4 text-sm">
           <div>
             <p className="font-semibold text-[#0052FF] dark:text-[#5B8DEE] mb-1">1. Invite to Unlock</p>
             <p className="text-gray-700 dark:text-gray-300">
-              Invite 1 person to unlock check-ins. More invites = bigger point multiplier.
+              Invite 1 person to unlock check-ins. More invites = bigger point multiplier
             </p>
           </div>
           <div>
