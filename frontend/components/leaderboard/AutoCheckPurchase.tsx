@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BasePayButton } from '@base-org/account-ui/react';
-import { pay, getPaymentStatus } from '@base-org/account';
+import { pay } from '@base-org/account';
 
 interface AutoCheckPurchaseProps {
   walletAddress: string;
@@ -12,8 +11,8 @@ interface AutoCheckPurchaseProps {
 export function AutoCheckPurchase({ walletAddress, participant }: AutoCheckPurchaseProps) {
   const [processing, setProcessing] = useState<string | null>(null);
   
-  // Your treasury wallet (where payments go)
-  const TREASURY_WALLET = process.env.NEXT_PUBLIC_TREASURY_WALLET || '';
+  
+  const TREASURY_WALLET = process.env.NEXT_PUBLIC_TREASURY_WALLET || '0xEbF64265BDbcE2dE0dEaeD58E44409605Bf7704d';
   
   const packages = [
     {
@@ -40,65 +39,29 @@ export function AutoCheckPurchase({ walletAddress, participant }: AutoCheckPurch
     }
   ];
   
-  async function handlePay(amount: string, duration: string) {
+  async function handlePayment(duration: string, amount: string) {
+    setProcessing(duration);
+    
     try {
-      setProcessing(duration);
+      console.log('Initiating BasePay payment:', { amount, to: TREASURY_WALLET });
       
-      // Call the pay function from @base-org/account
+    
       const payment = await pay({
         amount,
         to: TREASURY_WALLET,
-        testnet: false, // Set to false for mainnet
+        testnet: false // Base mainnet
       });
       
-      console.log('Payment initiated:', payment);
+      console.log('Payment result:', payment);
       
-      // Poll for payment status
-      const pollStatus = async () => {
-        try {
-          const status = await getPaymentStatus({
-            id: payment.id,
-            testnet: false,
-          });
-          
-          console.log('Payment status:', status);
-          
-          if (status.status === 'completed') {
-            // Record the purchase
-            await recordPurchase(duration, payment.id);
-          } else if (status.status === 'failed') {
-            alert('Payment failed. Please try again.');
-            setProcessing(null);
-          } else {
-            // Status is 'pending' - poll again after 1 second
-            setTimeout(pollStatus, 1000);
-          }
-        } catch (error) {
-          console.error('Status check error:', error);
-          // Retry after 1 second
-          setTimeout(pollStatus, 1000);
-        }
-      };
-      
-      // Start polling
-      pollStatus();
-      
-    } catch (error) {
-      console.error('Payment error:', error);
-      alert(`Payment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setProcessing(null);
-    }
-  }
-  
-  async function recordPurchase(duration: string, transactionId: string) {
-    try {
+      // Record purchase in backend
       const res = await fetch('/api/leaderboard/auto-check/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletAddress,
           duration,
-          transactionHash: transactionId
+          transactionHash: payment.id || 'pending'
         })
       });
       
@@ -108,12 +71,11 @@ export function AutoCheckPurchase({ walletAddress, participant }: AutoCheckPurch
         alert(`✅ Auto-check enabled for ${duration.replace('-', ' ')}!\n\nYou'll never miss a check-in.`);
         window.location.reload();
       } else {
-        console.error('Failed to record purchase:', data.error);
-        alert('Payment successful but activation failed. Please contact support with transaction ID: ' + transactionId);
+        alert('Payment successful but activation failed. Please contact support with transaction ID: ' + (payment.id || 'unknown'));
       }
-    } catch (error) {
-      console.error('Record purchase error:', error);
-      alert('Payment successful but activation failed. Please contact support.');
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      alert(`Payment failed: ${error.message || 'Unknown error'}`);
     } finally {
       setProcessing(null);
     }
@@ -142,7 +104,7 @@ export function AutoCheckPurchase({ walletAddress, participant }: AutoCheckPurch
     <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
       <h3 className="text-xl font-bold mb-2">⚡ Never Miss a Check-In</h3>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-        Enable auto-check to automatically earn points every 12 hours. Secure payments via USDC on Base.
+        Enable auto-check to automatically earn points every 12 hours.
       </p>
       
       <div className="space-y-3">
@@ -151,43 +113,49 @@ export function AutoCheckPurchase({ walletAddress, participant }: AutoCheckPurch
             key={pkg.id}
             className={`border rounded-lg p-4 transition-all ${
               pkg.featured
-                ? 'border-2 border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20'
-                : 'border-gray-200 dark:border-gray-700 hover:border-blue-500'
+                ? 'border-2 border-[#0052FF] bg-gradient-to-br from-[#0052FF]/5 to-purple-500/5 dark:from-[#0052FF]/10 dark:to-purple-500/10'
+                : 'border-gray-200 dark:border-gray-700 hover:border-[#0052FF]'
             }`}
           >
             <div className="flex justify-between items-center mb-3">
               <div>
-                <p className={`font-semibold ${pkg.featured ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                <p className={`font-semibold ${pkg.featured ? 'text-[#0052FF]' : ''}`}>
                   {pkg.label}
                 </p>
-                <p className={`text-sm ${pkg.featured ? 'font-semibold text-blue-700 dark:text-blue-300' : 'text-gray-500'}`}>
+                <p className={`text-sm ${pkg.featured ? 'font-semibold text-[#0052FF]' : 'text-gray-500'}`}>
                   ${pkg.price} USDC
                 </p>
               </div>
               <span className={`text-xs px-2 py-1 rounded font-bold ${
                 pkg.featured
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-[#0052FF] text-white'
                   : 'bg-gray-100 dark:bg-gray-700'
               }`}>
                 {pkg.savings}
               </span>
             </div>
             
-            <BasePayButton
-              colorScheme="light"
-              onClick={() => handlePay(pkg.price, pkg.duration)}
-            />
-            
-            {processing === pkg.duration && (
-              <p className="text-xs text-gray-500 mt-2 text-center">Processing payment...</p>
-            )}
+            <button
+              onClick={() => handlePayment(pkg.duration, pkg.price)}
+              disabled={processing === pkg.id}
+              className={`w-full font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                pkg.featured
+                  ? 'bg-gradient-to-r from-[#0052FF] to-[#5B8DEE] hover:from-[#0041CC] hover:to-[#4A7BD9] text-white shadow-lg shadow-[#0052FF]/20'
+                  : 'bg-[#0052FF] hover:bg-[#0041CC] text-white'
+              }`}
+            >
+              {processing === pkg.id ? 'Processing...' : `Enable ${pkg.label}`}
+            </button>
           </div>
         ))}
       </div>
       
       <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
         <p className="text-xs text-gray-500 dark:text-gray-400 text-center mb-2">
-           Payments go directly to BaseMatch treasury
+          💰 Payments go directly to BaseMatch treasury
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+        
         </p>
       </div>
     </div>
