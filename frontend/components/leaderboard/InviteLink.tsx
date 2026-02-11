@@ -43,7 +43,7 @@ export function InviteLink({ participant }: InviteLinkProps) {
       
       {needsInvite && (
         <div className="mb-4 text-center">
-          <div className="inline-flex items-center gap-2 bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-100 px-3 py-1 rounded-full text-sm font-bold mb-2">
+          <div className="inline-flex items-center gap-2 bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-100 px-3 py-1 rounded-full text-sm font-semibold mb-2">
             ⚠️ Action Required
           </div>
           <p className="text-sm font-semibold text-yellow-900 dark:text-yellow-100">
@@ -86,7 +86,7 @@ export function InviteLink({ participant }: InviteLinkProps) {
           📝 How your friend joins:
         </p>
         <ol className="text-xs text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
-          <li>Tell them to visit <span className="font-bold">basematch.app</span></li>
+          <li>Tell them to visit <span className="font-bold">basematch miniapp</span></li>
           <li>Go to the <span className="font-bold">Race</span> tab</li>
           <li>Enter your code: <span className="font-mono font-bold bg-[#0052FF]/10 dark:bg-[#0052FF]/20 text-[#0052FF] dark:text-[#5B8DEE] px-1 rounded">{referralCode}</span></li>
         </ol>
