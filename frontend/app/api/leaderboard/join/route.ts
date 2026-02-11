@@ -1,11 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Use service role key for admin operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseService } from '@/lib/supabase.server'; 
 
 export async function POST(request: Request) {
   try {
@@ -13,7 +7,6 @@ export async function POST(request: Request) {
     const walletAddress = body.walletAddress?.trim().toLowerCase();
     const referralCode = body.referralCode?.trim();
 
-    // ✅ Validate wallet address
     if (!walletAddress) {
       return NextResponse.json({ 
         error: 'Wallet address is required',
@@ -21,7 +14,6 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
     
-    // ✅ Validate Ethereum address format
     if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
       return NextResponse.json({ 
         error: 'Invalid wallet address format',
@@ -30,7 +22,7 @@ export async function POST(request: Request) {
     }
 
     // 1️⃣ Get user's profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseService
       .from('profiles')
       .select(`
         id,
@@ -52,8 +44,8 @@ export async function POST(request: Request) {
       }, { status: 404 });
     }
 
-    // 2️⃣ Check if user already joined leaderboard
-    const { data: existing } = await supabase
+    // 2️⃣ Check if user already joined
+    const { data: existing } = await supabaseService
       .from('leaderboard_participants')
       .select('*')
       .eq('profile_id', profile.id)
@@ -68,8 +60,8 @@ export async function POST(request: Request) {
       });
     }
 
-    // 3️⃣ Generate new referral code
-    const { data: codeData, error: codeError } = await supabase
+    // 3️⃣ Generate referral code
+    const { data: codeData, error: codeError } = await supabaseService
       .rpc('lb_generate_referral_code');
     
     if (codeError || !codeData) {
@@ -82,11 +74,11 @@ export async function POST(request: Request) {
     
     const newReferralCode = codeData;
 
-    // 4️⃣ Lookup referrer if referralCode exists
+    // 4️⃣ Lookup referrer
     let referrerId: string | null = null;
     
     if (referralCode) {
-      const { data: referrer } = await supabase
+      const { data: referrer } = await supabaseService
         .from('leaderboard_participants')
         .select('id, referral_code, invite_count')
         .eq('referral_code', referralCode)
@@ -94,20 +86,20 @@ export async function POST(request: Request) {
 
       if (referrer) {
         referrerId = referrer.id;
-        console.log(`User referred by code: ${referralCode} (inviter has ${referrer.invite_count} invites)`);
+        console.log(`User referred by code: ${referralCode}`);
       } else {
-        console.warn(`Invalid referral code provided: ${referralCode}`);
+        console.warn(`Invalid referral code: ${referralCode}`);
       }
     }
 
     // 5️⃣ Insert participant
-    const { data: participant, error: createError } = await supabase
+    const { data: participant, error: createError } = await supabaseService
       .from('leaderboard_participants')
       .insert({
         profile_id: profile.id,
         wallet_address: walletAddress,
         referral_code: newReferralCode,
-        referred_by_id: referrerId, // ✅ Store UUID, not code
+        referred_by_id: referrerId,
         invite_count: 0,
         total_points: 0,
         check_in_streak: 0
@@ -123,10 +115,9 @@ export async function POST(request: Request) {
       }, { status: 500 });
     }
 
-    // 6️⃣ If referred, create invite relationship + increment invite_count
+    // 6️⃣ Handle referral
     if (referrerId) {
-      // Create invite record
-      const { error: inviteError } = await supabase
+      const { error: inviteError } = await supabaseService
         .from('leaderboard_invites')
         .insert({
           inviter_id: referrerId,
@@ -136,19 +127,12 @@ export async function POST(request: Request) {
       if (inviteError) {
         console.error('Invite record error:', inviteError);
       } else {
-        // ✅ Atomic increment using PostgreSQL function
-        const { error: countError } = await supabase
-          .rpc('increment_invite_count', { 
-            participant_uuid: referrerId 
-          });
-        
-        if (countError) {
-          console.error('Failed to increment invite count:', countError);
-        }
+        await supabaseService.rpc('increment_invite_count', { 
+          participant_uuid: referrerId 
+        });
       }
 
-      // Log invite activity
-      await supabase
+      await supabaseService
         .from('leaderboard_activity_log')
         .insert({
           participant_id: referrerId,
@@ -161,8 +145,8 @@ export async function POST(request: Request) {
         });
     }
 
-    // 7️⃣ Log join activity
-    await supabase
+    // 7️⃣ Log join
+    await supabaseService
       .from('leaderboard_activity_log')
       .insert({
         participant_id: participant.id,
@@ -175,7 +159,7 @@ export async function POST(request: Request) {
         }
       });
 
-    // 8️⃣ Return response
+    // 8️⃣ Return
     return NextResponse.json({
       success: true,
       alreadyJoined: false,
@@ -186,7 +170,7 @@ export async function POST(request: Request) {
       referralLink: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://basematch.app'}/race?ref=${newReferralCode}`,
       needsInvite: participant.invite_count < 1,
       message: referrerId 
-        ? 'Successfully joined! You can check in once you invite 1 person.' 
+        ? 'Successfully joined! Invite 1 person to unlock check-ins.' 
         : 'Successfully joined! Share your referral link and invite 1 person to unlock check-ins.'
     });
 
