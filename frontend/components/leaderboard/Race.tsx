@@ -147,7 +147,7 @@ export default function Race() {
           </p>
           <div className="space-y-2">
             <button
-              onClick={() => window.location.href = '/profile/register'}
+              onClick={() => window.location.href = '/register/wallet/choice'}
               className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
             >
               Create Profile
