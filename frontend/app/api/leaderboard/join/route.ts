@@ -83,7 +83,6 @@ export async function POST(request: Request) {
     const newReferralCode = codeData;
 
     // 4️⃣ Lookup referrer if referralCode exists
-    let referredBy: string | null = null;
     let referrerId: string | null = null;
     
     if (referralCode) {
@@ -94,7 +93,6 @@ export async function POST(request: Request) {
         .single();
 
       if (referrer) {
-        referredBy = referralCode;
         referrerId = referrer.id;
         console.log(`User referred by code: ${referralCode} (inviter has ${referrer.invite_count} invites)`);
       } else {
@@ -109,7 +107,7 @@ export async function POST(request: Request) {
         profile_id: profile.id,
         wallet_address: walletAddress,
         referral_code: newReferralCode,
-        referred_by: referredBy, // Store the referral CODE, not ID
+        referred_by_id: referrerId, // ✅ Store UUID, not code
         invite_count: 0,
         total_points: 0,
         check_in_streak: 0
@@ -137,20 +135,16 @@ export async function POST(request: Request) {
       
       if (inviteError) {
         console.error('Invite record error:', inviteError);
-      }
-
-      // ✅ Increment invite count
-      const { data: referrerData } = await supabase
-        .from('leaderboard_participants')
-        .select('invite_count')
-        .eq('id', referrerId)
-        .single();
-      
-      if (referrerData) {
-        await supabase
-          .from('leaderboard_participants')
-          .update({ invite_count: (referrerData.invite_count || 0) + 1 })
-          .eq('id', referrerId);
+      } else {
+        // ✅ Atomic increment using PostgreSQL function
+        const { error: countError } = await supabase
+          .rpc('increment_invite_count', { 
+            participant_uuid: referrerId 
+          });
+        
+        if (countError) {
+          console.error('Failed to increment invite count:', countError);
+        }
       }
 
       // Log invite activity
@@ -160,6 +154,7 @@ export async function POST(request: Request) {
           participant_id: referrerId,
           action_type: 'invite',
           action_data: { 
+            invitee_id: participant.id,
             invitee_wallet: walletAddress,
             invitee_name: profile.name
           }
@@ -173,7 +168,8 @@ export async function POST(request: Request) {
         participant_id: participant.id,
         action_type: 'join',
         action_data: { 
-          referred_by: referralCode || null,
+          referred_by_code: referralCode || null,
+          referred_by_id: referrerId || null,
           profile_name: profile.name,
           wallet_address: walletAddress
         }
