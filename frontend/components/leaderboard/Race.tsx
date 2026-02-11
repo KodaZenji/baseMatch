@@ -167,7 +167,6 @@ export default function Race() {
   }
   
   // Successfully joined - show main interface
-  return (
 return (
     <div className="max-w-7xl mx-auto">
       
