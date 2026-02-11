@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseClient } from '@/lib/supabase/client';
+import { supabaseService } from '@/lib/supabase.server'; 
 
 function getCheckInWindow(): 'morning' | 'night' | null {
   const hour = new Date().getUTCHours();
@@ -9,7 +9,6 @@ function getCheckInWindow(): 'morning' | 'night' | null {
 }
 
 export async function GET(request: Request) {
-  // Verify cron secret
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -23,74 +22,80 @@ export async function GET(request: Request) {
   }
   
   try {
-    // Get all users with active auto-check
-    const { data: participants, error } = await supabaseClient
+    const { data: participants, error } = await supabaseService
       .from('leaderboard_participants')
-      .select('*')
+      .select('id, wallet_address, invite_count, total_points, check_in_streak, last_check_in, last_check_in_window')
       .eq('auto_check_enabled', true)
-      .gt('auto_check_expiry', now.toISOString());
+      .gt('auto_check_expiry', now.toISOString())
+      .neq('last_check_in_window', window);
     
     if (error) {
-      console.error('Error fetching participants:', error);
+      console.error('Fetch error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     
-    let checkedInCount = 0;
+    if (!participants || participants.length === 0) {
+      return NextResponse.json({
+        success: true,
+        checkedIn: 0,
+        window,
+        message: 'No participants to check in'
+      });
+    }
     
-    for (const participant of participants || []) {
-      // Check if already checked in this window
-      if (participant.last_check_in_window === window) {
-        continue; // already checked in this window
-      }
+    const eligible = participants.filter(p => {
+      if (!p.last_check_in) return true;
+      const hoursSince = (now.getTime() - new Date(p.last_check_in).getTime()) / (1000 * 60 * 60);
+      return hoursSince >= 12;
+    });
+    
+    const checkinsToInsert = [];
+    const participantUpdates = [];
+    
+    for (const p of eligible) {
+      const points = 10 + Math.min(p.invite_count || 0, 10) ** 2;
       
-      // Must be at least 12 hours since last check-in
-      if (participant.last_check_in) {
-        const hoursSince = (now.getTime() - new Date(participant.last_check_in).getTime()) / (1000 * 60 * 60);
-        if (hoursSince < 12) continue;
-      }
-      
-      // Calculate points
-      const points = 10 + Math.min(participant.invite_count, 10) ** 2;
-      
-      // Get check-in number
-      const { count } = await supabaseClient
+      const { count } = await supabaseService
         .from('leaderboard_checkins')
         .select('*', { count: 'exact', head: true })
-        .eq('participant_id', participant.id);
+        .eq('participant_id', p.id);
       
-      const checkInNumber = (count || 0) + 1;
+      checkinsToInsert.push({
+        participant_id: p.id,
+        checkin_window: window,
+        points,
+        auto_generated: true,
+        invite_count_at_checkin: p.invite_count || 0,
+        check_in_number: (count || 0) + 1
+      });
       
-      // Create check-in
-      await supabaseClient
+      participantUpdates.push({
+        id: p.id,
+        total_points: (p.total_points || 0) + points,
+        last_check_in: now.toISOString(),
+        last_check_in_window: window,
+        check_in_streak: (p.check_in_streak || 0) + 1
+      });
+    }
+    
+    if (checkinsToInsert.length > 0) {
+      await supabaseService
         .from('leaderboard_checkins')
-        .insert({
-          participant_id: participant.id,
-          window,
-          points,
-          auto_generated: true,
-          invite_count_at_checkin: participant.invite_count,
-          check_in_number: checkInNumber
-        });
-      
-      // Update participant
-      await supabaseClient
+        .insert(checkinsToInsert);
+    }
+    
+    if (participantUpdates.length > 0) {
+      await supabaseService
         .from('leaderboard_participants')
-        .update({
-          total_points: participant.total_points + points,
-          last_check_in: now.toISOString(),
-          last_check_in_window: window,
-          check_in_streak: participant.check_in_streak + 1
-        })
-        .eq('id', participant.id);
-      
-      checkedInCount++;
+        .upsert(participantUpdates, { onConflict: 'id' });
     }
     
     return NextResponse.json({
       success: true,
-      checkedIn: checkedInCount,
+      checkedIn: eligible.length,
       window,
-      timestamp: now.toISOString()
+      timestamp: now.toISOString(),
+      totalWithAutoCheck: participants.length
     });
     
   } catch (error: any) {
