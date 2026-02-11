@@ -172,7 +172,7 @@ export default function Race() {
         <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-full font-bold text-sm mb-4">
           🏆 FOUNDING MEMBER RACE
         </div>
-        <h1 className="text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-[#0052FF] via-purple-600 to-pink-600 bg-clip-text text-transparent">
+        <h1 className="text-3xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-[#0052FF] via-purple-600 to-pink-600 bg-clip-text text-transparent">
           BaseMatch Founding Race
         </h1>
         <p className="text-gray-600 dark:text-gray-400 text-lg mb-2">
