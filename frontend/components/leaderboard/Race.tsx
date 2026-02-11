@@ -299,6 +299,7 @@ export default function Race() {
           <div>
             <p className="font-semibold text-[#0052FF] dark:text-[#5B8DEE] mb-1">3. Win NFT</p>
             <p className="text-gray-700 dark:text-gray-300">
+              Top 5 on each leaderboard split 50 USDC AND
               Top 100 on your gender's leaderboard win a founding member NFT with lifetime benefits.
             </p>
           </div>
