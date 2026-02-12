@@ -329,6 +329,109 @@ export default function Race() {
     </div>
   );
 
-  // --- MAIN RACE INTERFACE (Already Joined) ---
-  // (This part remains unchanged from your original code)
+    // 🏆 MAIN RACE INTERFACE (Already Joined)
+  return (
+    <div className="max-w-7xl mx-auto">
+      
+      {/* Header */}
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-full font-bold text-sm mb-4">
+          🏆 FOUNDING MEMBER RACE
+        </div>
+        <h1 className="text-3xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-[#0052FF] via-purple-600 to-pink-600 bg-clip-text text-transparent">
+          BaseMatch Founding Race
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400 text-lg mb-2">
+          Top 100 on each leaderboard win founding member NFTs
+        </p>
+        <p className="text-gray-600 dark:text-gray-400 text-lg mb-2">
+          Top 5 on each leaderboard split 50 USDC
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-500">
+          Race ends: <span className="font-semibold text-red-600 dark:text-red-400">TBD</span>
+        </p>
+      </div>
+      
+      {/* Getting Started Banner */}
+      {participant && (participant.invite_count || 0) < 1 && (
+        <div className="mb-6 bg-gradient-to-r from-[#0052FF] to-[#5B8DEE] text-white rounded-2xl p-6 shadow-lg shadow-[#0052FF]/20">
+          <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
+            <Zap className="w-6 h-6" />
+            <span>Getting Started</span>
+          </h3>
+          <div className="grid md:grid-cols-3 gap-4 text-sm">
+            <div className="flex items-start gap-3">
+              <div className="bg-green-500 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">✓</div>
+              <div>
+                <p className="font-semibold mb-1">You're In!</p>
+                <p className="text-white/90">You've joined the leaderboard</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="bg-yellow-400 text-gray-900 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">2</div>
+              <div>
+                <p className="font-semibold mb-1">👉 Invite 1 Friend</p>
+                <p className="text-white/90">Share your code to unlock check-ins</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">3</div>
+              <div>
+                <p className="font-semibold mb-1">📈 Start Earning</p>
+                <p className="text-white/90">Check in every 12 hours for points</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="lg:col-span-2">
+          <RankingsTable 
+            gender={gender}
+            setGender={setGender}
+            myWallet={address}
+          />
+        </div>
+        
+        <div className="lg:col-span-1 space-y-6">
+          <CheckInButton walletAddress={address} />
+          <InviteLink participant={participant} />
+          <AutoCheckPurchase 
+            walletAddress={address}
+            participant={participant}
+          />
+        </div>
+      </div>
+      
+      {/* Info Section */}
+      <div className="mt-8 bg-gradient-to-br from-[#0052FF]/5 to-[#5B8DEE]/5 dark:from-[#0052FF]/10 dark:to-[#5B8DEE]/10 border border-[#0052FF]/20 dark:border-[#0052FF]/30 rounded-2xl p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+          How It Works
+        </h3>
+        <div className="grid md:grid-cols-3 gap-4 text-sm">
+          <div>
+            <p className="font-semibold text-[#0052FF] dark:text-[#5B8DEE] mb-1">1. Invite to Unlock</p>
+            <p className="text-gray-700 dark:text-gray-300">
+              Invite 1 person to unlock check-ins. More invites = bigger point multiplier
+            </p>
+          </div>
+          <div>
+            <p className="font-semibold text-[#0052FF] dark:text-[#5B8DEE] mb-1">2. Check In Daily</p>
+            <p className="text-gray-700 dark:text-gray-300">
+              Check in every 12 hours to earn points. Miss a window, lose those points forever.
+            </p>
+          </div>
+          <div>
+            <p className="font-semibold text-[#0052FF] dark:text-[#5B8DEE] mb-1">3. Win NFT & Cash</p>
+            <p className="text-gray-700 dark:text-gray-300">
+              Top 5 split 50 USDC, Top 100 win founding member NFTs with lifetime benefits.
+            </p>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  );
 }
