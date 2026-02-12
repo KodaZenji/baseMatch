@@ -76,17 +76,17 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
       {myRank && (
         <div className={`p-4 ${
           myRank.is_winning 
-            ? 'bg-green-50 dark:bg-green-900/20 border-b-2 border-green-500' 
-            : 'bg-red-50 dark:bg-red-900/20 border-b-2 border-red-500'
+            ? 'bg-green-50 dark:bg-green-900/20 border-b-1 border-green-400' 
+            : 'bg-red-50 dark:bg-red-900/20 border-b-1 border-red-400'
         }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {myRank.photo_url && (
-                <Image 
+                <Img
                   src={myRank.photo_url} 
                   alt={myRank.name || 'User'}
-                  width={48}
-                  height={48}
+                  width={40}
+                  height={40}
                   className="rounded-full"
                 />
               )}
@@ -95,14 +95,10 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   {myRank.total_points.toLocaleString()} points
                 </p>
-                {/* Show masked wallet for verification */}
-                <p className="text-xs text-gray-500 dark:text-gray-500">
-                  {maskWallet(myRank.wallet_address)}
-                </p>
               </div>
             </div>
             {myRank.is_winning ? (
-              <span className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold">
+              <span className="bg-green-500 text-gray-400 px-4 py-2 rounded-lg font-sm">
                 ✅ WINNING
               </span>
             ) : (
@@ -119,7 +115,7 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
         <table className="w-full">
           <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-900 dark:text-gray-400 uppercase tracking-wider">
                 Rank
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -182,11 +178,11 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         {user.photo_url ? (
-                          <Image 
+                          <Img
                             src={user.photo_url} 
                             alt={user.name || 'User'}
-                            width={40}
-                            height={40}
+                            width={38}
+                            height={38}
                             className="rounded-full"
                           />
                         ) : (
@@ -195,18 +191,16 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
                           </div>
                         )}
                         <div>
-                          <p className="font-medium">
-                            {user.name || maskWallet(user.wallet_address)}
-                          </p>
+    
                           {user.farcaster_username && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                            <p className="text-xs text-gray-900 dark:text-gray-400">
                               @{user.farcaster_username}
                             </p>
                           )}
                           {/* Show masked wallet if they have a name */}
                           {user.name && (
                             <p className="text-xs text-gray-400 dark:text-gray-500">
-                              {maskWallet(user.wallet_address)}
+          
                             </p>
                           )}
                         </div>
