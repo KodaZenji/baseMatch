@@ -1,7 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
+import {
+  Trophy,
+  User,
+  Flame,
+  CheckCircle,
+  XCircle
+} from 'lucide-react';
 
 interface RankingsTableProps {
   gender: 'male' | 'female';
@@ -9,7 +15,6 @@ interface RankingsTableProps {
   myWallet: string;
 }
 
-// Utility function to mask wallet address
 function maskWallet(address: string): string {
   if (!address || address.length < 10) return address;
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -19,211 +24,185 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
   const [rankings, setRankings] = useState<any[]>([]);
   const [myRank, setMyRank] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
     fetchRankings();
-  }, [gender, myWallet]); // Added myWallet to dependencies
-  
+  }, [gender, myWallet]);
+
   async function fetchRankings() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/leaderboard/rankings?gender=${gender}&myWallet=${myWallet}&limit=200`);
+      const res = await fetch(
+        `/api/leaderboard/rankings?gender=${gender}&myWallet=${myWallet}&limit=200`
+      );
       const data = await res.json();
-      
-      console.log('Rankings data:', data);
-      console.log('My wallet:', myWallet);
-      console.log('My rank:', data.myRank);
-      
       setRankings(data.leaderboard || []);
       setMyRank(data.myRank);
-    } catch (error) {
-      console.error('Fetch rankings error:', error);
     } finally {
       setLoading(false);
     }
   }
-  
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-      
+
       {/* Gender Toggle */}
-      <div className="p-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-4 bg-gray-50 dark:bg-gray-900 border-b">
         <div className="flex gap-3">
-          <button
-            onClick={() => setGender('male')}
-            className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all ${
-              gender === 'male'
-                ? 'bg-blue-600 text-white shadow-lg'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-            }`}
-          >
-            Men's Leaderboard
-          </button>
-          <button
-            onClick={() => setGender('female')}
-            className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all ${
-              gender === 'female'
-                ? 'bg-pink-600 text-white shadow-lg'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-            }`}
-          >
-            Women's Leaderboard
-          </button>
+          {(['male', 'female'] as const).map((g) => (
+            <button
+              key={g}
+              onClick={() => setGender(g)}
+              className={`flex-1 py-3 px-6 rounded-lg font-medium transition-all ${
+                gender === g
+                  ? 'bg-blue-600 text-white shadow'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300'
+              }`}
+            >
+              {g === 'male' ? "Men's Leaderboard" : "Women's Leaderboard"}
+            </button>
+          ))}
         </div>
       </div>
-      
+
       {/* My Rank Banner */}
       {myRank && (
-        <div className={`p-4 ${
-          myRank.is_winning 
-            ? 'bg-green-50 dark:bg-green-900/20 border-b-1 border-green-400' 
-            : 'bg-red-50 dark:bg-red-900/20 border-b-1 border-red-400'
-        }`}>
+        <div
+          className={`p-4 border-b ${
+            myRank.is_winning
+              ? 'bg-green-50 dark:bg-green-900/20 border-green-300'
+              : 'bg-red-50 dark:bg-red-900/20 border-red-300'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {myRank.photo_url && (
-                <Img
-                  src={myRank.photo_url} 
-                  alt={myRank.name || 'User'}
-                  width={40}
-                  height={40}
-                  className="rounded-full"
+              {myRank.photo_url ? (
+                <img
+                  src={myRank.photo_url}
+                  alt="User"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  className="w-10 h-10 rounded-full object-cover"
                 />
+              ) : (
+                <User size={36} className="text-gray-500" />
               )}
+
               <div>
-                <p className="font-bold text-lg">Your Rank: #{myRank.rank_in_gender}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-gray-800 dark:text-gray-200 font-semibold text-lg">
+                  Your Rank: #{myRank.rank_in_gender}
+                </p>
+                <p className="text-sm text-gray-500">
                   {myRank.total_points.toLocaleString()} points
                 </p>
               </div>
             </div>
+
             {myRank.is_winning ? (
-              <span className="bg-green-500 text-gray-400 px-4 py-2 rounded-lg font-sm">
-                ✅ WINNING
-              </span>
+              <CheckCircle className="text-green-600" size={26} />
             ) : (
-              <span className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold">
-                 #{myRank.rank_in_gender}
-              </span>
+              <XCircle className="text-red-600" size={26} />
             )}
           </div>
         </div>
       )}
-      
+
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-900 dark:text-gray-400 uppercase tracking-wider">
-                Rank
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Profile
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Points
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Invites
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Streak
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Status
-              </th>
+            <tr className="text-gray-600 dark:text-gray-300 text-xs uppercase tracking-wider">
+              <th className="px-6 py-3 text-left">Rank</th>
+              <th className="px-6 py-3 text-left">Profile</th>
+              <th className="px-6 py-3 text-left">Points</th>
+              <th className="px-6 py-3 text-left">Invites</th>
+              <th className="px-6 py-3 text-left">Streak</th>
+              <th className="px-6 py-3 text-left">Status</th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={6} className="text-center py-10 text-gray-500">
                   Loading rankings...
                 </td>
               </tr>
-            ) : rankings.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                  No rankings yet. Be the first to check in!
-                </td>
-              </tr>
             ) : (
-              rankings.map((user, index) => {
-                const isMe = user.wallet_address?.toLowerCase() === myWallet?.toLowerCase();
-                
+              rankings.map((user) => {
+                const isMe =
+                  user.wallet_address?.toLowerCase() ===
+                  myWallet?.toLowerCase();
+
                 return (
                   <tr
                     key={user.wallet_address}
-                    className={`${
-                      isMe
-                        ? 'bg-blue-50 dark:bg-blue-900/20 font-semibold'
-                        : ''
-                    } ${
-                      index === 99 
-                        ? 'border-b-4 border-red-500' 
-                        : ''
-                    } hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}
+                    className={`hover:bg-gray-50 dark:hover:bg-gray-700/40 transition ${
+                      isMe ? 'bg-blue-50 dark:bg-blue-900/10' : ''
+                    }`}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className={`text-lg font-bold ${
-                        user.rank_in_gender <= 3 ? 'text-yellow-600' : ''
-                      }`}>
-                        {user.rank_in_gender === 1 && '🥇'}
-                        {user.rank_in_gender === 2 && '🥈'}
-                        {user.rank_in_gender === 3 && '🥉'}
+                    {/* Rank */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100 font-semibold">
+                        <Trophy size={16} className="text-gray-400" />
                         #{user.rank_in_gender}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+
+                    {/* Profile */}
+                    <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         {user.photo_url ? (
-                          <Img
-                            src={user.photo_url} 
-                            alt={user.name || 'User'}
-                            width={38}
-                            height={38}
-                            className="rounded-full"
+                          <img
+                            src={user.photo_url}
+                            alt="User"
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                            className="w-9 h-9 rounded-full object-cover"
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                            <span className="text-lg">👤</span>
-                          </div>
+                          <User size={28} className="text-gray-400" />
                         )}
+
                         <div>
-    
                           {user.farcaster_username && (
-                            <p className="text-xs text-gray-900 dark:text-gray-400">
+                            <p className="text-sm text-gray-700 dark:text-gray-200">
                               @{user.farcaster_username}
                             </p>
                           )}
-                          {/* Show masked wallet if they have a name */}
                           {user.name && (
-                            <p className="text-xs text-gray-400 dark:text-gray-500">
-          
+                            <p className="text-xs text-gray-500">
+                              {maskWallet(user.wallet_address)}
                             </p>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-lg font-bold">{user.total_points.toLocaleString()}</div>
+
+                    {/* Points */}
+                    <td className="px-6 py-4 text-gray-900 dark:text-gray-100 font-semibold">
+                      {user.total_points.toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm">{user.invite_count}</div>
+
+                    {/* Invites */}
+                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
+                      {user.invite_count}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm">{user.check_in_streak} 🔥</div>
+
+                    {/* Streak */}
+                    <td className="px-6 py-4 text-gray-700 dark:text-gray-300">
+                      <div className="flex items-center gap-2">
+                        <Flame size={15} className="text-gray-400" />
+                        {user.check_in_streak}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+
+                    {/* Status */}
+                    <td className="px-6 py-4">
                       {user.is_winning ? (
-                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                          ✅ Winning
-                        </span>
+                        <CheckCircle className="text-green-600" size={18} />
                       ) : (
-                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
-                          ❌ Losing
-                        </span>
+                        <XCircle className="text-red-600" size={18} />
                       )}
                     </td>
                   </tr>
@@ -233,7 +212,6 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
           </tbody>
         </table>
       </div>
-      
     </div>
   );
 }
