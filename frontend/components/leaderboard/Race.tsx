@@ -6,7 +6,7 @@ import { CheckInButton } from './CheckInButton';
 import { InviteLink } from './InviteLink';
 import { RankingsTable } from './RankingsTable';
 import { AutoCheckPurchase } from './AutoCheckPurchase';
-import { Trophy } from 'lucide-react';
+import { Trophy, Zap, Users, TrendingUp } from 'lucide-react';
 
 export default function Race() {
   const { address } = useAccount();
@@ -17,27 +17,38 @@ export default function Race() {
   const [hasProfile, setHasProfile] = useState(false);
   const [gender, setGender] = useState<'male' | 'female'>('male');
   
+  const [showJoinForm, setShowJoinForm] = useState(false);
   const [referralCodeInput, setReferralCodeInput] = useState('');
-  const [showReferralInput, setShowReferralInput] = useState(false);
+  const [joiningWithCode, setJoiningWithCode] = useState(false);
   
   useEffect(() => {
     if (address) {
-      checkProfileAndJoin();
+      checkStatus();
     }
   }, [address]);
   
-  async function checkProfileAndJoin(manualReferralCode?: string) {
+  useEffect(() => {
+    // Pre-fill code from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlCode = urlParams.get('ref');
+    if (urlCode) {
+      setReferralCodeInput(urlCode.toUpperCase());
+      setJoiningWithCode(true);
+    }
+  }, []);
+  
+  async function checkStatus() {
     setLoading(true);
     setError(null);
     
     try {
-      const profileStatusRes = await fetch('/api/profile/status', {
+      const profileRes = await fetch('/api/profile/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address })
       });
       
-      const profileStatus = await profileStatusRes.json();
+      const profileStatus = await profileRes.json();
       
       if (!profileStatus.profileExists) {
         setHasProfile(false);
@@ -48,91 +59,115 @@ export default function Race() {
       
       setHasProfile(true);
       
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlReferralCode = urlParams.get('ref');
-      const referralCode = manualReferralCode || urlReferralCode || null;
-      
+      // Check if already joined
       const res = await fetch('/api/leaderboard/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletAddress: address,
-          referralCode
+          referralCode: null // Just checking status
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success && data.alreadyJoined) {
+        setParticipant(data.participant);
+        setShowJoinForm(false);
+      } else {
+        // Not joined - show form
+        setShowJoinForm(true);
+      }
+      
+    } catch (error: any) {
+      console.error('Status check error:', error);
+      setError(error.message || 'Network error');
+    } finally {
+      setLoading(false);
+    }
+  }
+  
+  async function handleJoin() {
+    setLoading(true);
+    
+    const code = joiningWithCode ? referralCodeInput.trim().toUpperCase() : null;
+    
+    try {
+      const res = await fetch('/api/leaderboard/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: address,
+          referralCode: code
         })
       });
       
       const data = await res.json();
       
       if (!res.ok) {
-        console.error('Join error:', data);
-        setError(data.error || 'Failed to join leaderboard');
+        setError(data.error || 'Failed to join');
         setLoading(false);
         return;
       }
       
       if (data.success) {
         setParticipant(data.participant);
-        setShowReferralInput(false);
+        setShowJoinForm(false);
         
-        if (!data.alreadyJoined && referralCode) {
-          alert(`✅ Successfully joined with code ${referralCode}!\n\nInvite 1 person to unlock check-ins.`);
-        } else if (!data.alreadyJoined) {
-          setShowReferralInput(true);
+        // Success message
+        if (code) {
+          alert(`🎉 Welcome to the race!\n\nYou joined with code ${code}\n\n👉 Next step: Invite 1 friend to unlock check-ins!`);
+        } else {
+          alert(`🎉 Welcome to the race!\n\n👉 Next step: Invite 1 friend to unlock check-ins!`);
         }
-      } else {
-        setError(data.error || 'Unknown error');
       }
       
     } catch (error: any) {
-      console.error('Auto-join error:', error);
-      setError(error.message || 'Network error. Please try again.');
+      setError(error.message || 'Unknown error');
     } finally {
       setLoading(false);
     }
   }
   
-  function handleReferralCodeSubmit() {
-    const code = referralCodeInput.trim().toUpperCase();
-    if (!code) {
-      alert('Please enter a referral code');
-      return;
-    }
-    checkProfileAndJoin(code);
-  }
-  
+  // NOT CONNECTED
   if (!address) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center max-w-md mx-auto p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
-          <Trophy className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
-          <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
-            🏆 BaseMatch Founding Race
+      <div className="flex items-center justify-center min-h-[500px]">
+        <div className="text-center max-w-lg mx-auto p-8 bg-gradient-to-br from-[#0052FF]/5 to-purple-500/5 dark:from-[#0052FF]/10 dark:to-purple-500/10 rounded-3xl shadow-2xl border-2 border-[#0052FF]/20">
+          <Trophy className="w-20 h-20 mx-auto mb-6 text-yellow-500 drop-shadow-lg" />
+          <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-[#0052FF] via-purple-600 to-pink-600 bg-clip-text text-transparent">
+            BaseMatch Founding Race
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Connect your wallet to join the race for founding member NFTs
+          <p className="text-gray-600 dark:text-gray-300 text-lg mb-6">
+            Top 100 win founding member NFTs<br/>
+            Top 5 split 50 USDC
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Top 100 on each leaderboard win free NFTs
-          </p>
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-400 dark:border-yellow-600 rounded-lg p-4 mb-6">
+            <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">
+              ⚡ Connect wallet to join the race
+            </p>
+          </div>
         </div>
       </div>
     );
   }
   
+  // LOADING
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-[500px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0052FF] mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Checking your profile...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#0052FF] mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400 text-lg font-medium">Loading race...</p>
         </div>
       </div>
     );
   }
   
-  if (!hasProfile || error) {
+  // NO PROFILE ERROR
+  if (!hasProfile || (error && !showJoinForm)) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-[500px]">
         <div className="text-center max-w-md mx-auto p-8 bg-red-50 dark:bg-red-900/20 rounded-2xl shadow-lg border-2 border-red-200 dark:border-red-700">
           <div className="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-800 rounded-full flex items-center justify-center">
             <svg className="w-8 h-8 text-red-600 dark:text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,30 +175,143 @@ export default function Race() {
             </svg>
           </div>
           <h2 className="text-2xl font-bold mb-2 text-red-900 dark:text-red-100">
-            Unable to Join
+            Profile Required
           </h2>
-          <p className="text-red-700 dark:text-red-300 mb-4">
-            {error || 'Please create a profile first'}
+          <p className="text-red-700 dark:text-red-300 mb-6">
+            {error || 'Create a profile to join the race'}
           </p>
-          <div className="space-y-2">
-            <button
-              onClick={() => window.location.href = '/register/wallet/choice'}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-            >
-              Create Profile
-            </button>
-            <button
-              onClick={() => checkProfileAndJoin()}
-              className="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold py-3 px-6 rounded-lg transition-colors"
-            >
-              Try Again
-            </button>
-          </div>
+          <button
+            onClick={() => window.location.href = '/register/wallet/choice'}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-lg transition-colors shadow-lg"
+          >
+            Create Profile Now
+          </button>
         </div>
       </div>
     );
   }
   
+  // 🎯 JOIN FORM - PREMIUM ONBOARDING
+  if (showJoinForm) {
+    return (
+      <div className="max-w-4xl mx-auto px-4">
+        
+        {/* Hero Section */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-full font-bold text-sm mb-6 shadow-lg">
+            🔥 LIMITED TIME - FOUNDING RACE
+          </div>
+          <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-[#0052FF] via-purple-600 to-pink-600 bg-clip-text text-transparent">
+            Join the Race
+          </h1>
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
+            Compete for founding member NFTs and prizes
+          </p>
+        </div>
+        
+        {/* Benefits Grid */}
+        <div className="grid md:grid-cols-3 gap-4 mb-12">
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-700 rounded-xl p-6 text-center">
+            <Trophy className="w-12 h-12 mx-auto mb-3 text-yellow-500" />
+            <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-white">Top 100 Win NFTs</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Founding member benefits forever</p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-xl p-6 text-center">
+            <TrendingUp className="w-12 h-12 mx-auto mb-3 text-blue-500" />
+            <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-white">Top 5 Split $50</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Cash prizes in USDC</p>
+          </div>
+          
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-2 border-purple-200 dark:border-purple-700 rounded-xl p-6 text-center">
+            <Users className="w-12 h-12 mx-auto mb-3 text-purple-500" />
+            <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-white">Invite Friends</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300">More invites = more points</p>
+          </div>
+        </div>
+        
+        {/* Join Form */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-2xl border-2 border-[#0052FF]/20 max-w-2xl mx-auto">
+          
+          {/* Referral Code Toggle */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={joiningWithCode}
+                  onChange={(e) => {
+                    setJoiningWithCode(e.target.checked);
+                    if (!e.target.checked) setReferralCodeInput('');
+                  }}
+                  className="w-5 h-5 text-[#0052FF] rounded focus:ring-2 focus:ring-[#0052FF]"
+                />
+                <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                  🎁 I have a referral code
+                </span>
+              </label>
+            </div>
+            
+            {joiningWithCode && (
+              <div className="animate-in slide-in-from-top duration-300">
+                <input
+                  type="text"
+                  placeholder="Enter code (e.g. ABC12345)"
+                  value={referralCodeInput}
+                  onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
+                  maxLength={8}
+                  className="w-full px-6 py-4 rounded-xl border-2 border-[#0052FF]/30 dark:border-[#0052FF]/50 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white font-mono text-2xl text-center focus:outline-none focus:ring-2 focus:ring-[#0052FF] focus:border-[#0052FF] transition-all"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+                  Your friend gets credit when you join
+                </p>
+              </div>
+            )}
+          </div>
+          
+          {/* CTA Button */}
+          <button
+            onClick={handleJoin}
+            disabled={joiningWithCode && !referralCodeInput.trim()}
+            className="w-full bg-gradient-to-r from-[#0052FF] to-[#5B8DEE] hover:from-[#0041CC] hover:to-[#4A7BD9] disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-bold py-5 px-8 rounded-xl transition-all shadow-xl shadow-[#0052FF]/30 hover:shadow-2xl hover:scale-105 text-xl"
+          >
+            {joiningWithCode ? `🚀 Join with Code ${referralCodeInput}` : '🚀 Join the Race'}
+          </button>
+          
+          <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4">
+            {joiningWithCode ? '✨ Your friend will get credit for inviting you' : '💡 Get your own referral code after joining'}
+          </p>
+        </div>
+        
+        {/* How It Works */}
+        <div className="mt-12 bg-gradient-to-br from-[#0052FF]/5 to-purple-500/5 dark:from-[#0052FF]/10 dark:to-purple-500/10 rounded-2xl p-8 border border-[#0052FF]/20">
+          <h3 className="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-white">
+            How to Win
+          </h3>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-[#0052FF] text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-3">1</div>
+              <h4 className="font-bold mb-2 text-gray-900 dark:text-white">Invite 1 Friend</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Unlock check-ins by inviting 1 person</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 bg-[#0052FF] text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-3">2</div>
+              <h4 className="font-bold mb-2 text-gray-900 dark:text-white">Check In Daily</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Earn points every 12 hours</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 bg-[#0052FF] text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-3">3</div>
+              <h4 className="font-bold mb-2 text-gray-900 dark:text-white">Win Rewards</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Top 100 get NFTs, Top 5 get cash</p>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    );
+  }
+  
+  // 🏆 MAIN RACE INTERFACE (Already Joined)
   return (
     <div className="max-w-7xl mx-auto">
       
@@ -186,70 +334,30 @@ export default function Race() {
         </p>
       </div>
       
-      {/* Referral Code Input */}
-      {showReferralInput && participant && !participant.referred_by && (
-        <div className="mb-6 bg-gradient-to-br from-[#0052FF]/5 to-purple-500/5 dark:from-[#0052FF]/10 dark:to-purple-500/10 border-2 border-[#0052FF]/30 dark:border-[#0052FF]/50 rounded-2xl p-6">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-             Got a Referral Code?
-          </h3>
-          <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
-            If someone referred you, enter their code below to give them credit!
-          </p>
-          <div className="flex gap-3">
-            <input
-              type="text"
-              placeholder="Enter code (e.g. ABC12345)"
-              value={referralCodeInput}
-              onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
-              maxLength={8}
-              className="flex-1 px-4 py-3 rounded-lg border-2 border-[#0052FF]/30 dark:border-[#0052FF]/50 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-lg focus:outline-none focus:ring-2 focus:ring-[#0052FF] focus:border-[#0052FF]"
-            />
-            <button
-              onClick={handleReferralCodeSubmit}
-              className="bg-[#0052FF] hover:bg-[#0041CC] text-white font-bold px-6 py-3 rounded-lg transition-colors shadow-lg shadow-[#0052FF]/20"
-            >
-              Apply Code
-            </button>
-          </div>
-          <button
-            onClick={() => setShowReferralInput(false)}
-            className="mt-3 text-sm text-[#0052FF] dark:text-[#5B8DEE] hover:underline"
-          >
-            Skip - I wasn't referred
-          </button>
-        </div>
-      )}
-      
       {/* Getting Started Banner */}
       {participant && (participant.invite_count || 0) < 1 && (
         <div className="mb-6 bg-gradient-to-r from-[#0052FF] to-[#5B8DEE] text-white rounded-2xl p-6 shadow-lg shadow-[#0052FF]/20">
           <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
-            <span></span>
+            <Zap className="w-6 h-6" />
             <span>Getting Started</span>
           </h3>
           <div className="grid md:grid-cols-3 gap-4 text-sm">
             <div className="flex items-start gap-3">
-              <div className="bg-green-500 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">
-                ✓
-              </div>
+              <div className="bg-green-500 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">✓</div>
               <div>
                 <p className="font-semibold mb-1">You're In!</p>
                 <p className="text-white/90">You've joined the leaderboard</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="bg-yellow-400 text-gray-900 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">
-                2
-              </div>
+              <div className="bg-yellow-400 text-gray-900 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">2</div>
               <div>
                 <p className="font-semibold mb-1">👉 Invite 1 Friend</p>
                 <p className="text-white/90">Share your code to unlock check-ins</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">
-                3
-              </div>
+              <div className="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold">3</div>
               <div>
                 <p className="font-semibold mb-1">📈 Start Earning</p>
                 <p className="text-white/90">Check in every 12 hours for points</p>
@@ -277,8 +385,6 @@ export default function Race() {
             participant={participant}
           />
         </div>
-        
-        
       </div>
       
       {/* Info Section */}
@@ -296,14 +402,13 @@ export default function Race() {
           <div>
             <p className="font-semibold text-[#0052FF] dark:text-[#5B8DEE] mb-1">2. Check In Daily</p>
             <p className="text-gray-700 dark:text-gray-300">
-              Check in every 12 hours (morning & night) to earn points. Miss a window, lose those points forever.
+              Check in every 12 hours to earn points. Miss a window, lose those points forever.
             </p>
           </div>
           <div>
-            <p className="font-semibold text-[#0052FF] dark:text-[#5B8DEE] mb-1">3. Win NFT</p>
+            <p className="font-semibold text-[#0052FF] dark:text-[#5B8DEE] mb-1">3. Win NFT & Cash</p>
             <p className="text-gray-700 dark:text-gray-300">
-              Top 5 on each leaderboard split 50 USDC AND
-              Top 100 on your gender's leaderboard win a founding member NFT with lifetime benefits.
+              Top 5 split 50 USDC, Top 100 win founding member NFTs with lifetime benefits.
             </p>
           </div>
         </div>
