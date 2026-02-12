@@ -61,7 +61,7 @@ export default function ChatWindow({
         fetchProfile();
     }, [otherUserAddress]);
 
-    // Scroll to bottom on new message
+    // Scroll to bottom on new messages
     useEffect(() => {
         const container = messagesContainerRef.current;
         if (!container) return;
@@ -72,6 +72,7 @@ export default function ChatWindow({
         }
     }, [messages]);
 
+    // Handle sending message via send button
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         setSendError(null);
@@ -257,12 +258,6 @@ export default function ChatWindow({
                             placeholder="Type a message..."
                             disabled={isSending}
                             rows={1}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    if (messageText.trim() && !isSending) handleSendMessage(e as any);
-                                }
-                            }}
                             className="flex-1 resize-none px-4 py-3 rounded-2xl border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-800 dark:text-white disabled:opacity-50"
                         />
                         <button
