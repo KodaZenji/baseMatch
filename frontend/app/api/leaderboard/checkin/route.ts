@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseClient } from '@/lib/supabase/client';
+import { supabaseService } from '@/lib/supabase.server';
 
 function getCheckInWindow(): 'morning' | 'night' | null {
   const hour = new Date().getUTCHours();
@@ -32,7 +32,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const walletAddress = body.walletAddress?.trim().toLowerCase();
     
-    // ✅ Validate wallet address exists and is properly formatted
+    console.log('=== CHECK-IN REQUEST ===');
+    console.log('Wallet:', walletAddress);
+    
+    // Validate wallet address exists and is properly formatted
     if (!walletAddress) {
       return NextResponse.json({ 
         error: 'Wallet address is required',
@@ -40,7 +43,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
     
-    // ✅ Validate Ethereum address format
+    // Validate Ethereum address format
     if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
       return NextResponse.json({ 
         error: 'Invalid wallet address format',
@@ -53,30 +56,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid check-in window' }, { status: 400 });
     }
     
+    console.log('Current window:', window);
+    
     // Get participant
-    const { data: participant, error: participantError } = await supabaseClient
+    const { data: participant, error: participantError } = await supabaseService
       .from('leaderboard_participants')
       .select('*')
       .eq('wallet_address', walletAddress)
       .single();
     
     if (participantError || !participant) {
+      console.error('Participant not found:', participantError);
       return NextResponse.json({ 
         error: 'Not joined leaderboard yet. Visit /race to join.',
         needsJoin: true 
       }, { status: 404 });
     }
     
-    // ✅ Check if user has invited at least 1 person
+    console.log('✅ Participant found:', participant.id);
+    
+    // Check if user has invited at least 1 person
     if (participant.invite_count < 1) {
+      console.warn('⚠️ User has not invited anyone yet');
       return NextResponse.json({
         error: 'You must invite at least 1 person before you can check in',
         requiresInvite: true,
         inviteCount: participant.invite_count || 0,
         referralCode: participant.referral_code,
-        referralLink: `${process.env.NEXT_PUBLIC_BASE_URL}/invite/${participant.referral_code}`
+        referralLink: `${process.env.NEXT_PUBLIC_BASE_URL}/race?ref=${participant.referral_code}`
       }, { status: 403 });
     }
+    
+    console.log('✅ User has invited:', participant.invite_count, 'people');
     
     // Check if can check in
     if (!canCheckIn(participant.last_check_in, participant.last_check_in_window, window)) {
@@ -84,6 +95,7 @@ export async function POST(request: Request) {
       const nextCheckTime = new Date(lastCheckTime.getTime() + 12 * 60 * 60 * 1000);
       const minutesRemaining = Math.max(0, Math.ceil((nextCheckTime.getTime() - Date.now()) / (1000 * 60)));
       
+      console.warn('⚠️ Already checked in this window');
       return NextResponse.json({
         error: 'Already checked in this window',
         canCheckIn: false,
@@ -92,63 +104,92 @@ export async function POST(request: Request) {
       }, { status: 429 });
     }
     
+    console.log('✅ Can check in');
+    
     // Calculate points
-    const { data: pointsData } = await supabaseClient
+    const { data: pointsData } = await supabaseService
       .rpc('lb_calculate_checkin_points', { invite_count: participant.invite_count });
     
     const points = pointsData || (10 + Math.min(participant.invite_count, 10) ** 2);
     
+    console.log('Points to award:', points);
+    
     // Get current check-in number
-    const { count } = await supabaseClient
+    const { count } = await supabaseService
       .from('leaderboard_checkins')
       .select('*', { count: 'exact', head: true })
       .eq('participant_id', participant.id);
     
     const checkInNumber = (count || 0) + 1;
     
+    console.log('Check-in number:', checkInNumber);
+    
+    
+    const checkInData = {
+      participant_id: participant.id,
+      checkin_window: window,  
+      points,
+      auto_generated: false,
+      invite_count_at_checkin: participant.invite_count,
+      check_in_number: checkInNumber
+    };
+    
+    console.log('Inserting check-in:', checkInData);
+    
     // Create check-in record
-    const { error: checkInError } = await supabaseClient
+    const { error: checkInError } = await supabaseService
       .from('leaderboard_checkins')
-      .insert({
-        participant_id: participant.id,
-        window,
-        points,
-        auto_generated: false,
-        invite_count_at_checkin: participant.invite_count,
-        check_in_number: checkInNumber
-      });
+      .insert(checkInData);
     
     if (checkInError) {
-      console.error('Check-in insert error:', checkInError);
-      return NextResponse.json({ error: checkInError.message }, { status: 500 });
+      console.error('❌ Check-in insert error:', checkInError);
+      return NextResponse.json({ 
+        error: 'Failed to record check-in',
+        details: checkInError.message 
+      }, { status: 500 });
     }
     
+    console.log('✅ Check-in recorded');
+    
     // Update participant stats
-    const { data: updated, error: updateError } = await supabaseClient
+    const updateData = {
+      total_points: participant.total_points + points,
+      last_check_in: new Date().toISOString(),
+      last_check_in_window: window,
+      check_in_streak: participant.check_in_streak + 1
+    };
+    
+    console.log('Updating participant:', updateData);
+    
+    const { data: updated, error: updateError } = await supabaseService
       .from('leaderboard_participants')
-      .update({
-        total_points: participant.total_points + points,
-        last_check_in: new Date().toISOString(),
-        last_check_in_window: window,
-        check_in_streak: participant.check_in_streak + 1
-      })
+      .update(updateData)
       .eq('id', participant.id)
       .select()
       .single();
     
     if (updateError) {
-      console.error('Update participant error:', updateError);
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
+      console.error('❌ Update participant error:', updateError);
+      return NextResponse.json({ 
+        error: 'Failed to update participant stats',
+        details: updateError.message 
+      }, { status: 500 });
     }
     
+    console.log('✅ Participant updated');
+    
     // Log activity
-    await supabaseClient
+    await supabaseService
       .from('leaderboard_activity_log')
       .insert({
         participant_id: participant.id,
         action_type: 'checkin',
         action_data: { window, points, check_in_number: checkInNumber }
       });
+    
+    console.log('✅ Activity logged');
+    console.log('🎉 Check-in complete!');
+    console.log('===================\n');
     
     return NextResponse.json({
       success: true,
@@ -161,7 +202,7 @@ export async function POST(request: Request) {
     });
     
   } catch (error: any) {
-    console.error('Check-in error:', error);
+    console.error('💥 Check-in error:', error);
     return NextResponse.json({ 
       error: error.message || 'An unexpected error occurred',
       code: 'UNKNOWN_ERROR'
@@ -189,7 +230,7 @@ export async function GET(request: Request) {
     }, { status: 400 });
   }
   
-  const { data: participant } = await supabaseClient
+  const { data: participant } = await supabaseService
     .from('leaderboard_participants')
     .select('*')
     .eq('wallet_address', walletAddress)
@@ -226,6 +267,6 @@ export async function GET(request: Request) {
     autoCheckEnabled: participant.auto_check_enabled,
     autoCheckExpiry: participant.auto_check_expiry,
     referralCode: participant.referral_code,
-    referralLink: `${process.env.NEXT_PUBLIC_BASE_URL}/invite/${participant.referral_code}`
+    referralLink: `${process.env.NEXT_PUBLIC_BASE_URL}/race?ref=${participant.referral_code}`
   });
 }
