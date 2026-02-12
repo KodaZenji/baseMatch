@@ -9,6 +9,12 @@ interface RankingsTableProps {
   myWallet: string;
 }
 
+// Utility function to mask wallet address
+function maskWallet(address: string): string {
+  if (!address || address.length < 10) return address;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
 export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProps) {
   const [rankings, setRankings] = useState<any[]>([]);
   const [myRank, setMyRank] = useState<any>(null);
@@ -16,13 +22,18 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
   
   useEffect(() => {
     fetchRankings();
-  }, [gender]);
+  }, [gender, myWallet]); // Added myWallet to dependencies
   
   async function fetchRankings() {
     setLoading(true);
     try {
       const res = await fetch(`/api/leaderboard/rankings?gender=${gender}&myWallet=${myWallet}&limit=200`);
       const data = await res.json();
+      
+      console.log('Rankings data:', data);
+      console.log('My wallet:', myWallet);
+      console.log('My rank:', data.myRank);
+      
       setRankings(data.leaderboard || []);
       setMyRank(data.myRank);
     } catch (error) {
@@ -73,7 +84,7 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
               {myRank.photo_url && (
                 <Image 
                   src={myRank.photo_url} 
-                  alt={myRank.name}
+                  alt={myRank.name || 'User'}
                   width={48}
                   height={48}
                   className="rounded-full"
@@ -83,6 +94,10 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
                 <p className="font-bold text-lg">Your Rank: #{myRank.rank_in_gender}</p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   {myRank.total_points.toLocaleString()} points
+                </p>
+                {/* Show masked wallet for verification */}
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  {maskWallet(myRank.wallet_address)}
                 </p>
               </div>
             </div>
@@ -138,76 +153,88 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
                 </td>
               </tr>
             ) : (
-              rankings.map((user, index) => (
-                <tr
-                  key={user.wallet_address}
-                  className={`${
-                    user.wallet_address.toLowerCase() === myWallet.toLowerCase()
-                      ? 'bg-blue-50 dark:bg-blue-900/20 font-semibold'
-                      : ''
-                  } ${
-                    index === 99 
-                      ? 'border-b-4 border-red-500' 
-                      : ''
-                  } hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`text-lg font-bold ${
-                      user.rank_in_gender <= 3 ? 'text-yellow-600' : ''
-                    }`}>
-                      {user.rank_in_gender === 1 && '🥇'}
-                      {user.rank_in_gender === 2 && '🥈'}
-                      {user.rank_in_gender === 3 && '🥉'}
-                      #{user.rank_in_gender}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      {user.photo_url ? (
-                        <Image 
-                          src={user.photo_url} 
-                          alt={user.name || 'User'}
-                          width={40}
-                          height={40}
-                          className="rounded-full"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                          <span className="text-lg">👤</span>
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-medium">
-                          {user.name || `${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}`}
-                        </p>
-                        {user.farcaster_username && (
-                          <p className="text-xs text-gray-500">{user.farcaster_username}</p>
-                        )}
+              rankings.map((user, index) => {
+                const isMe = user.wallet_address?.toLowerCase() === myWallet?.toLowerCase();
+                
+                return (
+                  <tr
+                    key={user.wallet_address}
+                    className={`${
+                      isMe
+                        ? 'bg-blue-50 dark:bg-blue-900/20 font-semibold'
+                        : ''
+                    } ${
+                      index === 99 
+                        ? 'border-b-4 border-red-500' 
+                        : ''
+                    } hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`text-lg font-bold ${
+                        user.rank_in_gender <= 3 ? 'text-yellow-600' : ''
+                      }`}>
+                        {user.rank_in_gender === 1 && '🥇'}
+                        {user.rank_in_gender === 2 && '🥈'}
+                        {user.rank_in_gender === 3 && '🥉'}
+                        #{user.rank_in_gender}
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-lg font-bold">{user.total_points.toLocaleString()}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm">{user.invite_count}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm">{user.check_in_streak} 🔥</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {user.is_winning ? (
-                      <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                        ✅ Winning
-                      </span>
-                    ) : (
-                      <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
-                        ❌ Losing
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        {user.photo_url ? (
+                          <Image 
+                            src={user.photo_url} 
+                            alt={user.name || 'User'}
+                            width={40}
+                            height={40}
+                            className="rounded-full"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                            <span className="text-lg">👤</span>
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium">
+                            {user.name || maskWallet(user.wallet_address)}
+                          </p>
+                          {user.farcaster_username && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              @{user.farcaster_username}
+                            </p>
+                          )}
+                          {/* Show masked wallet if they have a name */}
+                          {user.name && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500">
+                              {maskWallet(user.wallet_address)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-lg font-bold">{user.total_points.toLocaleString()}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm">{user.invite_count}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm">{user.check_in_streak} 🔥</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {user.is_winning ? (
+                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                          ✅ Winning
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
+                          ❌ Losing
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
