@@ -7,14 +7,20 @@ export async function POST(request: Request) {
     const walletAddress = body.walletAddress?.trim().toLowerCase();
     const referralCode = body.referralCode?.trim()?.toUpperCase() || null;
 
+    console.log('=== JOIN REQUEST ===');
+    console.log('Wallet:', walletAddress);
+    console.log('Referral Code:', referralCode);
+
+    // Validate wallet address
     if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      console.error('Invalid wallet address format');
       return NextResponse.json({ 
         error: 'Invalid wallet address',
         code: 'INVALID_ADDRESS'
       }, { status: 400 });
     }
 
-    // Get profile
+    // Get profile from profiles table
     const { data: profile, error: profileError } = await supabaseService
       .from('profiles')
       .select('id, wallet_address, name, gender')
@@ -22,20 +28,29 @@ export async function POST(request: Request) {
       .single();
 
     if (profileError || !profile) {
+      console.error('Profile not found:', profileError?.message);
       return NextResponse.json({ 
-        error: 'Profile not found',
-        needsProfile: true 
+        error: 'Profile not found. Please create a profile first.',
+        needsProfile: true,
+        code: 'PROFILE_NOT_FOUND'
       }, { status: 404 });
     }
 
-    // Check if already joined
-    const { data: existing } = await supabaseService
+    console.log('✅ Profile found:', profile.id);
+
+    // Check if already joined the leaderboard
+    const { data: existing, error: existingError } = await supabaseService
       .from('leaderboard_participants')
       .select('*')
       .eq('profile_id', profile.id)
-      .single();
+      .maybeSingle();
+
+    if (existingError) {
+      console.error('Error checking existing participant:', existingError);
+    }
 
     if (existing) {
+      console.log('ℹ️ User already joined:', existing.id);
       return NextResponse.json({
         success: true,
         alreadyJoined: true,
@@ -44,126 +59,215 @@ export async function POST(request: Request) {
       });
     }
 
-    // Generate code
+    // Generate unique referral code
     const { data: newReferralCode, error: codeError } = await supabaseService
       .rpc('lb_generate_referral_code');
     
     if (codeError || !newReferralCode) {
+      console.error('Failed to generate referral code:', codeError);
       return NextResponse.json({ 
-        error: 'Failed to generate referral code'
+        error: 'Failed to generate referral code',
+        code: 'CODE_GENERATION_FAILED'
       }, { status: 500 });
     }
 
-    // ⚠️ CRITICAL: Lookup referrer BEFORE creating participant
+    console.log('✅ Generated referral code:', newReferralCode);
+
+    // Lookup referrer if referral code was provided
     let referrerId: string | null = null;
-    let referrerFound = false;
+    let referrerData: any = null;
     
     if (referralCode) {
-      console.log('🔍 Looking up referrer code:', referralCode);
+      console.log('🔍 Looking up referrer with code:', referralCode);
       
-      // Try case-insensitive lookup in case there's a mismatch
+      // Try to find the referrer - use OR query to handle case sensitivity
       const { data: referrer, error: referrerError } = await supabaseService
         .from('leaderboard_participants')
         .select('id, wallet_address, referral_code, invite_count, active_invite_count')
-        .or(`referral_code.eq.${referralCode},referral_code.ilike.${referralCode}`)
-        .limit(1)
-        .single();
+        .eq('referral_code', referralCode)
+        .maybeSingle();
 
-      // LOG THIS - Check console to see if referrer is found
-      console.log('Referrer lookup result:', {
-        found: !!referrer,
-        referrer: referrer,
-        error: referrerError
-      });
+      if (referrerError) {
+        console.error('❌ Error looking up referrer:', referrerError);
+      }
 
       if (referrer) {
         referrerId = referrer.id;
-        referrerFound = true;
-        console.log('✅ Referrer found:', referrer.wallet_address);
+        referrerData = referrer;
+        console.log('✅ Found referrer:', {
+          id: referrer.id,
+          wallet: referrer.wallet_address,
+          code: referrer.referral_code,
+          currentInvites: referrer.invite_count,
+          currentActiveInvites: referrer.active_invite_count
+        });
       } else {
-        console.warn('⚠️ NO REFERRER FOUND for code:', referralCode);
-        // Don't fail - just continue without referrer
+        console.warn('⚠️ No referrer found for code:', referralCode);
+        console.warn('This means either:');
+        console.warn('1. The code does not exist in the database');
+        console.warn('2. RLS policy is blocking the query');
+        console.warn('3. The code has a typo');
       }
     }
 
-    // Insert participant with referred_by_id
-    const insertData = {
+    // Prepare participant data
+    const participantData = {
       profile_id: profile.id,
       wallet_address: walletAddress,
       referral_code: newReferralCode,
-      referred_by_id: referrerId, // This will be null if not found
+      referred_by_id: referrerId, // Will be null if no valid referrer found
       invite_count: 0,
       active_invite_count: 0,
       total_points: 0,
-      check_in_streak: 0
+      check_in_streak: 0,
+      is_eligible: true
     };
 
-    console.log('📝 Inserting participant:', insertData);
+    console.log('📝 Creating participant with data:', participantData);
 
+    // Insert new participant
     const { data: participant, error: createError } = await supabaseService
       .from('leaderboard_participants')
-      .insert(insertData)
+      .insert(participantData)
       .select()
       .single();
 
     if (createError) {
-      console.error('❌ Create error:', createError);
+      console.error('❌ Failed to create participant:', createError);
       return NextResponse.json({ 
         error: 'Failed to create participant',
-        details: createError.message
+        details: createError.message,
+        code: 'PARTICIPANT_CREATION_FAILED'
       }, { status: 500 });
     }
 
-    // Verify it was saved correctly
-    console.log('✅ Participant created with referred_by_id:', participant.referred_by_id);
+    if (!participant) {
+      console.error('❌ Participant created but no data returned');
+      return NextResponse.json({ 
+        error: 'Failed to create participant - no data returned',
+        code: 'NO_PARTICIPANT_DATA'
+      }, { status: 500 });
+    }
 
-    // Handle referral relationship if referrer exists
+    console.log('✅ Participant created successfully:', {
+      id: participant.id,
+      referral_code: participant.referral_code,
+      referred_by_id: participant.referred_by_id
+    });
+
+    // If there was a valid referrer, establish the relationship
     if (referrerId && participant) {
-      // Create invite record
-      const { error: inviteError } = await supabaseService
+      console.log('🔗 Establishing referral relationship...');
+      
+      // 1. Create invite record
+      const { data: inviteRecord, error: inviteError } = await supabaseService
         .from('leaderboard_invites')
         .insert({
           inviter_id: referrerId,
           invitee_id: participant.id,
           invitee_became_active_at: new Date().toISOString()
-        });
+        })
+        .select()
+        .single();
 
       if (inviteError) {
-        console.error('❌ Invite error:', inviteError);
+        console.error('❌ Failed to create invite record:', inviteError);
+      } else {
+        console.log('✅ Invite record created:', inviteRecord.id);
       }
 
-      // Increment counts
-      const { error: updateError } = await supabaseService
+      // 2. Update referrer's invite counts
+      const newInviteCount = (referrerData?.invite_count || 0) + 1;
+      const newActiveInviteCount = (referrerData?.active_invite_count || 0) + 1;
+
+      const { data: updatedReferrer, error: updateError } = await supabaseService
         .from('leaderboard_participants')
         .update({
-          invite_count: supabaseService.raw('invite_count + 1'),
-          active_invite_count: supabaseService.raw('active_invite_count + 1')
+          invite_count: newInviteCount,
+          active_invite_count: newActiveInviteCount
         })
-        .eq('id', referrerId);
+        .eq('id', referrerId)
+        .select('id, invite_count, active_invite_count')
+        .single();
 
       if (updateError) {
-        console.error('❌ Update error:', updateError);
+        console.error('❌ Failed to update referrer invite counts:', updateError);
+      } else {
+        console.log('✅ Referrer invite counts updated:', {
+          id: updatedReferrer.id,
+          invite_count: updatedReferrer.invite_count,
+          active_invite_count: updatedReferrer.active_invite_count
+        });
       }
+
+      // 3. Log the referral activity
+      const { error: logError } = await supabaseService
+        .from('leaderboard_activity_log')
+        .insert({
+          participant_id: referrerId,
+          action_type: 'invite',
+          action_data: { 
+            invitee_id: participant.id,
+            invitee_wallet: walletAddress,
+            became_active: true,
+            timestamp: new Date().toISOString()
+          }
+        });
+
+      if (logError) {
+        console.error('❌ Failed to log referral activity:', logError);
+      } else {
+        console.log('✅ Referral activity logged');
+      }
+
+      // 4. Verify the relationship was established
+      const { data: verification } = await supabaseService
+        .from('leaderboard_participants')
+        .select('id, referred_by_id, referral_code')
+        .eq('id', participant.id)
+        .single();
+
+      console.log('🔍 Verification - Participant referred_by_id:', verification?.referred_by_id);
+      
+      if (!verification?.referred_by_id) {
+        console.error('⚠️ WARNING: referred_by_id was not saved properly!');
+      }
+    } else if (referralCode && !referrerId) {
+      console.warn('⚠️ Referral code was provided but no referrer was found');
+      console.warn('Participant created without referrer relationship');
     }
 
+    console.log('🎉 Join process complete!');
+    console.log('===================\n');
+
+    // Return success response
     return NextResponse.json({
       success: true,
       alreadyJoined: false,
-      participant,
+      participant: participant,
       referralLink: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://basematch.app'}/race?ref=${newReferralCode}`,
+      needsInvite: participant.invite_count < 1,
       debug: {
-        referralCodeUsed: referralCode,
-        referrerFound: referrerFound,
-        referrerIdSet: !!participant.referred_by_id,
+        referralCodeProvided: !!referralCode,
+        referralCodeValue: referralCode,
+        referrerFound: !!referrerId,
+        referrerIdInDb: participant.referred_by_id,
         participantId: participant.id,
-        referredById: participant.referred_by_id
+        participantCode: participant.referral_code
       }
     });
 
   } catch (error: any) {
-    console.error('💥 Join error:', error);
+    console.error('💥 CRITICAL ERROR in join endpoint:', error);
+    console.error('Stack trace:', error.stack);
+    
     return NextResponse.json({ 
-      error: error.message || 'Unknown error'
+      error: error.message || 'Unknown error occurred',
+      code: 'INTERNAL_ERROR',
+      ...(process.env.NODE_ENV === 'development' && { 
+        stack: error.stack,
+        details: error 
+      })
     }, { status: 500 });
   }
 }
