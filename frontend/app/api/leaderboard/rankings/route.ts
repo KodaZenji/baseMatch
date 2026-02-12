@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   const myWallet = searchParams.get('myWallet');
   
   console.log('=== RANKINGS REQUEST ===');
-  console.log('Gender:', gender);
+  console.log('Gender filter:', gender);
   console.log('My Wallet:', myWallet);
   
   try {
@@ -18,8 +18,11 @@ export async function GET(request: Request) {
       .select('*')
       .eq('is_eligible', true);
     
+    // FIX: Case-insensitive gender matching
     if (gender) {
-      query = query.eq('gender', gender);
+      const genderTitleCase = gender.charAt(0).toUpperCase() + gender.slice(1).toLowerCase();
+      query = query.ilike('gender', genderTitleCase);
+      console.log('Filtering by gender:', genderTitleCase);
     }
     
     const { data: rankings, error } = await query
@@ -32,6 +35,16 @@ export async function GET(request: Request) {
     }
     
     console.log('✅ Found rankings:', rankings?.length || 0);
+    
+    // Debug: Show first few entries
+    if (rankings && rankings.length > 0) {
+      console.log('Sample entry:', {
+        wallet: rankings[0].wallet_address,
+        gender: rankings[0].gender,
+        points: rankings[0].total_points,
+        rank: rankings[0].rank_in_gender
+      });
+    }
     
     // Find user's rank if wallet provided
     let myRank = null;
@@ -65,7 +78,7 @@ export async function GET(request: Request) {
       leaderboard: rankings || [],
       totalCompetitors: totalCompetitors || 0,
       myRank,
-      cutoffPoints: rankings?.[99]?.total_points || 0 // rank 100's points
+      cutoffPoints: rankings?.[99]?.total_points || 0
     });
     
   } catch (error: any) {
