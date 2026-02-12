@@ -196,15 +196,26 @@ export function RankingsTable({ gender, setGender, myWallet }: RankingsTableProp
                         {user.check_in_streak}
                       </div>
                     </td>
-
-                    {/* Status */}
-                    <td className="px-6 py-4">
-                      {user.is_winning ? (
-                        <CheckCircle className="text-green-600" size={18} />
-                      ) : (
-                        <XCircle className="text-red-600" size={18} />
-                      )}
-                    </td>
+{/* Status */}
+<td className="px-6 py-4">
+  <div className="flex items-center gap-2">
+    {user.is_winning ? (
+      <>
+        <CheckCircle className="text-green-600" size={18} />
+        <span className="text-sm text-gray-600 dark:text-gray-300">
+          Winning
+        </span>
+      </>
+    ) : (
+      <>
+        <XCircle className="text-red-600" size={18} />
+        <span className="text-sm text-gray-600 dark:text-gray-300">
+          Losing
+        </span>
+      </>
+    )}
+  </div>
+</td>
                   </tr>
                 );
               })
