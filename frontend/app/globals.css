@@ -1,3 +1,14 @@
+html {
+  font-size: 14px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 @import "tailwindcss";
 
 @variant dark (&:where(.dark, .dark *));
