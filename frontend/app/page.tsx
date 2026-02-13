@@ -17,7 +17,7 @@ import { FaXTwitter } from 'react-icons/fa6';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BaseAppAutoConnect } from '@/components/BaseAppAutoConnect';
-import Race from '@/components/leaderboard/Race';
+import RaceComingSoon from '@/components/RaceComingSoon';
 import { Trophy } from 'lucide-react';
 
 // Dark Mode Toggle Component
@@ -114,7 +114,7 @@ function ExploreMenu({ isOpen, onClose, setActiveTab }: {
               <Trophy className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
               <div className="text-left">
                 <span className="font-bold block">Founding Race</span>
-                <span className="text-xs text-yellow-600 dark:text-yellow-400">Win NFTs 🏆</span>
+                <span className="text-xs text-yellow-600 dark:text-yellow-400">Coming Soon ✨</span>
               </div>
             </button>
 
@@ -713,7 +713,7 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
   {activeTab === 'browse' && <BrowseProfiles />}
   {activeTab === 'matches' && <Matches />}
-  {activeTab === 'race' && <Race />}
+{activeTab === 'race' && <RaceComingSoon />}
   {activeTab === 'profile' && <Dashboard />}
   {activeTab === 'notifications' && <Notifications />}
 </main>
