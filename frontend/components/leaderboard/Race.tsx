@@ -73,55 +73,50 @@ export default function Race() {
   }, []);
 
   async function checkStatus() {
-    setLoading(true);
-    setError(null);
+  setLoading(true);
+  setError(null);
 
-    try {
-      const profileRes = await fetch('/api/profile/status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address })
-      });
+  try {
+    // 1. Check if profile exists
+    const profileRes = await fetch('/api/profile/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address })
+    });
 
-      const profileStatus = await profileRes.json();
+    const profileStatus = await profileRes.json();
 
-      if (!profileStatus.profileExists) {
-        setHasProfile(false);
-        setError('Please create a profile first before joining the race.');
-        setLoading(false);
-        return;
-      }
-
-      setHasProfile(true);
-
-      // Check if already joined by calling join with no code
-      const res = await fetch('/api/leaderboard/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          walletAddress: address,
-          referralCode: null
-        })
-      });
-
-      const data = await res.json();
-
-      if (data.success && data.alreadyJoined) {
-        // Already joined
-        setParticipant(data.participant);
-        setShowJoinForm(false);
-      } else {
-        // Not joined yet
-        setShowJoinForm(true);
-      }
-
-    } catch (err: any) {
-      console.error('Status check error:', err);
-      setError(err.message || 'Network error');
-    } finally {
+    if (!profileStatus.profileExists) {
+      setHasProfile(false);
+      setError('Please create a profile first before joining the race.');
       setLoading(false);
+      return;
     }
+
+    setHasProfile(true);
+
+    // 2.  Check if already joined using READ-ONLY status endpoint
+    const statusRes = await fetch(`/api/leaderboard/status?wallet=${address}`);
+    const statusData = await statusRes.json();
+
+    console.log('📊 Status check result:', statusData);
+
+    if (statusData.joined) {
+      // Already joined - show main interface
+      console.log('✅ User already joined');
+      setParticipant(statusData.participant);
+      setShowJoinForm(false);
+    } else {
+        setShowJoinForm(true);
+    }
+
+  } catch (err: any) {
+    console.error('Status check error:', err);
+    setError(err.message || 'Network error');
+  } finally {
+    setLoading(false);
   }
+}
 
   async function handleJoin() {
     setLoading(true);
