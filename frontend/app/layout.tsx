@@ -52,6 +52,13 @@ export const metadata: Metadata = {
     }),
   }
 };
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
 
 export default function RootLayout({
   children,
@@ -65,6 +72,7 @@ export default function RootLayout({
         className={`${lexend.variable} font-sans antialiased`}
         style={{ fontFamily: 'var(--font-lexend), sans-serif' }}
       >
+         <div style={{ zoom: 0.92 }}>
         <Providers>
           <ReminderCheckerWrapper />
           {children}
