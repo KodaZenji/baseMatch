@@ -52,12 +52,12 @@ export const metadata: Metadata = {
     }),
   }
 };
-export const viewport: Viewport = {
-  width: 'device-width',
+export const viewport = {
+  width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  viewportFit: 'cover',
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
