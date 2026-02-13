@@ -15,12 +15,15 @@ interface SuccessModalProps {
 
 function SuccessModal({ referralCode, onClose }: SuccessModalProps) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 w-[90%] max-w-md text-center shadow-2xl">
-        <h2 className="text-2xl font-bold mb-4 text-green-600 dark:text-green-400">🎉 Welcome to the Race!</h2>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 w-full max-w-md text-center shadow-2xl">
+        <h2 className="text-2xl font-bold mb-4 text-green-600 dark:text-green-400">
+          🎉 Welcome to the Race!
+        </h2>
         {referralCode ? (
           <p className="mb-6 text-gray-700 dark:text-gray-300">
-            You joined with code <span className="font-mono font-bold">{referralCode}</span>.<br/>
+            You joined with code <span className="font-mono font-bold text-[#0052FF]">{referralCode}</span>
+            <br/><br/>
             👉 Next step: Invite 1 friend to unlock check-ins!
           </p>
         ) : (
@@ -91,6 +94,7 @@ export default function Race() {
 
       setHasProfile(true);
 
+      // Check if already joined by calling join with no code
       const res = await fetch('/api/leaderboard/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -103,9 +107,11 @@ export default function Race() {
       const data = await res.json();
 
       if (data.success && data.alreadyJoined) {
+        // Already joined
         setParticipant(data.participant);
         setShowJoinForm(false);
       } else {
+        // Not joined yet
         setShowJoinForm(true);
       }
 
@@ -121,14 +127,20 @@ export default function Race() {
     setLoading(true);
     const code = joiningWithCode ? referralCodeInput.trim().toUpperCase() : null;
 
+    console.log('🚀 Attempting to join with code:', code);
+
     try {
       const res = await fetch('/api/leaderboard/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: address, referralCode: code })
+        body: JSON.stringify({ 
+          walletAddress: address, 
+          referralCode: code 
+        })
       });
 
       const data = await res.json();
+      console.log('📥 Join response:', data);
 
       if (!res.ok) {
         setError(data.error || 'Failed to join');
@@ -140,10 +152,11 @@ export default function Race() {
         setParticipant(data.participant);
         setShowJoinForm(false);
         setSuccessReferralCode(code);
-        setShowSuccessModal(true);
+        setShowSuccessModal(true); // ✅ Show modal (no alert!)
       }
 
     } catch (err: any) {
+      console.error('❌ Join error:', err);
       setError(err.message || 'Unknown error');
     } finally {
       setLoading(false);
@@ -329,9 +342,9 @@ export default function Race() {
     </div>
   );
 
-    // 🏆 MAIN RACE INTERFACE (Already Joined)
+  // 🏆 MAIN RACE INTERFACE (Already Joined)
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto px-4">
       
       {/* Header */}
       <div className="text-center mb-8">
