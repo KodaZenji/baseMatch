@@ -64,12 +64,22 @@ export async function GET(request: Request) {
       }
     }
     
-    // Get total competitors
-    const { count: totalCompetitors } = await supabaseService
-      .from('leaderboard_participants')
-      .select('*, profiles!inner(*)', { count: 'exact', head: true })
-      .eq('is_eligible', true)
-      .eq(gender ? 'profiles.gender' : 'is_eligible', gender || true);
+    // Get total competitors using the SAME view with SAME filters
+    let countQuery = supabaseService
+      .from('leaderboard_rankings')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_eligible', true);
+    
+    // Apply same gender filter for count
+    if (gender) {
+      countQuery = countQuery.eq('gender', gender);
+    }
+    
+    const { count: totalCompetitors, error: countError } = await countQuery;
+    
+    if (countError) {
+      console.error('❌ Count query error:', countError);
+    }
     
     console.log('Total competitors:', totalCompetitors);
     console.log('===================\n');
@@ -80,6 +90,7 @@ export async function GET(request: Request) {
       myRank,
       cutoffPoints: rankings?.[99]?.total_points || 0
     });
+    
     
   } catch (error: any) {
     console.error('💥 Rankings error:', error);
