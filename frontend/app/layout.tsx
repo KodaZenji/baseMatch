@@ -77,6 +77,7 @@ export default function RootLayout({
           <ReminderCheckerWrapper />
           {children}
         </Providers>
+           </div>
       </body>
     </html>
   );
