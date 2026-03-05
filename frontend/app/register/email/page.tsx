@@ -54,7 +54,7 @@ export default function EmailRegisterPage() {
                                 fill="url(#brandGradient)"
                                 stroke="none"
                             />
-                            {/* ✅ UPDATED: brand-matching gradient */}
+                    
                             <svg width="0" height="0">
                                 <defs>
                                     <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
