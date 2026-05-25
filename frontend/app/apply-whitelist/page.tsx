@@ -42,7 +42,7 @@ interface TaskState {
 
 export default function ApplyWhitelistPage() {
   const router = useRouter();
-  const [form, setForm] = useState<<FormState>({
+  const [form, setForm] = useState<FormState>({
     xUsername: '',
     qtLink: '',
     commentLink: '',
