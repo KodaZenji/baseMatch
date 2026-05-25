@@ -2,18 +2,28 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Heart, ArrowLeft, ExternalLink, CheckCircle2, Twitter, Users, MessageSquareQuote, ThumbsUp } from 'lucide-react';
+import {
+  Heart,
+  ArrowLeft,
+  ExternalLink,
+  CheckCircle2,
+  Twitter,
+  Users,
+  MessageSquareQuote,
+  ThumbsUp,
+  ChevronRight,
+} from 'lucide-react';
 
-// ─── REPLACE THESE WITH REAL VALUES ───────────────────────────────────────────
-const BASEMATCH_X_HANDLE = 'BaseMatchApp';
-const BASEMATCH_X_PROFILE_URL = `https://x.com/${basematch_}`;
-const PINNED_TWEET_URL = 'https://x.com/BaseMatchApp/status/PLACEHOLDER_TWEET_ID';
-const GUILD_XYZ_URL = 'https://guild.xyz/basematch'; // replace with real guild URL
-// ──────────────────────────────────────────────────────────────────────────────
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const BASEMATCH_X_HANDLE = 'basematch_';
+const PINNED_TWEET_ID = 'PLACEHOLDER_TWEET_ID'; // ← replace with real ID
+const GUILD_XYZ_URL = 'https://guild.xyz/basematch'; // ← replace with real URL
 
 const FOLLOW_URL = `https://x.com/intent/follow?screen_name=${BASEMATCH_X_HANDLE}`;
-const LIKE_URL = `https://x.com/intent/like?tweet_id=PLACEHOLDER_TWEET_ID`;
-const QT_URL = `https://x.com/intent/retweet?tweet_id=PLACEHOLDER_TWEET_ID&text=${encodeURIComponent('BMG soon 👀 @BaseMatchApp')}`;
+const LIKE_URL = `https://x.com/intent/like?tweet_id=${PINNED_TWEET_ID}`;
+const QT_URL = `https://x.com/intent/retweet?tweet_id=${PINNED_TWEET_ID}&text=${encodeURIComponent('BMG soon 👀 @basematch_')}`;
+const PINNED_TWEET_URL = `https://x.com/basematch_/status/${PINNED_TWEET_ID}`;
+// ──────────────────────────────────────────────────────────────────────────────
 
 type TaskStatus = 'idle' | 'done';
 
@@ -32,7 +42,7 @@ interface TaskState {
 
 export default function ApplyWhitelistPage() {
   const router = useRouter();
-  const [form, setForm] = useState<FormState>({
+  const [form, setForm] = useState<<FormState>({
     xUsername: '',
     qtLink: '',
     commentLink: '',
@@ -47,23 +57,28 @@ export default function ApplyWhitelistPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  const markTask = (task: keyof TaskState) => {
-    setTasks(prev => ({ ...prev, [task]: 'done' }));
+  const toggleTask = (task: keyof TaskState) => {
+    setTasks((prev) => ({
+      ...prev,
+      [task]: prev[task] === 'done' ? 'idle' : 'done',
+    }));
   };
 
-  const handleExternalTask = (url: string, task: keyof TaskState) => {
+  const openLink = (url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer');
-    setTimeout(() => markTask(task), 1500);
   };
 
   const handleSubmit = async () => {
     setError('');
 
     if (!form.xUsername.trim()) return setError('Please enter your X username.');
-    if (!form.qtLink.trim()) return setError('QT link.');
-    if (!form.commentLink.trim()) return setError('Comment link.');
+    if (!form.qtLink.trim()) return setError('Please paste your Quote Tweet link.');
+    if (!form.commentLink.trim()) return setError('Please paste your comment link.');
     if (!form.walletAddress.trim() || !form.walletAddress.startsWith('0x')) {
-      return setError('EVM wallet address (starts with 0x).');
+      return setError('Please enter a valid EVM wallet address (starts with 0x).');
+    }
+    if (tasks.followed !== 'done' || tasks.liked !== 'done' || tasks.qt !== 'done') {
+      return setError('Please complete and confirm all three required tasks above.');
     }
 
     setSubmitting(true);
@@ -98,23 +113,22 @@ export default function ApplyWhitelistPage() {
   // ─── SUCCESS STATE ────────────────────────────────────────────────────────
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-black flex items-center justify-center p-6 font-sans">
         <div className="text-center max-w-sm">
           <div className="relative inline-flex mb-8">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center shadow-[0_0_60px_rgba(193,28,132,0.5)]">
-              <CheckCircle2 className="w-12 h-12 text-white" />
+            <div className="w-20 h-20 rounded-full bg-[#2C2C2E] flex items-center justify-center ring-1 ring-white/10">
+              <CheckCircle2 className="w-10 h-10 text-[#A855F7]" />
             </div>
-            <div className="absolute -top-1 -right-1 w-6 h-6 bg-pink-400 rounded-full animate-ping" />
           </div>
-          <h2 className="text-3xl font-bold text-white mb-3" style={{ fontFamily: "'Syne', sans-serif" }}>
-            Application Received!
+          <h2 className="text-[28px] font-semibold text-white mb-3 tracking-tight">
+            Application Received
           </h2>
-          <p className="text-gray-400 mb-8 leading-relaxed">
-            We've logged your entry. Thanks for filling this form. Stay tuned on X.
+          <p className="text-[#8E8E93] mb-8 leading-relaxed text-[15px]">
+            We've logged your entry. Thanks for completing the tasks. Stay tuned on X.
           </p>
           <button
             onClick={() => router.push('/')}
-            className="px-8 py-3 bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity"
+            className="px-8 py-3 bg-[#A855F7] text-white text-[15px] font-medium rounded-full hover:bg-[#9333EA] active:scale-95 transition-all"
           >
             Back to BaseMatch
           </button>
@@ -125,226 +139,287 @@ export default function ApplyWhitelistPage() {
 
   // ─── MAIN FORM ────────────────────────────────────────────────────────────
   return (
-    <>
-      {/* Google Font */}
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');`}</style>
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-[#A855F7]/30">
+      <div className="max-w-lg mx-auto px-5 py-10">
 
-      <div
-        className="min-h-screen bg-[#0a0a0f] relative overflow-hidden"
-        style={{ fontFamily: "'DM Sans', sans-serif" }}
-      >
-        {/* Background glow blobs */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-pink-600/10 blur-[120px]" />
-          <div className="absolute top-1/2 -right-32 w-80 h-80 rounded-full bg-purple-600/10 blur-[100px]" />
-          <div className="absolute bottom-0 left-1/3 w-72 h-72 rounded-full bg-pink-500/8 blur-[120px]" />
+        {/* Back button */}
+        <button
+          onClick={() => router.push('/')}
+          className="flex items-center gap-1.5 text-[#8E8E93] hover:text-white transition-colors mb-8 text-[15px] font-medium active:opacity-60"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
+
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 rounded-xl bg-[#2C2C2E] flex items-center justify-center ring-1 ring-white/10">
+              <Heart className="w-4 h-4 text-[#C084FC]" fill="currentColor" />
+            </div>
+            <span className="text-[#C084FC] font-medium text-[13px] tracking-wide uppercase">
+              BaseMatch
+            </span>
+          </div>
+          <h1 className="text-[32px] font-semibold text-white leading-tight mb-3 tracking-tight">
+            Apply for Whitelist
+          </h1>
+          <p className="text-[#8E8E93] text-[15px] leading-relaxed">
+            Complete the tasks below and submit your wallet to enter the whitelist.
+          </p>
         </div>
 
-        <div className="relative z-10 max-w-lg mx-auto px-4 py-10">
-
-          {/* Back button */}
-          <button
-            onClick={() => router.push('/')}
-            className="flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors mb-10 text-sm font-medium"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </button>
-
-          {/* Header */}
-          <div className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center shadow-[0_0_20px_rgba(193,28,132,0.4)]">
-                <Heart className="w-5 h-5 text-white" fill="white" />
-              </div>
-              <span className="text-pink-400 font-semibold text-sm tracking-widest uppercase">BaseMatch</span>
-            </div>
-            <h1
-              className="text-4xl font-extrabold text-white leading-tight mb-3"
-              style={{ fontFamily: "'Syne', sans-serif" }}
-            >
-              Appl
-            </h3>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              Complete the tasks below and submit your wallet to enter. 
+        {/* Guild nudge banner */}
+        <a
+          href={GUILD_XYZ_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 p-4 rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 hover:bg-[#2C2C2E] transition-colors mb-8 group active:scale-[0.98]"
+        >
+          <div className="w-9 h-9 rounded-lg bg-[#2C2C2E] flex items-center justify-center ring-1 ring-white/10 flex-shrink-0">
+            <Users className="w-4 h-4 text-[#A855F7]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-medium text-[15px] mb-0.5">
+              Boost your chances
+            </p>
+            <p className="text-[#8E8E93] text-[13px] leading-relaxed">
+              Guild.xyz members have higher odds of receiving OG status.
             </p>
           </div>
+          <ExternalLink className="w-4 h-4 text-[#8E8E93] flex-shrink-0 group-hover:text-white transition-colors" />
+        </a>
 
-          {/* Guild nudge banner */}
-          <a
-            href={GUILD_XYZ_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-start gap-3 p-4 rounded-2xl border border-purple-500/30 bg-purple-500/8 hover:bg-purple-500/12 transition-colors mb-8 group"
-          >
-            <div className="mt-0.5 w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/30 transition-colors">
-              <Users className="w-4 h-4 text-purple-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-purple-300 font-semibold text-sm mb-0.5">
-                Boost your chances 🚀
-              </p>
-              <p className="text-gray-500 text-xs leading-relaxed">
-                Members of our Guild.xyz page stand a higher chance of receiving OG status. Everyone else will be considered fairly.
-              </p>
-            </div>
-            <ExternalLink className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5 group-hover:text-purple-300 transition-colors" />
-          </a>
+        {/* Task cards */}
+        <div className="space-y-3 mb-8">
 
-          {/* Task cards */}
-          <div className="space-y-3 mb-8">
-
-            {/* Task 1 — Follow */}
-            <div className="rounded-2xl border border-white/8 bg-white/4 p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Twitter className="w-4 h-4 text-sky-400" />
-                  <span className="text-white font-semibold text-sm">Follow BaseMatch</span>
+          {/* Task 1 — Follow */}
+          <div className="rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 overflow-hidden">
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center">
+                    <Twitter className="w-3.5 h-3.5 text-sky-400" />
+                  </div>
+                  <span className="text-white font-medium text-[15px]">Follow BaseMatch</span>
                 </div>
                 {tasks.followed === 'done' && (
-                  <span className="flex items-center gap-1 text-green-400 text-xs font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Done
+                  <span className="flex items-center gap-1 text-emerald-400 text-[13px] font-medium">
+                    <CheckCircle2 className="w-4 h-4" /> Done
                   </span>
                 )}
               </div>
               <button
-                onClick={() => handleExternalTask(FOLLOW_URL, 'followed')}
-                className="w-full py-2.5 rounded-xl border border-sky-500/40 bg-sky-500/10 text-sky-400 text-sm font-semibold hover:bg-sky-500/20 transition-all hover:border-sky-400/60 flex items-center justify-center gap-2"
+                onClick={() => openLink(FOLLOW_URL)}
+                className="w-full py-2.5 rounded-xl bg-[#2C2C2E] text-sky-400 text-[13px] font-medium hover:bg-[#3A3A3C] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
                 Follow @{BASEMATCH_X_HANDLE}
+                <ExternalLink className="w-3.5 h-3.5 opacity-70" />
               </button>
             </div>
+            <div
+              onClick={() => toggleTask('followed')}
+              className={`px-5 py-3.5 flex items-center justify-between border-t border-white/5 cursor-pointer active:bg-[#2C2C2E] transition-colors ${
+                tasks.followed === 'done' ? 'bg-[#A855F7]/10' : ''
+              }`}
+            >
+              <span className={`text-[13px] ${tasks.followed === 'done' ? 'text-[#A855F7] font-medium' : 'text-[#8E8E93]'}`}>
+                {tasks.followed === 'done' ? 'Confirmed' : 'Tap to confirm you followed'}
+              </span>
+              <div
+                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                  tasks.followed === 'done'
+                    ? 'bg-[#A855F7] border-[#A855F7]'
+                    : 'border-[#8E8E93]'
+                }`}
+              >
+                {tasks.followed === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+              </div>
+            </div>
+          </div>
 
-            {/* Task 2 — Like + username */}
-            <div className="rounded-2xl border border-white/8 bg-white/4 p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <ThumbsUp className="w-4 h-4 text-pink-400" />
-                  <span className="text-white font-semibold text-sm">Like pinned post</span>
+          {/* Task 2 — Like + username */}
+          <div className="rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 overflow-hidden">
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center">
+                    <ThumbsUp className="w-3.5 h-3.5 text-[#C084FC]" />
+                  </div>
+                  <span className="text-white font-medium text-[15px]">Like pinned post</span>
                 </div>
                 {tasks.liked === 'done' && (
-                  <span className="flex items-center gap-1 text-green-400 text-xs font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Done
+                  <span className="flex items-center gap-1 text-emerald-400 text-[13px] font-medium">
+                    <CheckCircle2 className="w-4 h-4" /> Done
                   </span>
                 )}
               </div>
               <button
-                onClick={() => handleExternalTask(LIKE_URL, 'liked')}
-                className="w-full py-2.5 rounded-xl border border-pink-500/40 bg-pink-500/10 text-pink-400 text-sm font-semibold hover:bg-pink-500/20 transition-all hover:border-pink-400/60 flex items-center justify-center gap-2 mb-3"
+                onClick={() => openLink(LIKE_URL)}
+                className="w-full py-2.5 rounded-xl bg-[#2C2C2E] text-[#C084FC] text-[13px] font-medium hover:bg-[#3A3A3C] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-3"
               >
                 Like the post
-                <ExternalLink className="w-3.5 h-3.5" />
+                <ExternalLink className="w-3.5 h-3.5 opacity-70" />
               </button>
               <input
                 type="text"
                 placeholder="Your X username (e.g. @yourname)"
                 value={form.xUsername}
-                onChange={e => setForm(p => ({ ...p, xUsername: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl bg-white/6 border border-white/10 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-pink-500/50 focus:bg-white/8 transition-all"
+                onChange={(e) => setForm((p) => ({ ...p, xUsername: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl bg-[#2C2C2E] border border-white/5 text-white text-[15px] placeholder-[#8E8E93] focus:outline-none focus:border-[#A855F7]/50 focus:bg-[#3A3A3C] transition-all"
               />
             </div>
+            <div
+              onClick={() => toggleTask('liked')}
+              className={`px-5 py-3.5 flex items-center justify-between border-t border-white/5 cursor-pointer active:bg-[#2C2C2E] transition-colors ${
+                tasks.liked === 'done' ? 'bg-[#A855F7]/10' : ''
+              }`}
+            >
+              <span className={`text-[13px] ${tasks.liked === 'done' ? 'text-[#A855F7] font-medium' : 'text-[#8E8E93]'}`}>
+                {tasks.liked === 'done' ? 'Confirmed' : 'Tap to confirm you liked'}
+              </span>
+              <div
+                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                  tasks.liked === 'done' ? 'bg-[#A855F7] border-[#A855F7]' : 'border-[#8E8E93]'
+                }`}
+              >
+                {tasks.liked === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+              </div>
+            </div>
+          </div>
 
-            {/* Task 3 — QT */}
-            <div className="rounded-2xl border border-white/8 bg-white/4 p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <MessageSquareQuote className="w-4 h-4 text-purple-400" />
-                  <span className="text-white font-semibold text-sm">
-                    QT with <span className="italic text-purple-300">"Mochis are coming"</span>
+          {/* Task 3 — QT */}
+          <div className="rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 overflow-hidden">
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center">
+                    <MessageSquareQuote className="w-3.5 h-3.5 text-[#C084FC]" />
+                  </div>
+                  <span className="text-white font-medium text-[15px]">
+                    QT with <span className="italic text-[#C084FC]">"Mochis are coming"</span>
                   </span>
                 </div>
                 {tasks.qt === 'done' && (
-                  <span className="flex items-center gap-1 text-green-400 text-xs font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Done
+                  <span className="flex items-center gap-1 text-emerald-400 text-[13px] font-medium">
+                    <CheckCircle2 className="w-4 h-4" /> Done
                   </span>
                 )}
               </div>
               <button
-                onClick={() => handleExternalTask(QT_URL, 'qt')}
-                className="w-full py-2.5 rounded-xl border border-purple-500/40 bg-purple-500/10 text-purple-400 text-sm font-semibold hover:bg-purple-500/20 transition-all hover:border-purple-400/60 flex items-center justify-center gap-2 mb-3"
+                onClick={() => openLink(QT_URL)}
+                className="w-full py-2.5 rounded-xl bg-[#2C2C2E] text-[#C084FC] text-[13px] font-medium hover:bg-[#3A3A3C] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-3"
               >
                 Quote Tweet
-                <ExternalLink className="w-3.5 h-3.5" />
+                <ExternalLink className="w-3.5 h-3.5 opacity-70" />
               </button>
               <input
                 type="url"
                 placeholder="Paste your QT link"
                 value={form.qtLink}
-                onChange={e => setForm(p => ({ ...p, qtLink: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl bg-white/6 border border-white/10 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500/50 focus:bg-white/8 transition-all"
+                onChange={(e) => setForm((p) => ({ ...p, qtLink: e.target.value }))}
+                className="w-full px-4 py-3 rounded-xl bg-[#2C2C2E] border border-white/5 text-white text-[15px] placeholder-[#8E8E93] focus:outline-none focus:border-[#A855F7]/50 focus:bg-[#3A3A3C] transition-all"
               />
             </div>
-
-            {/* Task 4 — Tag 3 friends */}
-            <div className="rounded-2xl border border-white/8 bg-white/4 p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Users className="w-4 h-4 text-orange-400" />
-                <span className="text-white font-semibold text-sm">Tag 3 friends on pinned post</span>
+            <div
+              onClick={() => toggleTask('qt')}
+              className={`px-5 py-3.5 flex items-center justify-between border-t border-white/5 cursor-pointer active:bg-[#2C2C2E] transition-colors ${
+                tasks.qt === 'done' ? 'bg-[#A855F7]/10' : ''
+              }`}
+            >
+              <span className={`text-[13px] ${tasks.qt === 'done' ? 'text-[#A855F7] font-medium' : 'text-[#8E8E93]'}`}>
+                {tasks.qt === 'done' ? 'Confirmed' : 'Tap to confirm you QT’d'}
+              </span>
+              <div
+                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                  tasks.qt === 'done' ? 'bg-[#A855F7] border-[#A855F7]' : 'border-[#8E8E93]'
+                }`}
+              >
+                {tasks.qt === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
               </div>
-              <p className="text-gray-500 text-xs mb-3">
-                Comment on the{' '}
-                <a href={PINNED_TWEET_URL} target="_blank" rel="noopener noreferrer" className="text-orange-400 underline hover:text-orange-300">
-                  pinned post
-                </a>
-                {' '}tagging 3 friends, then paste the link below.
-              </p>
-              <input
-                type="url"
-                placeholder="Paste your comment link"
-                value={form.commentLink}
-                onChange={e => setForm(p => ({ ...p, commentLink: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl bg-white/6 border border-white/10 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-white/8 transition-all"
-              />
-            </div>
-
-            {/* Wallet */}
-            <div className="rounded-2xl border border-white/8 bg-white/4 p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-4 h-4 rounded bg-gradient-to-br from-pink-500 to-purple-600 flex-shrink-0" />
-                <span className="text-white font-semibold text-sm">Submit EVM Wallet</span>
-              </div>
-              <input
-                type="text"
-                placeholder="0x..."
-                value={form.walletAddress}
-                onChange={e => setForm(p => ({ ...p, walletAddress: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl bg-white/6 border border-white/10 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-pink-500/50 focus:bg-white/8 transition-all font-mono"
-              />
             </div>
           </div>
 
-          {/* Error */}
-          {error && (
-            <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-              {error}
+          {/* Task 4 — Tag 3 friends */}
+          <div className="rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 p-5">
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center">
+                <Users className="w-3.5 h-3.5 text-orange-400" />
+              </div>
+              <span className="text-white font-medium text-[15px]">Tag 3 friends</span>
             </div>
-          )}
+            <p className="text-[#8E8E93] text-[13px] mb-3 leading-relaxed">
+              Comment on the{' '}
+              <a
+                href={PINNED_TWEET_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-orange-400 hover:text-orange-300 underline underline-offset-2 decoration-white/10"
+              >
+                pinned post
+              </a>{' '}
+              tagging 3 friends, then paste the link below.
+            </p>
+            <input
+              type="url"
+              placeholder="Paste your comment link"
+              value={form.commentLink}
+              onChange={(e) => setForm((p) => ({ ...p, commentLink: e.target.value }))}
+              className="w-full px-4 py-3 rounded-xl bg-[#2C2C2E] border border-white/5 text-white text-[15px] placeholder-[#8E8E93] focus:outline-none focus:border-orange-400/50 focus:bg-[#3A3A3C] transition-all"
+            />
+          </div>
 
-          {/* Submit */}
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold text-base hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(193,28,132,0.3)] hover:shadow-[0_0_40px_rgba(193,28,132,0.5)]"
-            style={{ fontFamily: "'Syne', sans-serif" }}
-          >
-            {submitting ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Submitting...
-              </span>
-            ) : (
-              'Submit Application →'
-            )}
-          </button>
-
-          <p className="text-center text-gray-600 text-xs mt-4">
-            Duplicate submissions are automatically filtered. One entry per wallet.
-          </p>
+          {/* Wallet */}
+          <div className="rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 p-5">
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center">
+                <div className="w-3.5 h-3.5 rounded bg-gradient-to-br from-[#A855F7] to-[#C084FC]" />
+              </div>
+              <span className="text-white font-medium text-[15px]">Submit EVM Wallet</span>
+            </div>
+            <input
+              type="text"
+              placeholder="0x..."
+              value={form.walletAddress}
+              onChange={(e) => setForm((p) => ({ ...p, walletAddress: e.target.value }))}
+              className="w-full px-4 py-3 rounded-xl bg-[#2C2C2E] border border-white/5 text-white text-[15px] placeholder-[#8E8E93] focus:outline-none focus:border-[#A855F7]/50 focus:bg-[#3A3A3C] transition-all font-mono"
+            />
+          </div>
         </div>
+
+        {/* Error */}
+        {error && (
+          <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">
+            {error}
+          </div>
+        )}
+
+        {/* Submit */}
+        <button
+          onClick={handleSubmit}
+          disabled={submitting}
+          className="w-full py-4 rounded-2xl bg-[#A855F7] text-white font-semibold text-[16px] hover:bg-[#9333EA] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+        >
+          {submitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Submitting...
+            </span>
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              Submit Application
+              <ChevronRight className="w-4 h-4" />
+            </span>
+          )}
+        </button>
+
+        <p className="text-center text-[#8E8E93] text-[12px] mt-4">
+          Duplicate submissions are filtered. One entry per wallet.
+        </p>
       </div>
-    </>
+    </div>
   );
 }
