@@ -83,7 +83,7 @@ export default function ApplyWhitelistPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/whitelist/apply', {
+      const res = await fetch('/api/whitelist-api', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
