@@ -6,14 +6,14 @@ import { Heart, ArrowLeft, ExternalLink, CheckCircle2, Twitter, Users, MessageSq
 
 // ─── REPLACE THESE WITH REAL VALUES ───────────────────────────────────────────
 const BASEMATCH_X_HANDLE = 'BaseMatchApp';
-const BASEMATCH_X_PROFILE_URL = `https://x.com/${BASEMATCH_X_HANDLE}`;
+const BASEMATCH_X_PROFILE_URL = `https://x.com/${basematch_}`;
 const PINNED_TWEET_URL = 'https://x.com/BaseMatchApp/status/PLACEHOLDER_TWEET_ID';
 const GUILD_XYZ_URL = 'https://guild.xyz/basematch'; // replace with real guild URL
 // ──────────────────────────────────────────────────────────────────────────────
 
 const FOLLOW_URL = `https://x.com/intent/follow?screen_name=${BASEMATCH_X_HANDLE}`;
 const LIKE_URL = `https://x.com/intent/like?tweet_id=PLACEHOLDER_TWEET_ID`;
-const QT_URL = `https://x.com/intent/retweet?tweet_id=PLACEHOLDER_TWEET_ID&text=${encodeURIComponent('Mochis are coming 👀 @BaseMatchApp')}`;
+const QT_URL = `https://x.com/intent/retweet?tweet_id=PLACEHOLDER_TWEET_ID&text=${encodeURIComponent('BMG soon 👀 @BaseMatchApp')}`;
 
 type TaskStatus = 'idle' | 'done';
 
@@ -60,10 +60,10 @@ export default function ApplyWhitelistPage() {
     setError('');
 
     if (!form.xUsername.trim()) return setError('Please enter your X username.');
-    if (!form.qtLink.trim()) return setError('Please paste your QT link.');
-    if (!form.commentLink.trim()) return setError('Please paste your comment link.');
+    if (!form.qtLink.trim()) return setError('QT link.');
+    if (!form.commentLink.trim()) return setError('Comment link.');
     if (!form.walletAddress.trim() || !form.walletAddress.startsWith('0x')) {
-      return setError('Please enter a valid EVM wallet address (starts with 0x).');
+      return setError('EVM wallet address (starts with 0x).');
     }
 
     setSubmitting(true);
@@ -110,7 +110,7 @@ export default function ApplyWhitelistPage() {
             Application Received!
           </h2>
           <p className="text-gray-400 mb-8 leading-relaxed">
-            We've logged your entry. OG roles will be distributed based on Guild membership and task completion. Stay tuned on X.
+            We've logged your entry. Thanks for filling this form. Stay tuned on X.
           </p>
           <button
             onClick={() => router.push('/')}
@@ -144,7 +144,7 @@ export default function ApplyWhitelistPage() {
 
           {/* Back button */}
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/')}
             className="flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors mb-10 text-sm font-medium"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -163,13 +163,10 @@ export default function ApplyWhitelistPage() {
               className="text-4xl font-extrabold text-white leading-tight mb-3"
               style={{ fontFamily: "'Syne', sans-serif" }}
             >
-              Apply for<br />
-              <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
-                OG Whitelist
-              </span>
-            </h1>
+              Appl
+            </h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Complete the tasks below and submit your wallet to enter. OG roles are awarded based on merit and community involvement.
+              Complete the tasks below and submit your wallet to enter. 
             </p>
           </div>
 
@@ -215,7 +212,6 @@ export default function ApplyWhitelistPage() {
                 className="w-full py-2.5 rounded-xl border border-sky-500/40 bg-sky-500/10 text-sky-400 text-sm font-semibold hover:bg-sky-500/20 transition-all hover:border-sky-400/60 flex items-center justify-center gap-2"
               >
                 Follow @{BASEMATCH_X_HANDLE}
-                <ExternalLink className="w-3.5 h-3.5" />
               </button>
             </div>
 
