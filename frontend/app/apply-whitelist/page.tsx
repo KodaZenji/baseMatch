@@ -124,7 +124,7 @@ export default function ApplyWhitelistPage() {
             Application Received
           </h2>
           <p className="text-[#8E8E93] mb-8 leading-relaxed text-[15px]">
-            We've logged your entry. Thanks for completing the tasks. Stay tuned on X.
+            We&apos;ve logged your entry. Thanks for completing the tasks. Stay tuned on X.
           </p>
           <button
             onClick={() => router.push('/')}
