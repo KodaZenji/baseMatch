@@ -297,7 +297,7 @@ export default function ApplyWhitelistPage() {
                     <MessageSquareQuote className="w-3.5 h-3.5 text-[#C084FC]" />
                   </div>
                   <span className="text-white font-medium text-[15px]">
-                    QT with <span className="italic text-[#C084FC]">"Mochis are coming"</span>
+                    QT with <span className="italic text-[#C084FC]">&quot;BMG soon&quot;</span>
                   </span>
                 </div>
                 {tasks.qt === 'done' && (
