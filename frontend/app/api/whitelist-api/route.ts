@@ -48,18 +48,21 @@ export async function POST(request: NextRequest) {
 
     // Save application
     const { error } = await supabase
-      .from('whitelist_applications')
-      .insert({
-        x_username: x_username.toLowerCase().replace('@', ''),
-        qt_link: qt_link || null,
-        comment_link: comment_link || null,
-        wallet_address: wallet_address.toLowerCase(),
-        followed: tasks_completed?.followed === 'done',
-        liked: tasks_completed?.liked === 'done',
-        qt_done: tasks_completed?.qt === 'done',
-        submitted_at: new Date().toISOString(),
-      });
+.from('whitelist_applications')
+.insert({
+    x_username: x_username.toLowerCase().replace('@', ''),
+    qt_link: qt_link || null,
+    comment_link: comment_link || null,
+    wallet_address: wallet_address.toLowerCase(),
 
+    followed: tasks_completed?.followed === 'done',
+    liked: tasks_completed?.liked === 'done',
+    qt_done: tasks_completed?.qt === 'done',
+
+    verification_status: 'pending',
+
+    submitted_at: new Date().toISOString(),
+});
     if (error) {
       console.error('Supabase insert error:', error);
       return NextResponse.json(
