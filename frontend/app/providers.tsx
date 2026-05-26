@@ -25,12 +25,11 @@ function RainbowKitThemeWrapper({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Check current theme from HTML element
   const isDark = document.documentElement.classList.contains('dark');
 
   return (
-    <RainbowKitProvider 
-      initialChain={base} 
+    <RainbowKitProvider
+      initialChain={base}
       theme={isDark ? darkTheme({
         accentColor: '#C11C84',
         accentColorForeground: 'white',
@@ -51,19 +50,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
-    
+
     const init = async () => {
       try {
+        // Keep isInMiniApp guard for Farcaster client detection
+        // sdk.actions.ready() removed — deprecated after April 9 migration
         const isInMiniApp = await sdk.isInMiniApp();
-        
         if (isInMiniApp) {
-          await sdk.actions.ready();
-          console.log('✅ Farcaster Mini App SDK Initialized');
+          console.log('ℹ️ Running inside Farcaster client');
         } else {
-          console.log('ℹ️ Not running in a Mini App environment');
+          console.log('ℹ️ Running as standard web app');
         }
       } catch (error) {
-        console.error('❌ SDK Handshake Error:', error);
+        console.error('❌ SDK check error:', error);
       }
     };
 
@@ -76,8 +75,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
-          <OnchainKitProvider 
-            chain={base} 
+          <OnchainKitProvider
+            chain={base}
             apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
           >
             <RainbowKitThemeWrapper>
