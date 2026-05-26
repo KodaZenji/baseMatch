@@ -10,7 +10,10 @@ export default function CompleteWalletProfilePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { address, isConnected } = useAccount();
-  const source = searchParams.get('source'); // 'farcaster', 'baseapp', or null
+
+  // source is now only 'baseapp' (basename import) or null (manual)
+  // 'farcaster' source removed entirely
+  const source = searchParams.get('source');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -25,46 +28,17 @@ export default function CompleteWalletProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [profileSource, setProfileSource] = useState<string | null>(null);
   const [avatarLoaded, setAvatarLoaded] = useState(false);
-
-  // ✅ State to keep imported profiles
-  const [farcasterProfile, setFarcasterProfile] = useState<any>(null);
   const [baseProfile, setBaseProfile] = useState<any>(null);
 
-  // Consolidated logic for profile initialization
+  // Profile initialization
   useEffect(() => {
     if (!address) return;
-
-    console.log('🔍 Initializing profile for:', address, 'Source:', source);
 
     const initializeData = () => {
       let finalAvatar = '';
       let isImported = false;
 
-      // 1️⃣ Handle Farcaster Import
-      if (source === 'farcaster') {
-        const stored = localStorage.getItem('farcasterProfile');
-        if (stored) {
-          try {
-            const profile = JSON.parse(stored);
-            setFarcasterProfile(profile);
-            setFormData(prev => ({
-              ...prev,
-              name: profile.displayName || profile.username || '',
-              interests: profile.bio || '',
-            }));
-            const photoUrl = profile.photoUrl || profile.pfp_url || profile.pfp || '';
-            if (photoUrl && photoUrl.trim() !== '') {
-              finalAvatar = photoUrl;
-              isImported = true;
-              setProfileSource('farcaster');
-            }
-          } catch (err) {
-            console.error('❌ Error parsing Farcaster profile:', err);
-          }
-        }
-      }
-
-      // 2️⃣ Handle Base App Import
+      // Handle Basename import
       if (source === 'baseapp') {
         const stored = localStorage.getItem('baseProfile');
         if (stored) {
@@ -73,24 +47,23 @@ export default function CompleteWalletProfilePage() {
             setBaseProfile(profile);
             setFormData(prev => ({
               ...prev,
-              name: profile.displayName || profile.username || '',
+              name: profile.displayName || '',
               interests: profile.bio || '',
             }));
             const photoUrl = profile.photoUrl || profile.pfpUrl || profile.pfp || '';
-            if (photoUrl && photoUrl.trim() !== '') {
+            if (photoUrl.trim()) {
               finalAvatar = photoUrl;
               isImported = true;
               setProfileSource('baseapp');
             }
           } catch (err) {
-            console.error('❌ Error parsing Base profile:', err);
+            console.error('Error parsing Base profile:', err);
           }
         }
       }
 
-      // 3️⃣ Fallback avatar
+      // Fallback avatar — dicebear pixel art from wallet seed
       if (!finalAvatar) {
-        console.log('🎨 Using dicebear fallback');
         const seed = address.substring(2, 10);
         finalAvatar = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
         setProfileSource(null);
@@ -103,15 +76,12 @@ export default function CompleteWalletProfilePage() {
     initializeData();
   }, [source, address]);
 
-  // Dark mode initialization
+  // Dark mode
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const shouldBeDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
-    
-    if (shouldBeDark) {
-      document.documentElement.classList.add('dark');
-    }
+    if (shouldBeDark) document.documentElement.classList.add('dark');
   }, []);
 
   if (!isConnected) {
@@ -119,18 +89,16 @@ export default function CompleteWalletProfilePage() {
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors">
         <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border border-gray-200 dark:border-gray-700">
           <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
-                <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
-                <svg width="0" height="0">
-                  <defs>
-                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#ec4899" />
-                      <stop offset="100%" stopColor="#a855f7" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
+            <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
+              <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
+              <svg width="0" height="0">
+                <defs>
+                  <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ec4899" />
+                    <stop offset="100%" stopColor="#a855f7" />
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
           </div>
           <h1 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
@@ -151,7 +119,6 @@ export default function CompleteWalletProfilePage() {
     );
   }
 
-  // ✅ Submit handler using state
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -176,71 +143,43 @@ export default function CompleteWalletProfilePage() {
         throw new Error('Please enter a valid email address');
       }
 
-      // ✅ Read Farcaster/Base data from state
-      let farcasterData = {
-        farcasterVerified: false,
-        farcasterUsername: null as string | null,
-        farcasterFid: null as number | null,
-      };
-
-      if (source === 'farcaster' && farcasterProfile) {
-        farcasterData = {
-          farcasterVerified: true,
-          farcasterUsername: farcasterProfile.username || null,
-          farcasterFid: farcasterProfile.fid ? parseInt(farcasterProfile.fid) : null,
-        };
-      } else if (source === 'baseapp' && baseProfile) {
-        farcasterData = {
-          farcasterVerified: true,
-          farcasterUsername: baseProfile.username || null,
-          farcasterFid: baseProfile.fid ? parseInt(baseProfile.fid) : null,
-        };
-      }
-
-      console.log('📤 Submitting profile registration:', {
+      // Basename import data — no more farcasterFid/farcasterUsername
+      // basename stored separately in profiles table via import-base-profile route
+      const profilePayload = {
         address,
         name: formData.name,
-        hasAvatar: !!avatarUrl,
-        avatarSource: avatarUrl?.includes('dicebear') ? 'dicebear fallback' : profileSource || 'manual',
+        birthYear,
+        gender: formData.gender,
+        interests: formData.interests,
+        email: formData.email,
+        photoUrl: avatarUrl,
         profileSource: profileSource || 'manual',
-        ...farcasterData,
-      });
+        // Legacy farcaster fields — kept for DB schema compatibility, set to null
+        farcasterVerified: false,
+        farcasterUsername: null,
+        farcasterFid: null,
+      };
 
       const response = await fetch('/api/profile/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          address,
-          name: formData.name,
-          birthYear: birthYear,
-          gender: formData.gender,
-          interests: formData.interests,
-          email: formData.email,
-          photoUrl: avatarUrl,
-          profileSource: profileSource || 'manual',
-          farcasterVerified: farcasterData.farcasterVerified,
-          farcasterUsername: farcasterData.farcasterUsername,
-          farcasterFid: farcasterData.farcasterFid,
-        }),
+        body: JSON.stringify(profilePayload),
       });
 
       const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
+      if (!response.ok) throw new Error(data.error || 'Registration failed');
 
-      // ✅ Only now clear localStorage
-      localStorage.removeItem('farcasterProfile');
+      // Clear localStorage after successful registration
       localStorage.removeItem('baseProfile');
 
       const mintData = {
         profile_id: data.userInfo?.profileId,
         id: data.userInfo?.profileId,
-        address: address,
+        address,
         email: formData.email,
         registerWithWalletPayload: {
           name: formData.name,
-          birthYear: birthYear,
+          birthYear,
           gender: formData.gender,
           interests: formData.interests,
           photoUrl: avatarUrl,
@@ -249,11 +188,9 @@ export default function CompleteWalletProfilePage() {
       };
 
       localStorage.setItem('walletFirstMint', JSON.stringify(mintData));
-      console.log('✅ Profile data saved to localStorage for minting');
-
       router.push('/register/wallet/mint');
+
     } catch (err) {
-      console.error('❌ Error:', err);
       setError(err instanceof Error ? err.message : 'Failed to complete profile');
     } finally {
       setIsLoading(false);
@@ -263,36 +200,34 @@ export default function CompleteWalletProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 py-8 transition-colors">
       <div className="bg-white dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 w-full max-w-2xl border border-gray-200 dark:border-gray-700 my-4">
+
         <div className="flex justify-center mb-6">
-          <div className="relative">
-            <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
-              <Heart className="w-12 h-12" fill="url(#brandGradient2)" stroke="none" />
-              <svg width="0" height="0">
-                <defs>
-                  <linearGradient id="brandGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#ec4899" />
-                    <stop offset="100%" stopColor="#a855f7" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
+          <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
+            <Heart className="w-12 h-12" fill="url(#brandGradient2)" stroke="none" />
+            <svg width="0" height="0">
+              <defs>
+                <linearGradient id="brandGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#ec4899" />
+                  <stop offset="100%" stopColor="#a855f7" />
+                </linearGradient>
+              </defs>
+            </svg>
           </div>
         </div>
 
         <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
           Complete Your Profile
         </h1>
-        
-        {(profileSource === 'farcaster' || profileSource === 'baseapp') && (
+
+        {profileSource === 'baseapp' && (
           <div className="text-center mb-6">
-            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 font-semibold">
+            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700 font-semibold">
               <Sparkles className="w-4 h-4" />
-              {profileSource === 'baseapp' ? 'Imported from Base App' : 'Imported from Farcaster'}
+              Imported from Base (Basename)
             </span>
           </div>
         )}
 
-        {/* FORM */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-800 dark:text-red-300 px-4 py-3 rounded-lg font-medium">
@@ -309,16 +244,15 @@ export default function CompleteWalletProfilePage() {
                   alt="Profile"
                   className="w-24 h-24 rounded-full border-4 border-purple-300 dark:border-purple-700 mb-2 shadow-lg"
                   onError={(e) => {
-                    console.error('❌ Avatar failed to load, using dicebear fallback');
                     if (address) {
                       const seed = address.substring(2, 10);
                       e.currentTarget.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
                     }
                   }}
                 />
-                <p className="text-xs text-gray-700 dark:text-gray-400 font-semibold">
-                  {(profileSource === 'farcaster' || profileSource === 'baseapp') && avatarLoaded
-                    ? profileSource === 'baseapp' ? 'Base app avatar' : 'Farcaster avatar'
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">
+                  {profileSource === 'baseapp' && avatarLoaded
+                    ? 'Basename avatar'
                     : 'Generated avatar'}
                 </p>
               </div>
@@ -333,19 +267,19 @@ export default function CompleteWalletProfilePage() {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400"
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400"
               placeholder="Your name"
             />
           </div>
 
-          {/* BirthYear */}
+          {/* Birth Year */}
           <div>
             <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-2">Birth Year *</label>
             <select
               value={formData.birthYear}
               onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
               required
-              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium"
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors font-medium"
             >
               <option value="">Select birth year</option>
               {Array.from({ length: 83 }, (_, i) => {
@@ -368,7 +302,7 @@ export default function CompleteWalletProfilePage() {
               value={formData.gender}
               onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
               required
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors font-medium"
             >
               <option value="">Select gender</option>
               <option value="Female">Female</option>
@@ -385,7 +319,7 @@ export default function CompleteWalletProfilePage() {
               onChange={(e) => setFormData({ ...formData, interests: e.target.value })}
               required
               rows={3}
-              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors resize-none font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400"
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400"
               placeholder="Hiking, Photography, Crypto..."
             />
           </div>
@@ -398,7 +332,7 @@ export default function CompleteWalletProfilePage() {
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
-              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-colors font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400"
+              className="w-full px-4 py-3 text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400"
               placeholder="your@email.com"
             />
           </div>
@@ -415,7 +349,7 @@ export default function CompleteWalletProfilePage() {
         <div className="mt-6 text-center">
           <button
             onClick={() => router.push('/register/wallet/choice')}
-            className="text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-sm transition-colors font-medium"
+            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-sm transition-colors font-medium"
           >
             ← Back to signup options
           </button>
