@@ -63,7 +63,7 @@ export default function CampaignPage() {
   const campaignId = params.id as string;
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [winners, setWinners] = useState<<Winner[]>([]);
+  const [winners, setWinners] = useState<Winner[]>([]);
   const [loading, setLoading] = useState(true);
   const [entering, setEntering] = useState(false);
   const [entryResult, setEntryResult] = useState<{ success: boolean; message: string; entry_number?: number } | null>(null);
