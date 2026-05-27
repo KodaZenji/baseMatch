@@ -198,7 +198,7 @@ function BotInviteModal({ guildId, guildName, onClose }: { guildId: string; guil
 export default function AdminRafflePage() {
   const { address, isConnected } = useAccount();
 
-  const [applications, setApplications] = useState<<Application[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
