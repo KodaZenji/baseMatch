@@ -55,16 +55,10 @@ const TASK_PRESETS: Record<XTaskType, { label: string; urlHint: string }> = {
 
 export default function AdminRafflePage() {
   const { address } = useAccount();
-  const [applications, setApplications] = useState<<Application[]>([]);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [expandedApp, setExpandedApp] = useState<string | null>(null);
-  const [configuringCampaign, setConfiguringCampaign] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [campaignOverrides, setCampaignOverrides] = useState<<Record<string, any>>({});
-  const [xTasksMap, setXTasksMap] = useState<<Record<string, XTask[]>>({});
-  const [saveMessage, setSaveMessage] = useState<<Record<string, string>>({});
-
+  const [applications, setApplications] = useState<Application[]>([]);
+const [campaignOverrides, setCampaignOverrides] = useState<Record<string, any>>({});
+const [xTasksMap, setXTasksMap] = useState<Record<string, XTask[]>>({});
+const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
   const isAdmin = address?.toLowerCase() === ADMIN_WALLET;
 
   useEffect(() => {
