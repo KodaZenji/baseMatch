@@ -1,7 +1,12 @@
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { action, admin_wallet, campaign_data } = await request.json();
-    const { id } = params;
+    const { id } = await params; // await the Promise
 
     // Admin auth check
     const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS?.toLowerCase();
