@@ -6,7 +6,8 @@ import { injected } from 'wagmi/connectors';
 import {
   CheckCircle2, XCircle, Trophy, Users, Clock,
   ChevronDown, ChevronUp, Loader2, Plus, Trash2,
-  Twitter, ExternalLink, Rocket, Wallet, LogOut, ShieldAlert
+  Twitter, ExternalLink, Rocket, Wallet, LogOut, ShieldAlert,
+  Copy, Check, MessageCircle, Bot
 } from 'lucide-react';
 
 const ADMIN_WALLET = process.env.NEXT_PUBLIC_ADMIN_WALLET?.toLowerCase();
@@ -57,7 +58,7 @@ const TASK_PRESETS: Record<XTaskType, { label: string; urlHint: string }> = {
 const BLUE = '#0052FF';
 const BLUE_LIGHT = '#4d8aff';
 
-// ── Wallet connect button (self-contained, no RainbowKit needed) ────────────
+// ── Wallet connect button ─────────────────────────────────────────────────
 function WalletButton() {
   const { address, isConnected } = useAccount();
   const { connect, isPending } = useConnect();
@@ -86,29 +87,127 @@ function WalletButton() {
       className="flex items-center gap-2 px-5 py-3 rounded-2xl text-white font-semibold text-sm transition-all disabled:opacity-50"
       style={{ background: `linear-gradient(to right, ${BLUE}, #1a6fff)` }}
     >
-      {isPending ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
-      ) : (
-        <Wallet className="w-4 h-4" />
-      )}
+      {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />}
       {isPending ? 'Connecting...' : 'Connect Wallet'}
     </button>
   );
 }
 
-// ── Main page ────────────────────────────────────────────────────────────────
+// ── Copy button component ────────────────────────────────────────────────
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 text-xs transition-all"
+    >
+      {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+      {copied ? 'Copied!' : label}
+    </button>
+  );
+}
+
+// ── Bot Invite Modal ─────────────────────────────────────────────────────
+function BotInviteModal({ guildId, guildName, onClose }: { guildId: string; guildName: string; onClose: () => void }) {
+  const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+  // Minimal permissions: just needs to read member roles (no special permissions needed for role check)
+  // Actually bot just needs to be present in server. No special permissions required for guilds/{id}/members/{id}
+  const inviteUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&permissions=0&scope=bot&guild_id=${guildId}&disable_guild_select=true`;
+
+  const discordDmUrl = `https://discord.com/channels/@me`; // Opens Discord DMs
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="rounded-2xl border border-[#0052FF]/30 bg-[#0a0a0f] max-w-md w-full p-6 shadow-2xl shadow-[#0052FF]/10">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(0,82,255,0.2)' }}>
+            <Bot className="w-5 h-5" style={{ color: BLUE_LIGHT }} />
+          </div>
+          <div>
+            <h3 className="text-white font-bold">Bot Invite Ready</h3>
+            <p className="text-gray-500 text-xs">{guildName}</p>
+          </div>
+        </div>
+
+        <p className="text-gray-400 text-sm mb-4">
+          The partner must invite the BaseMatch raffle bot to their Discord server before the raffle goes live. 
+          Send them this invite link.
+        </p>
+
+        <div className="rounded-xl border border-white/8 bg-white/4 p-4 mb-4">
+          <p className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wider">Bot Invite URL</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-xs text-[#4d8aff] font-mono break-all">{inviteUrl}</code>
+            <CopyButton text={inviteUrl} label="Copy" />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-white/8 bg-white/4 p-4 mb-6">
+          <p className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wider">Quick Discord DM</p>
+          <p className="text-gray-400 text-xs mb-3">
+            Open Discord and DM the partner at <span className="text-white font-semibold">@{guildName}</span>
+          </p>
+          <a
+            href={discordDmUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 w-full py-2.5 rounded-xl text-white font-semibold text-sm justify-center transition-all hover:opacity-90"
+            style={{ background: `linear-gradient(to right, ${BLUE}, #1a6fff)` }}
+          >
+            <MessageCircle className="w-4 h-4" /> Open Discord
+          </a>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 rounded-xl border border-white/20 text-white font-semibold text-sm hover:bg-white/6 transition-all"
+          >
+            Done — I'll send it
+          </button>
+        </div>
+
+        <p className="text-gray-600 text-xs text-center mt-4">
+          The bot needs <span className="text-yellow-400 font-semibold">Server Members Intent</span> enabled on our end (already done).
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────
 export default function AdminRafflePage() {
   const { address, isConnected } = useAccount();
 
-  const [applications, setApplications] = useState<Application[]>([]);
+  const [applications, setApplications] = useState<<Application[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
   const [configuringCampaign, setConfiguringCampaign] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [campaignOverrides, setCampaignOverrides] = useState<Record<string, any>>({});
-  const [xTasksMap, setXTasksMap] = useState<Record<string, XTask[]>>({});
-  const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
+  const [campaignOverrides, setCampaignOverrides] = useState<<Record<string, any>>({});
+  const [xTasksMap, setXTasksMap] = useState<<Record<string, XTask[]>>({});
+  const [saveMessage, setSaveMessage] = useState<<Record<string, string>>({});
+  const [botInviteApp, setBotInviteApp] = useState<<Application | null>(null);
 
   const isAdmin = !!address && address.toLowerCase() === ADMIN_WALLET;
 
@@ -216,6 +315,8 @@ export default function AdminRafflePage() {
           setXTasksMap(prev => ({ ...prev, [data.campaign.id]: [] }));
           setConfiguringCampaign(data.campaign.id);
         }
+        // Show bot invite modal after approval
+        setBotInviteApp(app);
       }
     } finally { setActionLoading(null); }
   }
@@ -300,6 +401,15 @@ export default function AdminRafflePage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white p-6" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      {/* Bot Invite Modal */}
+      {botInviteApp && (
+        <BotInviteModal
+          guildId={botInviteApp.discord_guild_id}
+          guildName={botInviteApp.project_name}
+          onClose={() => setBotInviteApp(null)}
+        />
+      )}
+
       <div className="max-w-4xl mx-auto">
 
         {/* Header */}
