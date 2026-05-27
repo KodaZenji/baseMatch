@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
         contact_email: contact_email.trim().toLowerCase(),
         website_url: website_url?.trim() || null,
         twitter_url: twitter_url?.trim() || null,
+        x_handle: body.x_handle?.trim() || null,
         discord_server_url: discord_server_url.trim(),
         discord_guild_id: discord_guild_id.trim(),
         required_role_id: required_role_id.trim(),
