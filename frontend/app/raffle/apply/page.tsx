@@ -1,217 +1,186 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, Ticket, ExternalLink } from 'lucide-react';
+import { Clock, Users, Trophy, ExternalLink, Ticket, ChevronRight } from 'lucide-react';
 
-export default function RaffleApplyPage() {
+interface Campaign {
+  id: string;
+  project_name: string;
+  project_description: string;
+  prize_description: string;
+  prize_quantity: number;
+  banner_url: string | null;
+  required_role_name: string;
+  discord_guild_name: string;
+  twitter_url: string | null;
+  website_url: string | null;
+  start_date: string;
+  end_date: string;
+  status: string;
+  total_entries: number;
+}
+
+function timeLeft(endDate: string): string {
+  const diff = new Date(endDate).getTime() - Date.now();
+  if (diff <= 0) return 'Ended';
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  if (days > 0) return `${days}d ${hours}h left`;
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  return `${hours}h ${mins}m left`;
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    active: 'bg-green-500/20 text-green-400 border-green-500/30',
+    ended: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    drawn: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  };
+  return (
+    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${map[status] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
+}
+
+export default function RafflePage() {
   const router = useRouter();
-  const [form, setForm] = useState({
-    project_name: '', project_description: '', contact_name: '',
-    contact_discord: '', contact_email: '', website_url: '', twitter_url: '',
-    discord_server_url: '', discord_guild_id: '', required_role_id: '',
-    required_role_name: '', prize_description: '', prize_quantity: '1',
-    proposed_start_date: '', proposed_end_date: '',
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState('');
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'active' | 'ended' | 'drawn'>('all');
 
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setForm(p => ({ ...p, [k]: e.target.value }));
+  useEffect(() => {
+    fetch('/api/raffle/campaigns')
+      .then(r => r.json())
+      .then(d => { setCampaigns(d.campaigns || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
 
-  async function handleSubmit() {
-    setError('');
-    const required = ['project_name', 'project_description', 'contact_name', 'contact_discord',
-      'contact_email', 'discord_server_url', 'discord_guild_id', 'required_role_id',
-      'required_role_name', 'prize_description'];
-    if (required.some(k => !form[k as keyof typeof form]?.trim())) {
-      setError('Please fill in all required fields.'); return;
-    }
-
-    setSubmitting(true);
-    try {
-      const res = await fetch('/api/raffle/apply', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, prize_quantity: parseInt(form.prize_quantity) || 1 }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || 'Submission failed.'); return; }
-      setSubmitted(true);
-    } catch { setError('Network error. Please try again.'); }
-    finally { setSubmitting(false); }
-  }
-
-  const inputCls = "w-full px-4 py-3 rounded-xl bg-white/6 border border-white/10 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-pink-500/50 focus:bg-white/8 transition-all";
-  const labelCls = "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2";
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
-        <div className="text-center max-w-sm">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center mx-auto mb-6 shadow-[0_0_40px_rgba(193,28,132,0.4)]">
-            <CheckCircle2 className="w-10 h-10 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-3">Application Submitted!</h2>
-          <p className="text-gray-400 text-sm mb-6">
-            We'll review your application and get back to you via Discord within 2-3 days.
-          </p>
-          <button onClick={() => router.push('/raffle')}
-            className="px-8 py-3 bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity">
-            View Active Raffles
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const filtered = filter === 'all' ? campaigns : campaigns.filter(c => c.status === filter);
 
   return (
-    <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');`}</style>
-      <div className="min-h-screen bg-[#0a0a0f] relative" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-        <div className="pointer-events-none fixed inset-0">
-          <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-pink-600/8 blur-[120px]" />
-          <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-purple-600/8 blur-[100px]" />
-        </div>
-
-        <div className="relative z-10 max-w-2xl mx-auto px-4 py-10">
-          <button onClick={() => router.push('/raffle')} className="flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors mb-10 text-sm">
-            <ArrowLeft className="w-4 h-4" /> Back to Raffles
-          </button>
-
-          <div className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
-                <Ticket className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-pink-400 font-semibold text-sm tracking-widest uppercase">BaseMatch Raffles</span>
-            </div>
-            <h1 className="text-4xl font-extrabold text-white mb-3" style={{ fontFamily: "'Syne', sans-serif" }}>
-              List Your{' '}
-              <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">Project</span>
-            </h1>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              Run a raffle for your Web3 project for BMG wl spots. We'll review your application and get back to you within 2-3 days.
-            </p>
-          </div>
-
-          <div className="space-y-6">
-            {/* Project info */}
-            <div className="rounded-2xl border border-white/8 bg-white/4 p-6 space-y-4">
-              <h2 className="text-white font-bold text-base">Project Information</h2>
-              <div>
-                <label className={labelCls}>Project Name *</label>
-                <input className={inputCls} placeholder="e.g. BaseMonkeys" value={form.project_name} onChange={set('project_name')} />
-              </div>
-              <div>
-                <label className={labelCls}>Project Description *</label>
-                <textarea className={inputCls} rows={3} placeholder="What is your project about?" value={form.project_description}
-                  onChange={e => setForm(p => ({ ...p, project_description: e.target.value }))} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>Website</label>
-                  <input className={inputCls} placeholder="https://" value={form.website_url} onChange={set('website_url')} />
-                </div>
-                <div>
-                  <label className={labelCls}>Twitter/X</label>
-                  <input className={inputCls} placeholder="https://x.com/..." value={form.twitter_url} onChange={set('twitter_url')} />
-                </div>
-              </div>
-            </div>
-
-            {/* Contact */}
-            <div className="rounded-2xl border border-white/8 bg-white/4 p-6 space-y-4">
-              <h2 className="text-white font-bold text-base">Contact Details</h2>
-              <div>
-                <label className={labelCls}>Your Name *</label>
-                <input className={inputCls} placeholder="Full name" value={form.contact_name} onChange={set('contact_name')} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>Discord Username *</label>
-                  <input className={inputCls} placeholder="@username" value={form.contact_discord} onChange={set('contact_discord')} />
-                </div>
-                <div>
-                  <label className={labelCls}>Email *</label>
-                  <input type="email" className={inputCls} placeholder="you@email.com" value={form.contact_email} onChange={set('contact_email')} />
-                </div>
-              </div>
-            </div>
-
-            {/* Discord server */}
-            <div className="rounded-2xl border border-white/8 bg-white/4 p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-white font-bold text-base">Discord Server</h2>
-                <a href="https://discord.com/developers/docs/reference" target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-purple-400 flex items-center gap-1 hover:text-purple-300">
-                  How to find IDs <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-              <div className="rounded-xl bg-purple-500/8 border border-purple-500/20 p-3 text-xs text-purple-300">
-                ⚠️ You must invite the BaseMatch bot to your server before approval.
-                Bot invite link will be provided after review.
-              </div>
-              <div>
-                <label className={labelCls}>Discord Server Invite Link *</label>
-                <input className={inputCls} placeholder="https://discord.gg/..." value={form.discord_server_url} onChange={set('discord_server_url')} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>Server (Guild) ID *</label>
-                  <input className={inputCls} placeholder="123456789012345678" value={form.discord_guild_id} onChange={set('discord_guild_id')} />
-                </div>
-                <div>
-                  <label className={labelCls}>Required Role ID *</label>
-                  <input className={inputCls} placeholder="123456789012345678" value={form.required_role_id} onChange={set('required_role_id')} />
-                </div>
-              </div>
-              <div>
-                <label className={labelCls}>Required Role Name * (displayed to users)</label>
-                <input className={inputCls} placeholder="e.g. Holder, OG, Member" value={form.required_role_name} onChange={set('required_role_name')} />
-              </div>
-            </div>
-
-            {/* Prize + dates */}
-            <div className="rounded-2xl border border-white/8 bg-white/4 p-6 space-y-4">
-              <h2 className="text-white font-bold text-base">Prize & Timeline</h2>
-              <div>
-                <label className={labelCls}>Prize Description *</label>
-                <textarea className={inputCls} rows={2} placeholder="What are you requesting for? e.g. 3x GTD whitelist spots"
-                  value={form.prize_description} onChange={e => setForm(p => ({ ...p, prize_description: e.target.value }))} />
-              </div>
-              <div>
-                <label className={labelCls}>Number of Winners *</label>
-                <input type="number" min="1" max="100" className={inputCls} value={form.prize_quantity} onChange={set('prize_quantity')} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>Proposed Start Date</label>
-                  <input type="datetime-local" className={inputCls} value={form.proposed_start_date} onChange={set('proposed_start_date')} />
-                </div>
-                <div>
-                  <label className={labelCls}>Proposed End Date</label>
-                  <input type="datetime-local" className={inputCls} value={form.proposed_end_date} onChange={set('proposed_end_date')} />
-                </div>
-              </div>
-            </div>
-
-            {error && (
-              <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{error}</div>
-            )}
-
-            <button onClick={handleSubmit} disabled={submitting}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold text-base hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(193,28,132,0.3)]"
-              style={{ fontFamily: "'Syne', sans-serif" }}>
-              {submitting ? 'Submitting...' : 'Submit Application →'}
-            </button>
-
-            <p className="text-center text-gray-600 text-xs">
-              We review all applications within 2-3 days. You'll be contacted via Discord.
-            </p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#0a0a0f]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-pink-600/8 blur-[120px]" />
+        <div className="absolute top-1/2 -right-32 w-80 h-80 rounded-full bg-purple-600/8 blur-[100px]" />
       </div>
-    </>
+
+      <div className="relative z-10 max-w-4xl mx-auto px-4 py-10">
+        <div className="mb-10">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center shadow-[0_0_20px_rgba(193,28,132,0.4)]">
+              <Ticket className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-pink-400 font-semibold text-sm tracking-widest uppercase">BaseMatch Genesis</span>
+          </div>
+          <h1 className="text-4xl font-extrabold text-white mb-3" style={{ fontFamily: "'Syne', sans-serif" }}>
+            BMG{' '}
+            <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+              Collab Raffles
+            </span>
+          </h1>
+          <p className="text-gray-400 text-sm leading-relaxed max-w-xl">
+            Partner projects approved by BaseMatch are giving away BMG whitelist spots. Connect your Discord to verify and enter.
+          </p>
+        </div>
+
+        <div className="flex gap-2 mb-8 flex-wrap">
+          {(['all', 'active', 'ended', 'drawn'] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all border ${
+                filter === f
+                  ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white border-transparent'
+                  : 'border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+              }`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+              {f === 'active' && (
+                <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs">
+                  {campaigns.filter(c => c.status === 'active').length}
+                </span>
+              )}
+            </button>
+          ))}
+
+          <button
+            onClick={() => router.push('/raffle/apply')}
+            className="ml-auto px-4 py-2 rounded-full text-sm font-semibold border border-purple-500/40 text-purple-400 hover:bg-purple-500/10 transition-all"
+          >
+            + Partner with Us
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="rounded-2xl border border-white/8 bg-white/4 h-64 animate-pulse" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-20">
+            <Trophy className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+            <p className="text-gray-500 font-semibold">No {filter === 'all' ? '' : filter} raffles yet</p>
+            <p className="text-gray-600 text-sm mt-1">Check back soon for new BMG collabs</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {filtered.map(campaign => (
+              <button
+                key={campaign.id}
+                onClick={() => router.push(`/raffle/${campaign.id}`)}
+                className="rounded-2xl border border-white/8 bg-white/4 hover:bg-white/6 hover:border-white/14 transition-all text-left overflow-hidden group"
+              >
+                {campaign.banner_url ? (
+                  <img src={campaign.banner_url} alt={campaign.project_name} className="w-full h-36 object-cover" />
+                ) : (
+                  <div className="w-full h-36 bg-gradient-to-br from-pink-900/30 to-purple-900/30 flex items-center justify-center">
+                    <Trophy className="w-10 h-10 text-pink-700" />
+                  </div>
+                )}
+
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="text-white font-bold text-lg leading-tight group-hover:text-pink-300 transition-colors">
+                      {campaign.project_name}
+                    </h3>
+                    <StatusBadge status={campaign.status} />
+                  </div>
+
+                  <p className="text-gray-400 text-sm mb-4"
+                     style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {campaign.prize_description}
+                  </p>
+
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3.5 h-3.5" />
+                      {campaign.total_entries} entries
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Trophy className="w-3.5 h-3.5" />
+                      {campaign.prize_quantity} winner{campaign.prize_quantity > 1 ? 's' : ''}
+                    </span>
+                    <span className="flex items-center gap-1 ml-auto">
+                      <Clock className="w-3.5 h-3.5" />
+                      {campaign.status === 'active' ? timeLeft(campaign.end_date) : campaign.status === 'drawn' ? 'Winners announced' : 'Ended'}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-white/6 flex items-center justify-between">
+                    <span className="text-xs text-purple-400 font-medium">
+                      Need: {campaign.required_role_name} in {campaign.discord_guild_name}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-pink-400 transition-colors" />
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
