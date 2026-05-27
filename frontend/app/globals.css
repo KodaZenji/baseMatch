@@ -153,11 +153,10 @@ body {
    HIDE SQUARE NAVIGATION GRIDS
    ============================================ */
 
-.dark .grid.grid-cols-4,
-.dark .grid.grid-cols-2.gap-4 {
+.dark nav .grid.grid-cols-2.gap-4,
+.dark .nav-grid.grid-cols-2.gap-4 {
   display: none !important;
 }
-
 /* ============================================
    INPUT FIELDS
    ============================================ */
