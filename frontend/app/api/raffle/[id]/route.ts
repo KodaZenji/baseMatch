@@ -50,6 +50,15 @@ export async function PATCH(
         return NextResponse.json({ error: 'Application not found' }, { status: 404 });
       }
 
+      // Validate required_roles from application
+      const requiredRoles = app.required_roles;
+      if (!Array.isArray(requiredRoles) || requiredRoles.length === 0) {
+        return NextResponse.json(
+          { error: 'Application has no required_roles. Cannot approve.' },
+          { status: 400 }
+        );
+      }
+
       await supabase
         .from('raffle_partner_applications')
         .update({
@@ -67,12 +76,19 @@ export async function PATCH(
           project_description: campaign_data?.project_description || app.project_description,
           prize_description: campaign_data?.prize_description || app.prize_description,
           prize_quantity: campaign_data?.prize_quantity || app.prize_quantity,
-          banner_url: campaign_data?.banner_url || null,
+
+          // partner_logo_url comes from the application
+          partner_logo_url: app.partner_logo_url || null,
+
+          // banner_url is your admin-controlled default image — never from the partner
+          banner_url: campaign_data?.banner_url || process.env.DEFAULT_RAFFLE_BANNER_URL || null,
+
+          // required_roles is the jsonb array from the application
+          required_roles: campaign_data?.required_roles || requiredRoles,
+
           discord_guild_id: app.discord_guild_id,
           discord_guild_name: campaign_data?.discord_guild_name || app.project_name,
           discord_guild_invite: campaign_data?.discord_guild_invite || app.discord_server_url,
-          required_role_id: app.required_role_id,
-          required_role_name: app.required_role_name,
           twitter_url: app.twitter_url || null,
           website_url: app.website_url || null,
           start_date: campaign_data?.start_date || app.proposed_start_date || new Date().toISOString(),
