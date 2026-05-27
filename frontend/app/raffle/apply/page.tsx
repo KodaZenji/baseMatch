@@ -9,7 +9,7 @@ export default function RaffleApplyPage() {
   const [form, setForm] = useState({
     project_name: '', project_description: '', contact_name: '',
     contact_discord: '', contact_email: '', website_url: '', twitter_url: '',
-    x_handle: '', // ← optional project X handle
+    x_handle: '',
     discord_server_url: '', discord_guild_id: '', required_role_id: '',
     required_role_name: '', prize_description: '', prize_quantity: '1',
     proposed_start_date: '', proposed_end_date: '',
@@ -23,9 +23,9 @@ export default function RaffleApplyPage() {
 
   async function handleSubmit() {
     setError('');
+    // Removed discord_guild_id and required_role_id from required — bot provides these after approval
     const required = ['project_name', 'project_description', 'contact_name', 'contact_discord',
-      'contact_email', 'discord_server_url', 'discord_guild_id', 'required_role_id',
-      'required_role_name', 'prize_description'];
+      'contact_email', 'discord_server_url', 'required_role_name', 'prize_description'];
     if (required.some(k => !form[k as keyof typeof form]?.trim())) {
       setError('Please fill in all required fields.'); return;
     }
@@ -47,14 +47,14 @@ export default function RaffleApplyPage() {
     finally { setSubmitting(false); }
   }
 
-  const inputCls = "w-full px-4 py-3 rounded-xl bg-white/6 border border-white/10 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-pink-500/50 focus:bg-white/8 transition-all";
+  const inputCls = "w-full px-4 py-3 rounded-xl bg-white/6 border border-white/10 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#0052FF]/50 focus:bg-white/8 transition-all";
   const labelCls = "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2";
 
   if (submitted) {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
         <div className="text-center max-w-sm">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center mx-auto mb-6 shadow-[0_0_40px_rgba(193,28,132,0.4)]">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#0052FF] to-[#1a6fff] flex items-center justify-center mx-auto mb-6 shadow-[0_0_40px_rgba(0,82,255,0.4)]">
             <CheckCircle2 className="w-10 h-10 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-white mb-3">Application Submitted!</h2>
@@ -62,7 +62,7 @@ export default function RaffleApplyPage() {
             We'll review your project for a BaseMatch Genesis collab and reply via Discord within 2-3 days.
           </p>
           <button onClick={() => router.push('/raffle')}
-            className="px-8 py-3 bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity">
+            className="px-8 py-3 bg-gradient-to-r from-[#0052FF] to-[#1a6fff] text-white font-semibold rounded-xl hover:opacity-90 transition-opacity">
             View Active Collabs
           </button>
         </div>
@@ -74,9 +74,10 @@ export default function RaffleApplyPage() {
     <>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');`}</style>
       <div className="min-h-screen bg-[#0a0a0f] relative" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        {/* Base blue ambient glow — replaces pink/purple blobs */}
         <div className="pointer-events-none fixed inset-0">
-          <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-pink-600/10 blur-[120px]" />
-          <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-purple-600/10 blur-[100px]" />
+          <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[#0052FF]/8 blur-[120px]" />
+          <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-[#0052FF]/6 blur-[100px]" />
         </div>
 
         <div className="relative z-10 max-w-2xl mx-auto px-4 py-10">
@@ -86,14 +87,22 @@ export default function RaffleApplyPage() {
 
           <div className="mb-10">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0052FF] to-[#1a6fff] flex items-center justify-center">
                 <Ticket className="w-5 h-5 text-white" />
               </div>
-              <span className="text-pink-400 font-semibold text-sm tracking-widest uppercase">BaseMatch Genesis</span>
+              <span className="text-[#0052FF] font-semibold text-sm tracking-widest uppercase">BaseMatch Genesis</span>
             </div>
-            <h1 className="text-4xl font-extrabold text-white mb-3" style={{ fontFamily: "'Syne', sans-serif", WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundImage: 'linear-gradient(to right, #f472b6, #a855f7)' }}>
+            <h1
+              className="text-4xl font-extrabold text-white mb-3"
+              style={{
+                fontFamily: "'Syne', sans-serif",
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundImage: 'linear-gradient(to right, #4d8aff, #0052FF)',
+              }}
+            >
               Partner Collab{' '}
-              <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+              <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(to right, #4d8aff, #0052FF)' }}>
                 Application
               </span>
             </h1>
@@ -155,11 +164,12 @@ export default function RaffleApplyPage() {
               <div className="flex items-center justify-between">
                 <h2 className="text-white font-bold text-base">Discord Server</h2>
                 <a href="https://discord.com/developers/docs/reference" target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-purple-400 flex items-center gap-1 hover:text-purple-300">
+                  className="text-xs text-[#4d8aff] flex items-center gap-1 hover:text-[#0052FF]">
                   How to find IDs <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
-              <div className="rounded-xl bg-purple-500/8 border border-purple-500/20 p-3 text-xs text-purple-300">
+              {/* Warning box — Base blue instead of purple */}
+              <div className="rounded-xl bg-[#0052FF]/8 border border-[#0052FF]/20 p-3 text-xs text-[#4d8aff]">
                 ⚠️ You must invite the BaseMatch bot to your server before approval.
                 Bot invite link will be provided after review.
               </div>
@@ -169,11 +179,11 @@ export default function RaffleApplyPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={labelCls}>Server (Guild) ID *</label>
+                  <label className={labelCls}>Server (Guild) ID <span className="text-gray-600 font-normal normal-case tracking-normal">(optional)</span></label>
                   <input className={inputCls} placeholder="123456789012345678" value={form.discord_guild_id} onChange={set('discord_guild_id')} />
                 </div>
                 <div>
-                  <label className={labelCls}>Required Role ID *</label>
+                  <label className={labelCls}>Required Role ID <span className="text-gray-600 font-normal normal-case tracking-normal">(optional)</span></label>
                   <input className={inputCls} placeholder="123456789012345678" value={form.required_role_id} onChange={set('required_role_id')} />
                 </div>
               </div>
@@ -188,7 +198,7 @@ export default function RaffleApplyPage() {
               <h2 className="text-white font-bold text-base">BMG Whitelist & Timeline</h2>
               <div>
                 <label className={labelCls}>Prize Description *</label>
-                <textarea className={inputCls} rows={2} placeholder="e.g. 5x BaseMatch Genesis whitelist spots"
+                <textarea className={inputCls} rows={2} placeholder="e.g. 5x BaseMatch Genesis GTD spots"
                   value={form.prize_description} onChange={e => setForm(p => ({ ...p, prize_description: e.target.value }))} />
               </div>
               <div>
@@ -212,8 +222,11 @@ export default function RaffleApplyPage() {
             )}
 
             <button onClick={handleSubmit} disabled={submitting}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold text-base hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(193,28,132,0.3)]"
-              style={{ fontFamily: "'Syne', sans-serif" }}>
+              className="w-full py-4 rounded-2xl text-white font-bold text-base hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(0,82,255,0.3)]"
+              style={{
+                fontFamily: "'Syne', sans-serif",
+                background: 'linear-gradient(to right, #0052FF, #1a6fff)',
+              }}>
               {submitting ? 'Submitting...' : 'Submit Collab Application →'}
             </button>
 
