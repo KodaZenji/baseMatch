@@ -14,6 +14,12 @@ function getSupabase() {
   );
 }
 
+interface RaffleRole {
+  role_id: string | null;
+  role_name: string;
+  weight: number;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const {
@@ -49,6 +55,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'This campaign has ended' }, { status: 400 });
     }
 
+    const requiredRoles: RaffleRole[] = campaign.required_roles || [];
+
+    if (requiredRoles.length === 0) {
+      return NextResponse.json(
+        { error: 'Campaign has no required roles configured' },
+        { status: 500 }
+      );
+    }
+
     // ── 2. Check for duplicate entry ────────────────────────────────────────
     const { data: existingEntry } = await supabase
       .from('raffle_entries')
@@ -64,7 +79,9 @@ export async function POST(request: NextRequest) {
       }, { status: 409 });
     }
 
-    // ── 3. Verify Discord role via check-membership ─────────────────────────
+    // ── 3. Verify Discord server membership + fetch all user roles ──────────
+    // Pass the first role_id for compat with check-membership's hasRole check.
+    // What matters here is inServer + the full roles array for weight resolution.
     const memberCheck = await fetch(
       `${process.env.NEXT_PUBLIC_APP_URL}/api/discord/check-membership`,
       {
@@ -73,7 +90,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           discord_user_id,
           guild_id: campaign.discord_guild_id,
-          required_role_id: campaign.required_role_id,
+          required_role_id: requiredRoles[0]?.role_id ?? null,
         }),
       }
     );
@@ -93,14 +110,30 @@ export async function POST(request: NextRequest) {
       }, { status: 403 });
     }
 
-    if (!memberData.hasRole) {
+    // ── 4. Weight resolution — find the highest matching role ───────────────
+    // memberData.roles is the full array of role IDs the user holds in the server.
+    const userRoleIds: string[] = memberData.roles || [];
+    let matchedWeight = 0;
+    let matchedRoleName: string | null = null;
+
+    for (const role of requiredRoles) {
+      if (role.role_id && userRoleIds.includes(role.role_id)) {
+        if (role.weight > matchedWeight) {
+          matchedWeight = role.weight;
+          matchedRoleName = role.role_name;
+        }
+      }
+    }
+
+    if (matchedWeight === 0) {
+      const roleNames = requiredRoles.map(r => `"${r.role_name}"`).join(', ');
       return NextResponse.json({
-        error: `You need the "${campaign.required_role_name}" role in ${campaign.discord_guild_name} to enter this raffle.`,
+        error: `You need one of these roles in ${campaign.discord_guild_name}: ${roleNames}`,
         discord_invite: campaign.discord_guild_invite,
       }, { status: 403 });
     }
 
-    // ── 4. Record entry ─────────────────────────────────────────────────────
+    // ── 5. Record entry ─────────────────────────────────────────────────────
     const { data: entry, error: entryError } = await supabase
       .from('raffle_entries')
       .insert({
@@ -108,8 +141,9 @@ export async function POST(request: NextRequest) {
         wallet_address: normalizedWallet,
         discord_user_id,
         discord_username,
-        discord_roles: memberData.roles || [],
+        discord_roles: userRoleIds,          // snapshot of all role IDs at entry time
         role_verified: true,
+        matched_role_weight: matchedWeight,  // used by draw route for weighted selection
       })
       .select()
       .single();
@@ -127,7 +161,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       entry_number: entry.entry_number,
-      message: `You're in! Entry #${entry.entry_number}`,
+      message: `You're in! Entry #${entry.entry_number}${matchedWeight > 1 ? ` · ${matchedWeight}× chance (${matchedRoleName})` : ''}`,
     }, { status: 201 });
 
   } catch (error) {
