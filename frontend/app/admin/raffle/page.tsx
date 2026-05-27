@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { injected } from 'wagmi/connectors';
 import {
   CheckCircle2, XCircle, Trophy, Users, Clock,
   ChevronDown, ChevronUp, Loader2, Plus, Trash2,
-  Twitter, ExternalLink, Rocket
+  Twitter, ExternalLink, Rocket, Wallet, LogOut, ShieldAlert
 } from 'lucide-react';
 
 const ADMIN_WALLET = process.env.NEXT_PUBLIC_ADMIN_WALLET?.toLowerCase();
@@ -47,30 +48,76 @@ interface Campaign {
 }
 
 const TASK_PRESETS: Record<XTaskType, { label: string; urlHint: string }> = {
-  follow: { label: 'Follow on X', urlHint: 'https://x.com/intent/follow?screen_name=HANDLE' },
-  like: { label: 'Like tweet', urlHint: 'https://x.com/intent/like?tweet_id=TWEET_ID' },
-  retweet: { label: 'Retweet tweet', urlHint: 'https://x.com/intent/retweet?tweet_id=TWEET_ID' },
-  comment: { label: 'Comment on tweet', urlHint: 'https://x.com/HANDLE/status/TWEET_ID' },
+  follow:  { label: 'Follow on X',        urlHint: 'https://x.com/intent/follow?screen_name=HANDLE'    },
+  like:    { label: 'Like tweet',          urlHint: 'https://x.com/intent/like?tweet_id=TWEET_ID'       },
+  retweet: { label: 'Retweet tweet',       urlHint: 'https://x.com/intent/retweet?tweet_id=TWEET_ID'    },
+  comment: { label: 'Comment on tweet',    urlHint: 'https://x.com/HANDLE/status/TWEET_ID'              },
 };
 
-export default function AdminRafflePage() {const { address } = useAccount();
+const BLUE = '#0052FF';
+const BLUE_LIGHT = '#4d8aff';
 
-const [applications, setApplications] = useState<Application[]>([]);
-const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-const [loading, setLoading] = useState(true);
-const [expandedApp, setExpandedApp] = useState<string | null>(null);
-const [configuringCampaign, setConfiguringCampaign] = useState<string | null>(null);
-const [actionLoading, setActionLoading] = useState<string | null>(null);
-const [campaignOverrides, setCampaignOverrides] = useState<Record<string, any>>({});
-const [xTasksMap, setXTasksMap] = useState<Record<string, XTask[]>>({});
-const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
-  const isAdmin = address?.toLowerCase() === ADMIN_WALLET;
+// ── Wallet connect button (self-contained, no RainbowKit needed) ────────────
+function WalletButton() {
+  const { address, isConnected } = useAccount();
+  const { connect, isPending } = useConnect();
+  const { disconnect } = useDisconnect();
+
+  if (isConnected && address) {
+    return (
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-mono text-gray-400 bg-white/6 border border-white/10 px-3 py-2 rounded-xl">
+          {address.slice(0, 6)}...{address.slice(-4)}
+        </span>
+        <button
+          onClick={() => disconnect()}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 text-gray-400 hover:text-red-400 hover:border-red-500/30 text-xs transition-all"
+        >
+          <LogOut className="w-3.5 h-3.5" /> Disconnect
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => connect({ connector: injected() })}
+      disabled={isPending}
+      className="flex items-center gap-2 px-5 py-3 rounded-2xl text-white font-semibold text-sm transition-all disabled:opacity-50"
+      style={{ background: `linear-gradient(to right, ${BLUE}, #1a6fff)` }}
+    >
+      {isPending ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <Wallet className="w-4 h-4" />
+      )}
+      {isPending ? 'Connecting...' : 'Connect Wallet'}
+    </button>
+  );
+}
+
+// ── Main page ────────────────────────────────────────────────────────────────
+export default function AdminRafflePage() {
+  const { address, isConnected } = useAccount();
+
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [expandedApp, setExpandedApp] = useState<string | null>(null);
+  const [configuringCampaign, setConfiguringCampaign] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [campaignOverrides, setCampaignOverrides] = useState<Record<string, any>>({});
+  const [xTasksMap, setXTasksMap] = useState<Record<string, XTask[]>>({});
+  const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
+
+  const isAdmin = !!address && address.toLowerCase() === ADMIN_WALLET;
 
   useEffect(() => {
     if (!isAdmin) return;
+    setLoading(true);
     Promise.all([
       fetch('/api/raffle/applications', {
-        headers: { 'x-admin-wallet': address || '' }
+        headers: { 'x-admin-wallet': address! }
       }).then(r => r.json()),
       fetch('/api/raffle/campaigns').then(r => r.json()),
     ]).then(([apps, cams]) => {
@@ -78,9 +125,7 @@ const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
       const allCampaigns = cams.campaigns || [];
       setCampaigns(allCampaigns);
       const taskMap: Record<string, XTask[]> = {};
-      allCampaigns.forEach((c: Campaign) => {
-        taskMap[c.id] = c.x_tasks || [];
-      });
+      allCampaigns.forEach((c: Campaign) => { taskMap[c.id] = c.x_tasks || []; });
       setXTasksMap(taskMap);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -89,10 +134,9 @@ const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
   // ── X Task helpers ──────────────────────────────────────────────────────
   function addTask(campaignId: string, type: XTaskType) {
     const preset = TASK_PRESETS[type];
-    const newTask: XTask = { type, label: preset.label, url: '' };
     setXTasksMap(prev => ({
       ...prev,
-      [campaignId]: [...(prev[campaignId] || []), newTask],
+      [campaignId]: [...(prev[campaignId] || []), { type, label: preset.label, url: '' }],
     }));
   }
 
@@ -115,13 +159,11 @@ const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
   async function saveTasks(campaignId: string, launch = false) {
     setActionLoading(`save-${campaignId}`);
     const tasks = xTasksMap[campaignId] || [];
-
     if (tasks.some(t => !t.url?.trim())) {
       setSaveMessage(prev => ({ ...prev, [campaignId]: '❌ All tasks must have a URL.' }));
       setActionLoading(null);
       return;
     }
-
     try {
       const res = await fetch(`/api/raffle/${campaignId}/configure`, {
         method: 'PATCH',
@@ -209,30 +251,69 @@ const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
     } finally { setActionLoading(null); }
   }
 
-  if (!isAdmin) {
+  const inputCls = "w-full px-3 py-2 rounded-xl bg-white/6 border border-white/10 text-white text-xs placeholder-gray-600 focus:outline-none focus:border-[#0052FF]/40 transition-all";
+
+  // ── GATE 1: Wallet not connected ─────────────────────────────────────────
+  if (!isConnected || !address) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center text-white">
-        <p>Unauthorized</p>
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        <div className="text-center max-w-sm">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6"
+            style={{ background: `linear-gradient(135deg, ${BLUE}, #1a6fff)` }}>
+            <Wallet className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-white mb-2">BMG Collab Admin</h1>
+          <p className="text-gray-500 text-sm mb-8">Connect your admin wallet to access the dashboard.</p>
+          <WalletButton />
+        </div>
       </div>
     );
   }
 
+  // ── GATE 2: Wrong wallet connected ───────────────────────────────────────
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        <div className="text-center max-w-sm">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto mb-6">
+            <ShieldAlert className="w-8 h-8 text-red-400" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">Wrong Wallet</h2>
+          <p className="text-gray-500 text-sm mb-2">
+            Connected as{' '}
+            <span className="font-mono text-gray-300">
+              {address.slice(0, 6)}...{address.slice(-4)}
+            </span>
+          </p>
+          <p className="text-gray-600 text-xs mb-8">This wallet is not the admin wallet. Disconnect and try again with the correct wallet.</p>
+          <WalletButton />
+        </div>
+      </div>
+    );
+  }
+
+  // ── GATE 3: Authorized — show dashboard ──────────────────────────────────
   const pending = applications.filter(a => a.status === 'pending');
   const reviewed = applications.filter(a => a.status !== 'pending');
   const stagingCampaigns = campaigns.filter(c => !c.is_ready);
   const activeCampaigns = campaigns.filter(c => c.is_ready && (c.status === 'active' || c.status === 'ended'));
 
-  const inputCls = "w-full px-3 py-2 rounded-xl bg-white/6 border border-white/10 text-white text-xs placeholder-gray-600 focus:outline-none focus:border-pink-500/40 transition-all";
-
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white p-6" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-extrabold mb-2">BMG Collab Admin</h1>
-        <p className="text-gray-500 text-sm mb-10">Approve partners → Configure X tasks → Launch BMG raffles</p>
+
+        {/* Header */}
+        <div className="flex items-start justify-between mb-10">
+          <div>
+            <h1 className="text-3xl font-extrabold mb-1">BMG Collab Admin</h1>
+            <p className="text-gray-500 text-sm">Approve partners → Configure X tasks → Launch BMG raffles</p>
+          </div>
+          <WalletButton />
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: BLUE }} />
           </div>
         ) : (
           <>
@@ -272,18 +353,18 @@ const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
                       {expandedApp === app.id && (
                         <div className="border-t border-white/8 p-5 space-y-4">
                           <div className="grid grid-cols-2 gap-3 text-xs">
-                            <div><p className="text-gray-500 mb-1">Guild ID</p><p className="font-mono">{app.discord_guild_id}</p></div>
+                            <div><p className="text-gray-500 mb-1">Guild ID</p><p className="font-mono">{app.discord_guild_id || '—'}</p></div>
                             <div><p className="text-gray-500 mb-1">Required Role</p><p>{app.required_role_name}</p></div>
                           </div>
 
                           <div className="space-y-2">
                             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Campaign Overrides</p>
                             {[
-                              { key: 'guild_name', placeholder: 'Discord server display name' },
+                              { key: 'guild_name',   placeholder: 'Discord server display name' },
                               { key: 'guild_invite', placeholder: 'Discord invite URL' },
-                              { key: 'banner_url', placeholder: 'Banner image URL' },
-                              { key: 'start_date', placeholder: 'Start date', type: 'datetime-local' },
-                              { key: 'end_date', placeholder: 'End date', type: 'datetime-local' },
+                              { key: 'banner_url',   placeholder: 'Banner image URL' },
+                              { key: 'start_date',   placeholder: 'Start date', type: 'datetime-local' },
+                              { key: 'end_date',     placeholder: 'End date',   type: 'datetime-local' },
                             ].map(({ key, placeholder, type }) => (
                               <input key={key} type={type || 'text'} placeholder={placeholder}
                                 className={inputCls}
@@ -319,7 +400,7 @@ const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
               <section className="mb-10">
                 <h2 className="text-lg font-bold mb-1 flex items-center gap-2">
                   Step 2 — Configure X Tasks
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-xs font-bold">{stagingCampaigns.length}</span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#0052FF]/20 text-[#4d8aff] text-xs font-bold">{stagingCampaigns.length}</span>
                 </h2>
                 <p className="text-gray-500 text-xs mb-4">Add X engagement tasks before launching the BMG collab.</p>
 
@@ -329,16 +410,16 @@ const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
                     const isConfiguring = configuringCampaign === c.id;
 
                     return (
-                      <div key={c.id} className="rounded-2xl border border-blue-500/20 bg-blue-500/5 overflow-hidden">
+                      <div key={c.id} className="rounded-2xl border border-[#0052FF]/20 bg-[#0052FF]/5 overflow-hidden">
                         <div className="p-5 flex items-center justify-between">
                           <div>
                             <h3 className="font-bold">{c.project_name}</h3>
-                            <p className="text-blue-400 text-xs mt-0.5">
+                            <p className="text-[#4d8aff] text-xs mt-0.5">
                               {tasks.length} X task{tasks.length !== 1 ? 's' : ''} configured · Not yet live
                             </p>
                           </div>
                           <button onClick={() => setConfiguringCampaign(isConfiguring ? null : c.id)}
-                            className="px-4 py-2 rounded-xl border border-blue-500/40 text-blue-400 text-sm font-semibold hover:bg-blue-500/10 transition-all flex items-center gap-2">
+                            className="px-4 py-2 rounded-xl border border-[#0052FF]/40 text-[#4d8aff] text-sm font-semibold hover:bg-[#0052FF]/10 transition-all flex items-center gap-2">
                             <Twitter className="w-4 h-4" />
                             {isConfiguring ? 'Close' : 'Edit X Tasks'}
                           </button>
@@ -346,15 +427,14 @@ const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
 
                         {isConfiguring && (
                           <div className="border-t border-white/8 p-5 space-y-5">
-                            {/* Existing tasks */}
                             {tasks.length > 0 && (
                               <div className="space-y-3">
                                 {tasks.map((task, idx) => (
                                   <div key={idx} className="rounded-xl border border-white/8 bg-white/4 p-4 space-y-3">
                                     <div className="flex items-center justify-between">
                                       <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
-                                        task.type === 'follow' ? 'bg-sky-500/20 text-sky-400 border-sky-500/30' :
-                                        task.type === 'like' ? 'bg-pink-500/20 text-pink-400 border-pink-500/30' :
+                                        task.type === 'follow'  ? 'bg-sky-500/20 text-sky-400 border-sky-500/30' :
+                                        task.type === 'like'    ? 'bg-pink-500/20 text-pink-400 border-pink-500/30' :
                                         task.type === 'retweet' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
                                         'bg-orange-500/20 text-orange-400 border-orange-500/30'
                                       }`}>
@@ -365,19 +445,11 @@ const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
                                         <Trash2 className="w-4 h-4" />
                                       </button>
                                     </div>
-                                    <input
-                                      className={inputCls}
-                                      placeholder="Task label e.g. Follow @BaseMonkeys"
-                                      value={task.label}
-                                      onChange={e => updateTask(c.id, idx, 'label', e.target.value)}
-                                    />
+                                    <input className={inputCls} placeholder="Task label e.g. Follow @BaseMonkeys"
+                                      value={task.label} onChange={e => updateTask(c.id, idx, 'label', e.target.value)} />
                                     <div className="flex gap-2">
-                                      <input
-                                        className={inputCls}
-                                        placeholder={TASK_PRESETS[task.type].urlHint}
-                                        value={task.url}
-                                        onChange={e => updateTask(c.id, idx, 'url', e.target.value)}
-                                      />
+                                      <input className={inputCls} placeholder={TASK_PRESETS[task.type].urlHint}
+                                        value={task.url} onChange={e => updateTask(c.id, idx, 'url', e.target.value)} />
                                       {task.url && (
                                         <a href={task.url} target="_blank" rel="noopener noreferrer"
                                           className="p-2 rounded-xl border border-white/10 text-gray-400 hover:text-white flex-shrink-0">
@@ -390,15 +462,14 @@ const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
                               </div>
                             )}
 
-                            {/* Add task buttons */}
                             <div>
                               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Add Task</p>
                               <div className="flex flex-wrap gap-2">
                                 {(Object.keys(TASK_PRESETS) as XTaskType[]).map(type => (
                                   <button key={type} onClick={() => addTask(c.id, type)}
                                     className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-all ${
-                                      type === 'follow' ? 'border-sky-500/40 text-sky-400 hover:bg-sky-500/10' :
-                                      type === 'like' ? 'border-pink-500/40 text-pink-400 hover:bg-pink-500/10' :
+                                      type === 'follow'  ? 'border-sky-500/40 text-sky-400 hover:bg-sky-500/10' :
+                                      type === 'like'    ? 'border-pink-500/40 text-pink-400 hover:bg-pink-500/10' :
                                       type === 'retweet' ? 'border-green-500/40 text-green-400 hover:bg-green-500/10' :
                                       'border-orange-500/40 text-orange-400 hover:bg-orange-500/10'
                                     }`}>
@@ -409,7 +480,6 @@ const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
                               </div>
                             </div>
 
-                            {/* Save message */}
                             {saveMessage[c.id] && (
                               <p className="text-sm font-medium text-center"
                                 style={{ color: saveMessage[c.id].startsWith('❌') ? '#f87171' : '#4ade80' }}>
@@ -417,25 +487,24 @@ const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
                               </p>
                             )}
 
-                            {/* Action buttons */}
                             <div className="flex gap-3">
-                              <button
-                                onClick={() => saveTasks(c.id, false)}
-                                disabled={actionLoading === `save-${c.id}`}
+                              <button onClick={() => saveTasks(c.id, false)} disabled={actionLoading === `save-${c.id}`}
                                 className="flex-1 py-3 rounded-xl border border-white/20 text-white font-semibold text-sm hover:bg-white/6 disabled:opacity-50 transition-all">
                                 {actionLoading === `save-${c.id}` ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Save Draft'}
                               </button>
-                              <button
-                                onClick={() => saveTasks(c.id, true)}
+                              <button onClick={() => saveTasks(c.id, true)}
                                 disabled={actionLoading === `save-${c.id}` || tasks.length === 0}
-                                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold text-sm hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                                className="flex-1 py-3 rounded-xl text-white font-bold text-sm hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                                style={{ background: `linear-gradient(to right, ${BLUE}, #1a6fff)` }}>
                                 {actionLoading === `save-${c.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
                                 Save & Launch
                               </button>
                             </div>
 
                             {tasks.length === 0 && (
-                              <p className="text-xs text-gray-600 text-center">Add at least one X task before launching. You can also launch with no tasks — just click Save & Launch with an empty list.</p>
+                              <p className="text-xs text-gray-600 text-center">
+                                Add at least one X task before launching. You can also launch with no tasks — just click Save & Launch with an empty list.
+                              </p>
                             )}
                           </div>
                         )}
@@ -472,7 +541,8 @@ const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
                           Edit Tasks
                         </button>
                         <button onClick={() => handleDraw(c.id)} disabled={actionLoading === c.id}
-                          className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 font-bold text-sm hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+                          className="px-4 py-2.5 rounded-xl text-white font-bold text-sm hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                          style={{ background: `linear-gradient(to right, ${BLUE}, #1a6fff)` }}>
                           {actionLoading === c.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trophy className="w-4 h-4" />}
                           Draw Winners
                         </button>
