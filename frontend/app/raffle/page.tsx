@@ -35,7 +35,7 @@ function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     active: 'bg-green-500/20 text-green-400 border-green-500/30',
     ended: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-    drawn: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    drawn: 'bg-[#0052FF]/20 text-[#4d8aff] border-[#0052FF]/30',
   };
   return (
     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${map[status] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
@@ -61,22 +61,26 @@ export default function RafflePage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      {/* Base blue ambient glows */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-pink-600/8 blur-[120px]" />
-        <div className="absolute top-1/2 -right-32 w-80 h-80 rounded-full bg-purple-600/8 blur-[100px]" />
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[#0052FF]/8 blur-[120px]" />
+        <div className="absolute top-1/2 -right-32 w-80 h-80 rounded-full bg-[#0052FF]/6 blur-[100px]" />
       </div>
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 py-10">
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center shadow-[0_0_20px_rgba(193,28,132,0.4)]">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0052FF] to-[#1a6fff] flex items-center justify-center shadow-[0_0_20px_rgba(0,82,255,0.4)]">
               <Ticket className="w-5 h-5 text-white" />
             </div>
-            <span className="text-pink-400 font-semibold text-sm tracking-widest uppercase">BaseMatch Genesis</span>
+            <span className="text-[#4d8aff] font-semibold text-sm tracking-widest uppercase">BaseMatch Genesis</span>
           </div>
           <h1 className="text-4xl font-extrabold text-white mb-3" style={{ fontFamily: "'Syne', sans-serif" }}>
             BMG{' '}
-            <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+            <span
+              className="bg-clip-text text-transparent"
+              style={{ backgroundImage: 'linear-gradient(to right, #4d8aff, #0052FF)' }}
+            >
               Collab Raffles
             </span>
           </h1>
@@ -92,9 +96,10 @@ export default function RafflePage() {
               onClick={() => setFilter(f)}
               className={`px-4 py-2 rounded-full text-sm font-semibold transition-all border ${
                 filter === f
-                  ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white border-transparent'
+                  ? 'text-white border-transparent'
                   : 'border-white/10 text-gray-400 hover:text-white hover:border-white/20'
               }`}
+              style={filter === f ? { background: 'linear-gradient(to right, #0052FF, #1a6fff)' } : {}}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
               {f === 'active' && (
@@ -107,7 +112,7 @@ export default function RafflePage() {
 
           <button
             onClick={() => router.push('/raffle/apply')}
-            className="ml-auto px-4 py-2 rounded-full text-sm font-semibold border border-purple-500/40 text-purple-400 hover:bg-purple-500/10 transition-all"
+            className="ml-auto px-4 py-2 rounded-full text-sm font-semibold border border-[#0052FF]/40 text-[#4d8aff] hover:bg-[#0052FF]/10 transition-all"
           >
             + Partner with Us
           </button>
@@ -136,14 +141,15 @@ export default function RafflePage() {
                 {campaign.banner_url ? (
                   <img src={campaign.banner_url} alt={campaign.project_name} className="w-full h-36 object-cover" />
                 ) : (
-                  <div className="w-full h-36 bg-gradient-to-br from-pink-900/30 to-purple-900/30 flex items-center justify-center">
-                    <Trophy className="w-10 h-10 text-pink-700" />
+                  <div className="w-full h-36 flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, rgba(0,82,255,0.15) 0%, rgba(26,111,255,0.08) 100%)' }}>
+                    <Trophy className="w-10 h-10 text-[#0052FF]/50" />
                   </div>
                 )}
 
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-white font-bold text-lg leading-tight group-hover:text-pink-300 transition-colors">
+                    <h3 className="text-white font-bold text-lg leading-tight group-hover:text-[#4d8aff] transition-colors">
                       {campaign.project_name}
                     </h3>
                     <StatusBadge status={campaign.status} />
@@ -170,10 +176,10 @@ export default function RafflePage() {
                   </div>
 
                   <div className="mt-3 pt-3 border-t border-white/6 flex items-center justify-between">
-                    <span className="text-xs text-purple-400 font-medium">
+                    <span className="text-xs text-[#4d8aff] font-medium">
                       Need: {campaign.required_role_name} in {campaign.discord_guild_name}
                     </span>
-                    <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-pink-400 transition-colors" />
+                    <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-[#4d8aff] transition-colors" />
                   </div>
                 </div>
               </button>
