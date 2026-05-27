@@ -1,7 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// app/api/raffle/campaigns/[id]/route.ts
-// GET single campaign + its winners if drawn
-// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -14,11 +10,11 @@ function getSupabase() {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }  // ← Promise wrapper
 ) {
   try {
     const supabase = getSupabase();
-    const { id } = params;
+    const { id } = await params;  // ← await here
 
     const { data: campaign, error } = await supabase
       .from('raffle_campaigns')
@@ -30,7 +26,6 @@ export async function GET(
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
     }
 
-    // Fetch winners if drawn
     let winners = [];
     if (campaign.status === 'drawn') {
       const { data: w } = await supabase
