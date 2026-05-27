@@ -61,3 +61,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to submit application.' }, { status: 500 });
   }
 }
+
