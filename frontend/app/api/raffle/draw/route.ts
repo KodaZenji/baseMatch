@@ -51,13 +51,32 @@ export async function POST(request: NextRequest) {
 
     const prizeCount = Math.min(campaign.prize_quantity, entries.length);
 
-    const shuffled = [...entries];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    // Build weighted pool — each entry appears matched_role_weight times
+    // weight=1 (base) means 1 slot; weight=3 means 3 slots (3x chance)
+    type Entry = typeof entries[0];
+    const pool: Entry[] = [];
+    for (const entry of entries) {
+      const weight = Math.max(1, entry.matched_role_weight || 1);
+      for (let w = 0; w < weight; w++) {
+        pool.push(entry);
+      }
     }
 
-    const winners = shuffled.slice(0, prizeCount);
+    // Fisher-Yates shuffle the weighted pool
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+
+    // Pick unique winners (de-duplicate by entry id)
+    const seen = new Set<string>();
+    const winners: Entry[] = [];
+    for (const entry of pool) {
+      if (!seen.has(entry.id) && winners.length < prizeCount) {
+        seen.add(entry.id);
+        winners.push(entry);
+      }
+    }
 
     const winnerInserts = winners.map((entry, idx) => ({
       campaign_id,
@@ -66,7 +85,7 @@ export async function POST(request: NextRequest) {
       discord_user_id: entry.discord_user_id,
       discord_username: entry.discord_username,
       prize_position: idx + 1,
-      draw_method: 'random',
+      draw_method: 'weighted',
       drawn_by: drawn_by.toLowerCase(),
     }));
 
@@ -85,6 +104,7 @@ export async function POST(request: NextRequest) {
       success: true,
       winners: winnerInserts,
       total_entries: entries.length,
+      weighted_pool_size: pool.length,
       winners_drawn: prizeCount,
     });
 
