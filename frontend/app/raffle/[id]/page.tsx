@@ -4,15 +4,24 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { Clock, Users, Trophy, ExternalLink, CheckCircle2, XCircle, Loader2, ArrowLeft, Ticket, Twitter, Shield, Wallet, LogOut } from 'lucide-react';
+import { Clock, Users, Trophy, ExternalLink, CheckCircle2, XCircle, Loader2, ArrowLeft, Ticket, Shield, Wallet, LogOut } from 'lucide-react';
 
 const BLUE = '#0052FF';
 const BLUE_LIGHT = '#4d8aff';
+
+// Update this path to your actual BaseMatch logo asset
+const BASE_LOGO = 'https://ipfs.filebase.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw';
 
 interface XTask {
   type: 'follow' | 'like' | 'retweet' | 'comment';
   label: string;
   url: string;
+}
+
+interface RaffleRole {
+  role_id: string | null;
+  role_name: string;
+  weight: number;
 }
 
 interface Campaign {
@@ -21,8 +30,9 @@ interface Campaign {
   project_description: string;
   prize_description: string;
   prize_quantity: number;
-  banner_url: string | null;
-  required_role_name: string;
+  partner_logo_url: string | null;
+  banner_url: string | null; // admin-set default banner
+  required_roles: RaffleRole[];
   discord_guild_name: string;
   discord_guild_invite: string;
   twitter_url: string | null;
@@ -57,7 +67,59 @@ const TASK_ICONS: Record<string, string> = {
   comment: '💬',
 };
 
-// ── Wallet connect button (same as admin page) ───────────────────────────
+// Overlapping rounded-square logo pair
+function LogoPair({ partnerLogoUrl, partnerName, size = 16 }: {
+  partnerLogoUrl: string | null;
+  partnerName: string;
+  size?: number; // tailwind size unit (16 = w-16 h-16)
+}) {
+  const sz = `${size * 4}px`; // convert to px
+  const overlap = `${size * 4 * 0.25}px`; // 25% overlap
+  return (
+    <div className="flex items-center">
+      {/* BaseMatch — left, on top */}
+      <div
+        className="rounded-2xl border-2 border-[#0a0a0f] overflow-hidden z-10 relative flex-shrink-0 bg-[#0052FF]/20"
+        style={{ width: sz, height: sz }}
+      >
+        <img
+          src={BASE_LOGO}
+          alt="BaseMatch"
+          className="w-full h-full object-cover"
+          onError={e => {
+            const el = e.target as HTMLImageElement;
+            el.style.display = 'none';
+            el.parentElement!.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#4d8aff;font-weight:bold;font-size:1.1rem">B</div>';
+          }}
+        />
+      </div>
+      {/* Partner — right, overlapping */}
+      <div
+        className="rounded-2xl border-2 border-[#0a0a0f] overflow-hidden flex-shrink-0 bg-white/8"
+        style={{ width: sz, height: sz, marginLeft: `-${overlap}` }}
+      >
+        {partnerLogoUrl ? (
+          <img
+            src={partnerLogoUrl}
+            alt={partnerName}
+            className="w-full h-full object-cover"
+            onError={e => {
+              const el = e.target as HTMLImageElement;
+              el.style.display = 'none';
+              el.parentElement!.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-weight:bold;font-size:1.1rem">${partnerName[0]}</div>`;
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-white/30 font-bold text-xl">
+            {partnerName[0]}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Wallet button
 function WalletButton() {
   const { address, isConnected } = useAccount();
   const { connect, isPending } = useConnect();
@@ -86,11 +148,7 @@ function WalletButton() {
       className="flex items-center gap-2 px-5 py-3 rounded-2xl text-white font-semibold text-sm transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(0,82,255,0.3)]"
       style={{ background: `linear-gradient(to right, ${BLUE}, #1a6fff)` }}
     >
-      {isPending ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
-      ) : (
-        <Wallet className="w-4 h-4" />
-      )}
+      {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />}
       {isPending ? 'Connecting...' : 'Connect Wallet'}
     </button>
   );
@@ -119,10 +177,14 @@ export default function CampaignPage() {
   useEffect(() => {
     fetch(`/api/raffle/campaigns/${campaignId}`)
       .then(r => r.json())
-      .then(d => { 
-        setCampaign({ ...d.campaign, x_tasks: d.campaign?.x_tasks || [] }); 
-        setWinners(d.winners || []); 
-        setLoading(false); 
+      .then(d => {
+        setCampaign({
+          ...d.campaign,
+          x_tasks: d.campaign?.x_tasks || [],
+          required_roles: d.campaign?.required_roles || [],
+        });
+        setWinners(d.winners || []);
+        setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [campaignId]);
@@ -205,7 +267,7 @@ export default function CampaignPage() {
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center text-white">
         <div className="text-center">
           <p className="text-xl font-bold mb-4">Campaign not found</p>
-          <button onClick={() => router.push('/raffle')} className="text-[BLUE_LIGHT] hover:text-[BLUE]">← Back to Raffles</button>
+          <button onClick={() => router.push('/raffle')} className="text-[#4d8aff] hover:text-[#0052FF]">← Back to Raffles</button>
         </div>
       </div>
     );
@@ -214,6 +276,7 @@ export default function CampaignPage() {
   const isActive = campaign.status === 'active' && new Date(campaign.end_date) > new Date();
   const isDrawn = campaign.status === 'drawn';
   const hasTasks = campaign.x_tasks && campaign.x_tasks.length > 0;
+  const roles = campaign.required_roles || [];
 
   return (
     <>
@@ -225,20 +288,24 @@ export default function CampaignPage() {
             <ArrowLeft className="w-4 h-4" /> All Raffles
           </button>
 
-          {campaign.banner_url ? (
-            <img src={campaign.banner_url} alt={campaign.project_name} className="w-full h-52 object-cover rounded-2xl mb-6" />
-          ) : (
-            <div className="w-full h-52 rounded-2xl mb-6 flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, rgba(0,82,255,0.15) 0%, rgba(26,111,255,0.08) 100%)' }}>
-              <Trophy className="w-16 h-16 text-[#0052FF]/40" />
+          {/* Hero — logo pair + project name, replaces tall banner */}
+          <div
+            className="w-full rounded-2xl mb-6 px-6 py-7 flex items-center gap-5"
+            style={{
+              background: campaign.banner_url
+                ? `linear-gradient(to right, rgba(10,10,15,0.6), rgba(10,10,15,0.75)), url(${campaign.banner_url}) center/cover no-repeat`
+                : 'linear-gradient(135deg, rgba(0,82,255,0.15) 0%, rgba(26,111,255,0.08) 100%)',
+            }}
+          >
+            <LogoPair partnerLogoUrl={campaign.partner_logo_url} partnerName={campaign.project_name} size={18} />
+            <div>
+              <p className="text-[#4d8aff] text-xs font-semibold uppercase tracking-widest mb-1">× BaseMatch Genesis</p>
+              <h1 className="text-2xl font-extrabold text-white leading-tight" style={{ fontFamily: "'Syne', sans-serif" }}>
+                {campaign.project_name}
+              </h1>
             </div>
-          )}
-
-          <div className="flex items-start justify-between mb-4">
-            <h1 className="text-3xl font-extrabold text-white" style={{ fontFamily: "'Syne', sans-serif" }}>
-              {campaign.project_name}
-            </h1>
-            <div className="flex gap-2">
+            {/* External links */}
+            <div className="ml-auto flex gap-2">
               {campaign.twitter_url && (
                 <a href={campaign.twitter_url} target="_blank" rel="noopener noreferrer"
                   className="p-2 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all">
@@ -279,26 +346,48 @@ export default function CampaignPage() {
               <Shield className="w-4 h-4" style={{ color: BLUE_LIGHT }} /> Requirements & Tasks
             </h3>
 
-            {/* Discord Role Requirement */}
-            <div className="flex items-start gap-3 mb-4 p-3 rounded-xl border border-[#0052FF]/20"
-              style={{ background: 'rgba(0,82,255,0.08)' }}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(0,82,255,0.2)' }}>
-                <Users className="w-4 h-4" style={{ color: BLUE_LIGHT }} />
-              </div>
-              <div>
-                <p className="text-white font-semibold text-sm">Discord Role Required</p>
-                <p className="text-gray-400 text-xs mt-0.5">
-                  Must have <span className="text-white font-bold">"{campaign.required_role_name}"</span> role in{' '}
-                  <span className="text-white font-bold">{campaign.discord_guild_name}</span>
+            {/* Discord Role Requirements — multi-role with weights */}
+            {roles.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Discord Role{roles.length > 1 ? 's' : ''} Required
                 </p>
-                <a href={campaign.discord_guild_invite} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-2 text-xs font-semibold hover:text-[#0052FF] transition-colors"
-                  style={{ color: BLUE_LIGHT }}>
+                <div className="space-y-2">
+                  {roles.map((role, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-3 rounded-xl border border-[#0052FF]/20"
+                      style={{ background: 'rgba(0,82,255,0.08)' }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ background: 'rgba(0,82,255,0.2)' }}
+                        >
+                          <Users className="w-4 h-4" style={{ color: BLUE_LIGHT }} />
+                        </div>
+                        <div>
+                          <p className="text-white font-semibold text-sm">"{role.role_name}"</p>
+                          <p className="text-gray-400 text-xs">in {campaign.discord_guild_name}</p>
+                        </div>
+                      </div>
+                    
+                    </div>
+                  ))}
+                </div>
+                <a
+                  href={campaign.discord_guild_invite}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-3 text-xs font-semibold hover:text-[#0052FF] transition-colors"
+                  style={{ color: BLUE_LIGHT }}
+                >
                   <ExternalLink className="w-3 h-3" /> Join Server
                 </a>
+                {roles.length > 1 && (
+                                  )}
               </div>
-            </div>
+            )}
 
             {/* X Tasks */}
             {hasTasks && (
@@ -307,7 +396,7 @@ export default function CampaignPage() {
                 {campaign.x_tasks.map((task, idx) => (
                   <a key={idx} href={task.url} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-3 p-3 rounded-xl bg-white/4 border border-white/8 hover:bg-white/6 hover:border-white/12 transition-all group">
-                    <span className="text-lg">{TASK_ICONS[task.type] || '🐦'}</span>
+                    <span className="text-lg">{TASK_ICONS[task.type] || 'X'}</span>
                     <div className="flex-1">
                       <p className="text-white text-sm font-medium group-hover:text-[#4d8aff] transition-colors">{task.label}</p>
                       <p className="text-gray-500 text-xs capitalize">{task.type}</p>
@@ -318,8 +407,8 @@ export default function CampaignPage() {
               </div>
             )}
 
-            {!hasTasks && (
-              <p className="text-gray-600 text-xs">No additional tasks required for this collab.</p>
+            {!hasTasks && roles.length === 0 && (
+              <p className="text-gray-600 text-xs">No additional requirements for this collab.</p>
             )}
           </div>
 
