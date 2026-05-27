@@ -14,16 +14,14 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
-// ─── CONFIG ───────────────────────────────────────────────────────────────────
 const BASEMATCH_X_HANDLE = 'basematch_';
-const PINNED_TWEET_ID = 'PLACEHOLDER_TWEET_ID'; // ← replace with real ID
-const GUILD_XYZ_URL = 'https://guild.xyz/basematch'; // ← replace with real URL
+const PINNED_TWEET_ID = 'PLACEHOLDER_TWEET_ID';
+const GUILD_XYZ_URL = 'https://guild.xyz/basematch';
 
 const FOLLOW_URL = `https://x.com/intent/follow?screen_name=${BASEMATCH_X_HANDLE}`;
 const LIKE_URL = `https://x.com/intent/like?tweet_id=${PINNED_TWEET_ID}`;
 const QT_URL = `https://x.com/intent/retweet?tweet_id=${PINNED_TWEET_ID}&text=${encodeURIComponent('BMG soon 👀 @basematch_')}`;
 const PINNED_TWEET_URL = `https://x.com/basematch_/status/${PINNED_TWEET_ID}`;
-// ──────────────────────────────────────────────────────────────────────────────
 
 type TaskStatus = 'idle' | 'done';
 
@@ -39,6 +37,11 @@ interface TaskState {
   liked: TaskStatus;
   qt: TaskStatus;
 }
+
+// Base blue accent color constants
+const BLUE = '#0052FF';
+const BLUE_LIGHT = '#4d8aff';
+const BLUE_DIM = 'rgba(0,82,255,0.15)';
 
 export default function ApplyWhitelistPage() {
   const router = useRouter();
@@ -110,14 +113,13 @@ export default function ApplyWhitelistPage() {
     }
   };
 
-  // ─── SUCCESS STATE ────────────────────────────────────────────────────────
   if (submitted) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-6 font-sans">
         <div className="text-center max-w-sm">
           <div className="relative inline-flex mb-8">
-            <div className="w-20 h-20 rounded-full bg-[#2C2C2E] flex items-center justify-center ring-1 ring-white/10">
-              <CheckCircle2 className="w-10 h-10 text-[#A855F7]" />
+            <div className="w-20 h-20 rounded-full bg-[#1a1a1a] flex items-center justify-center ring-1 ring-white/10">
+              <CheckCircle2 className="w-10 h-10" style={{ color: BLUE }} />
             </div>
           </div>
           <h2 className="text-[28px] font-semibold text-white mb-3 tracking-tight">
@@ -128,7 +130,8 @@ export default function ApplyWhitelistPage() {
           </p>
           <button
             onClick={() => router.push('/')}
-            className="px-8 py-3 bg-[#A855F7] text-white text-[15px] font-medium rounded-full hover:bg-[#9333EA] active:scale-95 transition-all"
+            className="px-8 py-3 text-white text-[15px] font-medium rounded-full active:scale-95 transition-all"
+            style={{ background: `linear-gradient(to right, ${BLUE}, #1a6fff)` }}
           >
             Back to BaseMatch
           </button>
@@ -137,12 +140,10 @@ export default function ApplyWhitelistPage() {
     );
   }
 
-  // ─── MAIN FORM ────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-[#A855F7]/30">
+    <div className="min-h-screen bg-black text-white font-sans" style={{ '--accent': BLUE } as React.CSSProperties}>
       <div className="max-w-lg mx-auto px-5 py-10">
 
-        {/* Back button */}
         <button
           onClick={() => router.push('/')}
           className="flex items-center gap-1.5 text-[#8E8E93] hover:text-white transition-colors mb-8 text-[15px] font-medium active:opacity-60"
@@ -154,10 +155,10 @@ export default function ApplyWhitelistPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 rounded-xl bg-[#2C2C2E] flex items-center justify-center ring-1 ring-white/10">
-              <Heart className="w-4 h-4 text-[#C084FC]" fill="currentColor" />
+            <div className="w-9 h-9 rounded-xl bg-[#1a1a1a] flex items-center justify-center ring-1 ring-white/10">
+              <Heart className="w-4 h-4" style={{ color: BLUE_LIGHT }} fill="currentColor" />
             </div>
-            <span className="text-[#C084FC] font-medium text-[13px] tracking-wide uppercase">
+            <span className="font-medium text-[13px] tracking-wide uppercase" style={{ color: BLUE_LIGHT }}>
               BaseMatch
             </span>
           </div>
@@ -177,21 +178,20 @@ export default function ApplyWhitelistPage() {
           className="flex items-center gap-3 p-4 rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 hover:bg-[#2C2C2E] transition-colors mb-8 group active:scale-[0.98]"
         >
           <div className="w-9 h-9 rounded-lg bg-[#2C2C2E] flex items-center justify-center ring-1 ring-white/10 flex-shrink-0">
-            <Users className="w-4 h-4 text-[#A855F7]" />
+            <Users className="w-4 h-4" style={{ color: BLUE }} />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-white font-medium text-[15px] mb-0.5">
               Boost your chances
             </p>
-            <p className="text-[#8E8E93] text-[13px] leading-relaxed">
-              Guild.xyz members have higher odds of receiving OG status.
+            <p className="text-[#8E8E93] text-[13px] truncate">
+              Complete quests on Guild.xyz → basematch
             </p>
           </div>
-          <ExternalLink className="w-4 h-4 text-[#8E8E93] flex-shrink-0 group-hover:text-white transition-colors" />
+          <ExternalLink className="w-4 h-4 text-[#8E8E93] group-hover:text-white transition-colors flex-shrink-0" />
         </a>
 
-        {/* Task cards */}
-        <div className="space-y-3 mb-8">
+        <div className="space-y-4 mb-6">
 
           {/* Task 1 — Follow */}
           <div className="rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 overflow-hidden">
@@ -199,9 +199,9 @@ export default function ApplyWhitelistPage() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center">
-                    <Twitter className="w-3.5 h-3.5 text-sky-400" />
+                    <Twitter className="w-3.5 h-3.5" style={{ color: BLUE_LIGHT }} />
                   </div>
-                  <span className="text-white font-medium text-[15px]">Follow BaseMatch</span>
+                  <span className="text-white font-medium text-[15px]">Follow @{BASEMATCH_X_HANDLE}</span>
                 </div>
                 {tasks.followed === 'done' && (
                   <span className="flex items-center gap-1 text-emerald-400 text-[13px] font-medium">
@@ -211,40 +211,39 @@ export default function ApplyWhitelistPage() {
               </div>
               <button
                 onClick={() => openLink(FOLLOW_URL)}
-                className="w-full py-2.5 rounded-xl bg-[#2C2C2E] text-sky-400 text-[13px] font-medium hover:bg-[#3A3A3C] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-xl bg-[#2C2C2E] text-[13px] font-medium hover:bg-[#3A3A3C] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                style={{ color: BLUE_LIGHT }}
               >
-                Follow @{BASEMATCH_X_HANDLE}
+                Follow on X
                 <ExternalLink className="w-3.5 h-3.5 opacity-70" />
               </button>
             </div>
             <div
               onClick={() => toggleTask('followed')}
-              className={`px-5 py-3.5 flex items-center justify-between border-t border-white/5 cursor-pointer active:bg-[#2C2C2E] transition-colors ${
-                tasks.followed === 'done' ? 'bg-[#A855F7]/10' : ''
-              }`}
+              className="px-5 py-3.5 flex items-center justify-between border-t border-white/5 cursor-pointer active:bg-[#2C2C2E] transition-colors"
+              style={tasks.followed === 'done' ? { backgroundColor: `${BLUE}18` } : {}}
             >
-              <span className={`text-[13px] ${tasks.followed === 'done' ? 'text-[#A855F7] font-medium' : 'text-[#8E8E93]'}`}>
+              <span className="text-[13px]" style={{ color: tasks.followed === 'done' ? BLUE : '#8E8E93', fontWeight: tasks.followed === 'done' ? 500 : 400 }}>
                 {tasks.followed === 'done' ? 'Confirmed' : 'Tap to confirm you followed'}
               </span>
               <div
-                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                  tasks.followed === 'done'
-                    ? 'bg-[#A855F7] border-[#A855F7]'
-                    : 'border-[#8E8E93]'
-                }`}
+                className="w-5 h-5 rounded-full border flex items-center justify-center transition-all"
+                style={tasks.followed === 'done'
+                  ? { backgroundColor: BLUE, borderColor: BLUE }
+                  : { borderColor: '#8E8E93' }}
               >
                 {tasks.followed === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
               </div>
             </div>
           </div>
 
-          {/* Task 2 — Like + username */}
+          {/* Task 2 — Like */}
           <div className="rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 overflow-hidden">
             <div className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center">
-                    <ThumbsUp className="w-3.5 h-3.5 text-[#C084FC]" />
+                    <ThumbsUp className="w-3.5 h-3.5" style={{ color: BLUE_LIGHT }} />
                   </div>
                   <span className="text-white font-medium text-[15px]">Like pinned post</span>
                 </div>
@@ -256,7 +255,8 @@ export default function ApplyWhitelistPage() {
               </div>
               <button
                 onClick={() => openLink(LIKE_URL)}
-                className="w-full py-2.5 rounded-xl bg-[#2C2C2E] text-[#C084FC] text-[13px] font-medium hover:bg-[#3A3A3C] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-3"
+                className="w-full py-2.5 rounded-xl bg-[#2C2C2E] text-[13px] font-medium hover:bg-[#3A3A3C] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-3"
+                style={{ color: BLUE_LIGHT }}
               >
                 Like the post
                 <ExternalLink className="w-3.5 h-3.5 opacity-70" />
@@ -266,22 +266,25 @@ export default function ApplyWhitelistPage() {
                 placeholder="Your X username (e.g. @yourname)"
                 value={form.xUsername}
                 onChange={(e) => setForm((p) => ({ ...p, xUsername: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl bg-[#2C2C2E] border border-white/5 text-white text-[15px] placeholder-[#8E8E93] focus:outline-none focus:border-[#A855F7]/50 focus:bg-[#3A3A3C] transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-[#2C2C2E] border border-white/5 text-white text-[15px] placeholder-[#8E8E93] focus:outline-none focus:bg-[#3A3A3C] transition-all"
+                style={{ '--tw-ring-color': BLUE } as React.CSSProperties}
+                onFocus={e => e.target.style.borderColor = `${BLUE}80`}
+                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
               />
             </div>
             <div
               onClick={() => toggleTask('liked')}
-              className={`px-5 py-3.5 flex items-center justify-between border-t border-white/5 cursor-pointer active:bg-[#2C2C2E] transition-colors ${
-                tasks.liked === 'done' ? 'bg-[#A855F7]/10' : ''
-              }`}
+              className="px-5 py-3.5 flex items-center justify-between border-t border-white/5 cursor-pointer active:bg-[#2C2C2E] transition-colors"
+              style={tasks.liked === 'done' ? { backgroundColor: `${BLUE}18` } : {}}
             >
-              <span className={`text-[13px] ${tasks.liked === 'done' ? 'text-[#A855F7] font-medium' : 'text-[#8E8E93]'}`}>
+              <span className="text-[13px]" style={{ color: tasks.liked === 'done' ? BLUE : '#8E8E93', fontWeight: tasks.liked === 'done' ? 500 : 400 }}>
                 {tasks.liked === 'done' ? 'Confirmed' : 'Tap to confirm you liked'}
               </span>
               <div
-                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                  tasks.liked === 'done' ? 'bg-[#A855F7] border-[#A855F7]' : 'border-[#8E8E93]'
-                }`}
+                className="w-5 h-5 rounded-full border flex items-center justify-center transition-all"
+                style={tasks.liked === 'done'
+                  ? { backgroundColor: BLUE, borderColor: BLUE }
+                  : { borderColor: '#8E8E93' }}
               >
                 {tasks.liked === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
               </div>
@@ -294,10 +297,10 @@ export default function ApplyWhitelistPage() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center">
-                    <MessageSquareQuote className="w-3.5 h-3.5 text-[#C084FC]" />
+                    <MessageSquareQuote className="w-3.5 h-3.5" style={{ color: BLUE_LIGHT }} />
                   </div>
                   <span className="text-white font-medium text-[15px]">
-                    QT with <span className="italic text-[#C084FC]">&quot;BMG soon&quot;</span>
+                    QT with <span className="italic" style={{ color: BLUE_LIGHT }}>&quot;BMG soon&quot;</span>
                   </span>
                 </div>
                 {tasks.qt === 'done' && (
@@ -308,7 +311,8 @@ export default function ApplyWhitelistPage() {
               </div>
               <button
                 onClick={() => openLink(QT_URL)}
-                className="w-full py-2.5 rounded-xl bg-[#2C2C2E] text-[#C084FC] text-[13px] font-medium hover:bg-[#3A3A3C] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-3"
+                className="w-full py-2.5 rounded-xl bg-[#2C2C2E] text-[13px] font-medium hover:bg-[#3A3A3C] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-3"
+                style={{ color: BLUE_LIGHT }}
               >
                 Quote Tweet
                 <ExternalLink className="w-3.5 h-3.5 opacity-70" />
@@ -318,29 +322,31 @@ export default function ApplyWhitelistPage() {
                 placeholder="Paste your QT link"
                 value={form.qtLink}
                 onChange={(e) => setForm((p) => ({ ...p, qtLink: e.target.value }))}
-                className="w-full px-4 py-3 rounded-xl bg-[#2C2C2E] border border-white/5 text-white text-[15px] placeholder-[#8E8E93] focus:outline-none focus:border-[#A855F7]/50 focus:bg-[#3A3A3C] transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-[#2C2C2E] border border-white/5 text-white text-[15px] placeholder-[#8E8E93] focus:outline-none focus:bg-[#3A3A3C] transition-all"
+                onFocus={e => e.target.style.borderColor = `${BLUE}80`}
+                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
               />
             </div>
             <div
               onClick={() => toggleTask('qt')}
-              className={`px-5 py-3.5 flex items-center justify-between border-t border-white/5 cursor-pointer active:bg-[#2C2C2E] transition-colors ${
-                tasks.qt === 'done' ? 'bg-[#A855F7]/10' : ''
-              }`}
+              className="px-5 py-3.5 flex items-center justify-between border-t border-white/5 cursor-pointer active:bg-[#2C2C2E] transition-colors"
+              style={tasks.qt === 'done' ? { backgroundColor: `${BLUE}18` } : {}}
             >
-              <span className={`text-[13px] ${tasks.qt === 'done' ? 'text-[#A855F7] font-medium' : 'text-[#8E8E93]'}`}>
-                {tasks.qt === 'done' ? 'Confirmed' : 'Tap to confirm you QT’d'}
+              <span className="text-[13px]" style={{ color: tasks.qt === 'done' ? BLUE : '#8E8E93', fontWeight: tasks.qt === 'done' ? 500 : 400 }}>
+                {tasks.qt === 'done' ? 'Confirmed' : "Tap to confirm you QT'd"}
               </span>
               <div
-                className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                  tasks.qt === 'done' ? 'bg-[#A855F7] border-[#A855F7]' : 'border-[#8E8E93]'
-                }`}
+                className="w-5 h-5 rounded-full border flex items-center justify-center transition-all"
+                style={tasks.qt === 'done'
+                  ? { backgroundColor: BLUE, borderColor: BLUE }
+                  : { borderColor: '#8E8E93' }}
               >
                 {tasks.qt === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
               </div>
             </div>
           </div>
 
-          {/* Task 4 — Tag 3 friends */}
+          {/* Task 4 — Tag 3 friends (kept orange as original accent for variety) */}
           <div className="rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 p-5">
             <div className="flex items-center gap-2.5 mb-3">
               <div className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center">
@@ -373,7 +379,7 @@ export default function ApplyWhitelistPage() {
           <div className="rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 p-5">
             <div className="flex items-center gap-2.5 mb-3">
               <div className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center">
-                <div className="w-3.5 h-3.5 rounded bg-gradient-to-br from-[#A855F7] to-[#C084FC]" />
+                <div className="w-3.5 h-3.5 rounded" style={{ background: `linear-gradient(135deg, ${BLUE}, ${BLUE_LIGHT})` }} />
               </div>
               <span className="text-white font-medium text-[15px]">Submit EVM Wallet</span>
             </div>
@@ -382,23 +388,24 @@ export default function ApplyWhitelistPage() {
               placeholder="0x..."
               value={form.walletAddress}
               onChange={(e) => setForm((p) => ({ ...p, walletAddress: e.target.value }))}
-              className="w-full px-4 py-3 rounded-xl bg-[#2C2C2E] border border-white/5 text-white text-[15px] placeholder-[#8E8E93] focus:outline-none focus:border-[#A855F7]/50 focus:bg-[#3A3A3C] transition-all font-mono"
+              className="w-full px-4 py-3 rounded-xl bg-[#2C2C2E] border border-white/5 text-white text-[15px] placeholder-[#8E8E93] focus:outline-none focus:bg-[#3A3A3C] transition-all font-mono"
+              onFocus={e => e.target.style.borderColor = `${BLUE}80`}
+              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
             />
           </div>
         </div>
 
-        {/* Error */}
         {error && (
           <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">
             {error}
           </div>
         )}
 
-        {/* Submit */}
         <button
           onClick={handleSubmit}
           disabled={submitting}
-          className="w-full py-4 rounded-2xl bg-[#A855F7] text-white font-semibold text-[16px] hover:bg-[#9333EA] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+          className="w-full py-4 rounded-2xl text-white font-semibold text-[16px] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+          style={{ background: `linear-gradient(to right, ${BLUE}, #1a6fff)` }}
         >
           {submitting ? (
             <span className="flex items-center justify-center gap-2">
