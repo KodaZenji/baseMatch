@@ -70,23 +70,31 @@ export default function AdminRafflePage() {
   useEffect(() => {
     if (!isAdmin) return;
     Promise.all([
-      fetch('/api/admin/raffle/applications').then(r => r.json()),
+      fetch('/api/raffle/applications', {
+        headers: { 'x-admin-wallet': address || '' }
+      }).then(r => r.json()),
       fetch('/api/raffle/campaigns').then(r => r.json()),
     ]).then(([apps, cams]) => {
       setApplications(apps.applications || []);
       const allCampaigns = cams.campaigns || [];
       setCampaigns(allCampaigns);
       const taskMap: Record<string, XTask[]> = {};
-      allCampaigns.forEach((c: Campaign) => { taskMap[c.id] = c.x_tasks || []; });
+      allCampaigns.forEach((c: Campaign) => {
+        taskMap[c.id] = c.x_tasks || [];
+      });
       setXTasksMap(taskMap);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [isAdmin]);
+  }, [isAdmin, address]);
 
+  // ── X Task helpers ──────────────────────────────────────────────────────
   function addTask(campaignId: string, type: XTaskType) {
     const preset = TASK_PRESETS[type];
     const newTask: XTask = { type, label: preset.label, url: '' };
-    setXTasksMap(prev => ({ ...prev, [campaignId]: [...(prev[campaignId] || []), newTask] }));
+    setXTasksMap(prev => ({
+      ...prev,
+      [campaignId]: [...(prev[campaignId] || []), newTask],
+    }));
   }
 
   function updateTask(campaignId: string, index: number, field: keyof XTask, value: string) {
@@ -108,13 +116,15 @@ export default function AdminRafflePage() {
   async function saveTasks(campaignId: string, launch = false) {
     setActionLoading(`save-${campaignId}`);
     const tasks = xTasksMap[campaignId] || [];
+
     if (tasks.some(t => !t.url?.trim())) {
       setSaveMessage(prev => ({ ...prev, [campaignId]: '❌ All tasks must have a URL.' }));
       setActionLoading(null);
       return;
     }
+
     try {
-      const res = await fetch(`/api/admin/raffle/${campaignId}/configure`, {
+      const res = await fetch(`/api/raffle/${campaignId}/configure`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ admin_wallet: address, x_tasks: tasks, launch }),
@@ -123,7 +133,9 @@ export default function AdminRafflePage() {
       if (data.success) {
         setSaveMessage(prev => ({ ...prev, [campaignId]: launch ? '🚀 BMG collab is live!' : '✅ Tasks saved.' }));
         if (launch) {
-          setCampaigns(prev => prev.map(c => c.id === campaignId ? { ...c, is_ready: true, status: 'active' } : c));
+          setCampaigns(prev => prev.map(c =>
+            c.id === campaignId ? { ...c, is_ready: true, status: 'active' } : c
+          ));
           setConfiguringCampaign(null);
         }
       } else {
@@ -140,8 +152,8 @@ export default function AdminRafflePage() {
     setActionLoading(app.id);
     const overrides = campaignOverrides[app.id] || {};
     try {
-      const res = await fetch(`/api/admin/raffle/${app.id}`, {
-        method: 'PATCH', // ← make sure your API exports PATCH, not POST
+      const res = await fetch(`/api/raffle/${app.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'approve',
@@ -170,8 +182,8 @@ export default function AdminRafflePage() {
   async function handleDecline(appId: string) {
     setActionLoading(appId);
     try {
-      await fetch(`/api/admin/raffle/${appId}`, {
-        method: 'PATCH', // ← make sure your API exports PATCH, not POST
+      await fetch(`/api/raffle/${appId}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'decline', admin_wallet: address }),
       });
@@ -225,6 +237,7 @@ export default function AdminRafflePage() {
           </div>
         ) : (
           <>
+            {/* ── STEP 1: Pending Applications ─────────────────────────── */}
             <section className="mb-10">
               <h2 className="text-lg font-bold mb-1 flex items-center gap-2">
                 Step 1 — Review Applications
@@ -302,6 +315,7 @@ export default function AdminRafflePage() {
               )}
             </section>
 
+            {/* ── STEP 2: Configure X Tasks (staging campaigns) ─────────── */}
             {stagingCampaigns.length > 0 && (
               <section className="mb-10">
                 <h2 className="text-lg font-bold mb-1 flex items-center gap-2">
@@ -314,6 +328,7 @@ export default function AdminRafflePage() {
                   {stagingCampaigns.map(c => {
                     const tasks = xTasksMap[c.id] || [];
                     const isConfiguring = configuringCampaign === c.id;
+
                     return (
                       <div key={c.id} className="rounded-2xl border border-blue-500/20 bg-blue-500/5 overflow-hidden">
                         <div className="p-5 flex items-center justify-between">
@@ -332,6 +347,7 @@ export default function AdminRafflePage() {
 
                         {isConfiguring && (
                           <div className="border-t border-white/8 p-5 space-y-5">
+                            {/* Existing tasks */}
                             {tasks.length > 0 && (
                               <div className="space-y-3">
                                 {tasks.map((task, idx) => (
@@ -350,11 +366,19 @@ export default function AdminRafflePage() {
                                         <Trash2 className="w-4 h-4" />
                                       </button>
                                     </div>
-                                    <input className={inputCls} placeholder="Task label e.g. Follow @BaseMonkeys"
-                                      value={task.label} onChange={e => updateTask(c.id, idx, 'label', e.target.value)} />
+                                    <input
+                                      className={inputCls}
+                                      placeholder="Task label e.g. Follow @BaseMonkeys"
+                                      value={task.label}
+                                      onChange={e => updateTask(c.id, idx, 'label', e.target.value)}
+                                    />
                                     <div className="flex gap-2">
-                                      <input className={inputCls} placeholder={TASK_PRESETS[task.type].urlHint}
-                                        value={task.url} onChange={e => updateTask(c.id, idx, 'url', e.target.value)} />
+                                      <input
+                                        className={inputCls}
+                                        placeholder={TASK_PRESETS[task.type].urlHint}
+                                        value={task.url}
+                                        onChange={e => updateTask(c.id, idx, 'url', e.target.value)}
+                                      />
                                       {task.url && (
                                         <a href={task.url} target="_blank" rel="noopener noreferrer"
                                           className="p-2 rounded-xl border border-white/10 text-gray-400 hover:text-white flex-shrink-0">
@@ -367,6 +391,7 @@ export default function AdminRafflePage() {
                               </div>
                             )}
 
+                            {/* Add task buttons */}
                             <div>
                               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Add Task</p>
                               <div className="flex flex-wrap gap-2">
@@ -385,6 +410,7 @@ export default function AdminRafflePage() {
                               </div>
                             </div>
 
+                            {/* Save message */}
                             {saveMessage[c.id] && (
                               <p className="text-sm font-medium text-center"
                                 style={{ color: saveMessage[c.id].startsWith('❌') ? '#f87171' : '#4ade80' }}>
@@ -392,17 +418,26 @@ export default function AdminRafflePage() {
                               </p>
                             )}
 
+                            {/* Action buttons */}
                             <div className="flex gap-3">
-                              <button onClick={() => saveTasks(c.id, false)} disabled={actionLoading === `save-${c.id}`}
+                              <button
+                                onClick={() => saveTasks(c.id, false)}
+                                disabled={actionLoading === `save-${c.id}`}
                                 className="flex-1 py-3 rounded-xl border border-white/20 text-white font-semibold text-sm hover:bg-white/6 disabled:opacity-50 transition-all">
                                 {actionLoading === `save-${c.id}` ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Save Draft'}
                               </button>
-                              <button onClick={() => saveTasks(c.id, true)} disabled={actionLoading === `save-${c.id}` || tasks.length === 0}
+                              <button
+                                onClick={() => saveTasks(c.id, true)}
+                                disabled={actionLoading === `save-${c.id}` || tasks.length === 0}
                                 className="flex-1 py-3 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-bold text-sm hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
                                 {actionLoading === `save-${c.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
                                 Save & Launch
                               </button>
                             </div>
+
+                            {tasks.length === 0 && (
+                              <p className="text-xs text-gray-600 text-center">Add at least one X task before launching. You can also launch with no tasks — just click Save & Launch with an empty list.</p>
+                            )}
                           </div>
                         )}
                       </div>
@@ -412,6 +447,7 @@ export default function AdminRafflePage() {
               </section>
             )}
 
+            {/* ── STEP 3: Active Campaigns (Draw trigger) ───────────────── */}
             <section className="mb-10">
               <h2 className="text-lg font-bold mb-1">Step 3 — Draw Winners</h2>
               <p className="text-gray-500 text-xs mb-4">Trigger the BMG whitelist draw.</p>
@@ -448,6 +484,7 @@ export default function AdminRafflePage() {
               )}
             </section>
 
+            {/* ── Reviewed Applications ────────────────────────────────── */}
             {reviewed.length > 0 && (
               <section>
                 <h2 className="text-lg font-bold mb-4 text-gray-500">Reviewed Applications</h2>
