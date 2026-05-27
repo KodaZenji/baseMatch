@@ -1,4 +1,4 @@
-export async function adminRaffle(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { action, admin_wallet, campaign_data } = await request.json();
     const { id } = params;
@@ -26,7 +26,6 @@ export async function adminRaffle(request: NextRequest, { params }: { params: { 
     }
 
     if (action === 'approve') {
-      // Fetch the application
       const { data: app, error: appError } = await supabase
         .from('raffle_partner_applications')
         .select('*')
@@ -37,7 +36,6 @@ export async function adminRaffle(request: NextRequest, { params }: { params: { 
         return NextResponse.json({ error: 'Application not found' }, { status: 404 });
       }
 
-      // Mark application approved
       await supabase
         .from('raffle_partner_applications')
         .update({
@@ -47,7 +45,6 @@ export async function adminRaffle(request: NextRequest, { params }: { params: { 
         })
         .eq('id', id);
 
-      // Create campaign — admin can override dates/details via campaign_data
       const { data: campaign, error: campaignError } = await supabase
         .from('raffle_campaigns')
         .insert({
