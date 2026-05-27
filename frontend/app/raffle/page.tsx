@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Clock, Users, Trophy, ExternalLink, Ticket, ChevronRight } from 'lucide-react';
+import { Clock, Users, Trophy, Ticket, ChevronRight } from 'lucide-react';
+
+// Update this path to your actual BaseMatch logo asset
+const BASE_LOGO = 'https://ipfs.filebase.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw';
+
+interface RaffleRole {
+  role_id: string | null;
+  role_name: string;
+  weight: number;
+}
 
 interface Campaign {
   id: string;
@@ -10,8 +19,9 @@ interface Campaign {
   project_description: string;
   prize_description: string;
   prize_quantity: number;
-  banner_url: string | null;
-  required_role_name: string;
+  partner_logo_url: string | null;
+  banner_url: string | null; // admin-set default, used as subtle bg if desired
+  required_roles: RaffleRole[];
   discord_guild_name: string;
   twitter_url: string | null;
   website_url: string | null;
@@ -44,6 +54,46 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// Overlapping rounded-square logo pair
+function LogoPair({ partnerLogoUrl, partnerName }: { partnerLogoUrl: string | null; partnerName: string }) {
+  return (
+    <div className="flex items-center">
+      {/* BaseMatch logo — left, on top (z-10) */}
+      <div className="w-14 h-14 rounded-2xl border-2 border-[#0a0a0f] overflow-hidden z-10 relative flex-shrink-0 bg-[#0052FF]/20">
+        <img
+          src={BASE_LOGO}
+          alt="BaseMatch"
+          className="w-full h-full object-cover"
+          onError={e => {
+            const el = e.target as HTMLImageElement;
+            el.style.display = 'none';
+            el.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-[#4d8aff] text-lg font-bold">B</div>';
+          }}
+        />
+      </div>
+      {/* Partner logo — right, slightly overlapping */}
+      <div className="w-14 h-14 rounded-2xl border-2 border-[#0a0a0f] overflow-hidden -ml-3 flex-shrink-0 bg-white/8">
+        {partnerLogoUrl ? (
+          <img
+            src={partnerLogoUrl}
+            alt={partnerName}
+            className="w-full h-full object-cover"
+            onError={e => {
+              const el = e.target as HTMLImageElement;
+              el.style.display = 'none';
+              el.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center text-white/40 text-lg font-bold">${partnerName[0]}</div>`;
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-white/30 text-lg font-bold">
+            {partnerName[0]}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function RafflePage() {
   const router = useRouter();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -59,9 +109,17 @@ export default function RafflePage() {
 
   const filtered = filter === 'all' ? campaigns : campaigns.filter(c => c.status === filter);
 
+  // Role label for card footer
+  function roleLabel(campaign: Campaign): string {
+    const roles = campaign.required_roles || [];
+    if (roles.length === 0) return campaign.discord_guild_name;
+    if (roles.length === 1) return `Need: ${roles[0].role_name} in ${campaign.discord_guild_name}`;
+    return `${roles.length} roles required · ${campaign.discord_guild_name}`;
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a0f]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      {/* Base blue ambient glows */}
+      {/* Ambient glows */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[#0052FF]/8 blur-[120px]" />
         <div className="absolute top-1/2 -right-32 w-80 h-80 rounded-full bg-[#0052FF]/6 blur-[100px]" />
@@ -89,6 +147,7 @@ export default function RafflePage() {
           </p>
         </div>
 
+        {/* Filter bar */}
         <div className="flex gap-2 mb-8 flex-wrap">
           {(['all', 'active', 'ended', 'drawn'] as const).map(f => (
             <button
@@ -109,7 +168,6 @@ export default function RafflePage() {
               )}
             </button>
           ))}
-
           <button
             onClick={() => router.push('/raffle/apply')}
             className="ml-auto px-4 py-2 rounded-full text-sm font-semibold border border-[#0052FF]/40 text-[#4d8aff] hover:bg-[#0052FF]/10 transition-all"
@@ -118,6 +176,7 @@ export default function RafflePage() {
           </button>
         </div>
 
+        {/* Cards */}
         {loading ? (
           <div className="grid gap-4 sm:grid-cols-2">
             {[1, 2, 3, 4].map(i => (
@@ -138,14 +197,17 @@ export default function RafflePage() {
                 onClick={() => router.push(`/raffle/${campaign.id}`)}
                 className="rounded-2xl border border-white/8 bg-white/4 hover:bg-white/6 hover:border-white/14 transition-all text-left overflow-hidden group"
               >
-                {campaign.banner_url ? (
-                  <img src={campaign.banner_url} alt={campaign.project_name} className="w-full h-36 object-cover" />
-                ) : (
-                  <div className="w-full h-36 flex items-center justify-center"
-                    style={{ background: 'linear-gradient(135deg, rgba(0,82,255,0.15) 0%, rgba(26,111,255,0.08) 100%)' }}>
-                    <Trophy className="w-10 h-10 text-[#0052FF]/50" />
-                  </div>
-                )}
+                {/* Card header: gradient bg + logo pair */}
+                <div
+                  className="w-full h-28 flex items-end px-5 pb-4 relative"
+                  style={{
+                    background: campaign.banner_url
+                      ? `linear-gradient(to bottom, rgba(10,10,15,0.3), rgba(10,10,15,0.85)), url(${campaign.banner_url}) center/cover no-repeat`
+                      : 'linear-gradient(135deg, rgba(0,82,255,0.15) 0%, rgba(26,111,255,0.08) 100%)',
+                  }}
+                >
+                  <LogoPair partnerLogoUrl={campaign.partner_logo_url} partnerName={campaign.project_name} />
+                </div>
 
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-2">
@@ -156,7 +218,7 @@ export default function RafflePage() {
                   </div>
 
                   <p className="text-gray-400 text-sm mb-4"
-                     style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {campaign.prize_description}
                   </p>
 
@@ -176,10 +238,10 @@ export default function RafflePage() {
                   </div>
 
                   <div className="mt-3 pt-3 border-t border-white/6 flex items-center justify-between">
-                    <span className="text-xs text-[#4d8aff] font-medium">
-                      Need: {campaign.required_role_name} in {campaign.discord_guild_name}
+                    <span className="text-xs text-[#4d8aff] font-medium truncate">
+                      {roleLabel(campaign)}
                     </span>
-                    <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-[#4d8aff] transition-colors" />
+                    <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-[#4d8aff] transition-colors flex-shrink-0" />
                   </div>
                 </div>
               </button>
