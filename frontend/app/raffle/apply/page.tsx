@@ -2,18 +2,25 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, Ticket, ExternalLink } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Ticket, ExternalLink, Plus, Minus } from 'lucide-react';
+
+interface RaffleRole {
+  role_id: string;
+  role_name: string;
+  weight: number;
+}
 
 export default function RaffleApplyPage() {
   const router = useRouter();
   const [form, setForm] = useState({
     project_name: '', project_description: '', contact_name: '',
     contact_discord: '', contact_email: '', website_url: '', twitter_url: '',
-    x_handle: '',
-    discord_server_url: '', discord_guild_id: '', required_role_id: '',
-    required_role_name: '', prize_description: '', prize_quantity: '1',
+    x_handle: '', partner_logo_url: '',
+    discord_server_url: '', discord_guild_id: '',
+    prize_description: '', prize_quantity: '1',
     proposed_start_date: '', proposed_end_date: '',
   });
+  const [roles, setRoles] = useState<RaffleRole[]>([{ role_id: '', role_name: '', weight: 1 }]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
@@ -21,13 +28,27 @@ export default function RaffleApplyPage() {
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }));
 
+  const addRole = () => setRoles(r => [...r, { role_id: '', role_name: '', weight: 1 }]);
+  const removeRole = (i: number) => setRoles(r => r.filter((_, idx) => idx !== i));
+  const setRole = (i: number, field: keyof RaffleRole, value: string | number) =>
+    setRoles(r => r.map((role, idx) => idx === i ? { ...role, [field]: value } : role));
+
   async function handleSubmit() {
     setError('');
-    // Removed discord_guild_id and required_role_id from required — bot provides these after approval
     const required = ['project_name', 'project_description', 'contact_name', 'contact_discord',
-      'contact_email', 'discord_server_url', 'required_role_name', 'prize_description'];
+      'contact_email', 'discord_server_url', 'prize_description'];
     if (required.some(k => !form[k as keyof typeof form]?.trim())) {
       setError('Please fill in all required fields.'); return;
+    }
+    if (!form.partner_logo_url.trim()) {
+      setError('Please provide a partner logo URL.'); return;
+    }
+    const validRoles = roles.filter(r => r.role_name.trim());
+    if (validRoles.length === 0) {
+      setError('Please add at least one required role with a name.'); return;
+    }
+    if (validRoles.some(r => r.weight < 1)) {
+      setError('All role weights must be at least 1.'); return;
     }
 
     setSubmitting(true);
@@ -38,6 +59,12 @@ export default function RaffleApplyPage() {
           ...form,
           prize_quantity: parseInt(form.prize_quantity) || 1,
           x_handle: form.x_handle?.trim() || null,
+          partner_logo_url: form.partner_logo_url.trim(),
+          required_roles: validRoles.map(r => ({
+            role_id: r.role_id.trim() || null,
+            role_name: r.role_name.trim(),
+            weight: Math.max(1, Number(r.weight)),
+          })),
         }),
       });
       const data = await res.json();
@@ -74,7 +101,6 @@ export default function RaffleApplyPage() {
     <>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');`}</style>
       <div className="min-h-screen bg-[#0a0a0f] relative" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-        {/* Base blue ambient glow — replaces pink/purple blobs */}
         <div className="pointer-events-none fixed inset-0">
           <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[#0052FF]/8 blur-[120px]" />
           <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-[#0052FF]/6 blur-[100px]" />
@@ -124,6 +150,27 @@ export default function RaffleApplyPage() {
                 <textarea className={inputCls} rows={3} placeholder="What is your project about?" value={form.project_description}
                   onChange={e => setForm(p => ({ ...p, project_description: e.target.value }))} />
               </div>
+              {/* Partner Logo URL — replaces banner_url */}
+              <div>
+                <label className={labelCls}>Partner Logo URL *</label>
+                <input className={inputCls} placeholder="https://... (square image, min 128×128px recommended)"
+                  value={form.partner_logo_url} onChange={set('partner_logo_url')} />
+                <p className="text-xs text-gray-600 mt-1.5">
+                  Use a square image. It will appear alongside the BaseMatch logo on raffle cards and the detail page.
+                </p>
+              </div>
+              {/* Live logo preview */}
+              {form.partner_logo_url && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/4 border border-white/8">
+                  <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Preview</span>
+                  <img
+                    src={form.partner_logo_url}
+                    alt="Partner logo preview"
+                    className="w-12 h-12 rounded-2xl object-cover border-2 border-white/10"
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={labelCls}>Website</label>
@@ -168,7 +215,6 @@ export default function RaffleApplyPage() {
                   How to find IDs <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
-              {/* Warning box — Base blue instead of purple */}
               <div className="rounded-xl bg-[#0052FF]/8 border border-[#0052FF]/20 p-3 text-xs text-[#4d8aff]">
                 ⚠️ You must invite the BaseMatch bot to your server before approval.
                 Bot invite link will be provided after review.
@@ -177,19 +223,67 @@ export default function RaffleApplyPage() {
                 <label className={labelCls}>Discord Server Invite Link *</label>
                 <input className={inputCls} placeholder="https://discord.gg/..." value={form.discord_server_url} onChange={set('discord_server_url')} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>Server (Guild) ID <span className="text-gray-600 font-normal normal-case tracking-normal">(optional)</span></label>
-                  <input className={inputCls} placeholder="123456789012345678" value={form.discord_guild_id} onChange={set('discord_guild_id')} />
-                </div>
-                <div>
-                  <label className={labelCls}>Required Role ID <span className="text-gray-600 font-normal normal-case tracking-normal">(optional)</span></label>
-                  <input className={inputCls} placeholder="123456789012345678" value={form.required_role_id} onChange={set('required_role_id')} />
-                </div>
-              </div>
               <div>
-                <label className={labelCls}>Required Role Name * (displayed to users)</label>
-                <input className={inputCls} placeholder="e.g. Holder, OG, Member" value={form.required_role_name} onChange={set('required_role_name')} />
+                <label className={labelCls}>Server (Guild) ID <span className="text-gray-600 font-normal normal-case tracking-normal">(optional)</span></label>
+                <input className={inputCls} placeholder="123456789012345678" value={form.discord_guild_id} onChange={set('discord_guild_id')} />
+              </div>
+
+              {/* Required Roles with weights — replaces single role_id + role_name */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className={labelCls + ' mb-0'}>
+                    Required Roles * <span className="text-gray-600 font-normal normal-case tracking-normal">(at least one)</span>
+                  </label>
+                  <span className="text-xs text-gray-600">Weight = raffle chance multiplier (min 1×)</span>
+                </div>
+
+                <div className="space-y-2">
+                  {roles.map((role, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <input
+                        className={inputCls + ' flex-1'}
+                        placeholder="Role ID (optional)"
+                        value={role.role_id}
+                        onChange={e => setRole(i, 'role_id', e.target.value)}
+                      />
+                      <input
+                        className={inputCls + ' flex-1'}
+                        placeholder="Role Name e.g. Holder *"
+                        value={role.role_name}
+                        onChange={e => setRole(i, 'role_name', e.target.value)}
+                      />
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className="text-gray-500 text-xs">Weight</span>
+                        <input
+                          type="number"
+                          min="1"
+                          className="w-16 px-3 py-3 rounded-xl bg-white/6 border border-white/10 text-white text-sm text-center focus:outline-none focus:border-[#0052FF]/50 transition-all"
+                          value={role.weight}
+                          onChange={e => setRole(i, 'weight', parseInt(e.target.value) || 1)}
+                        />
+                      </div>
+                      {roles.length > 1 && (
+                        <button
+                          onClick={() => removeRole(i)}
+                          className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl border border-red-500/20 text-red-400/50 hover:text-red-400 hover:border-red-500/40 transition-all"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={addRole}
+                  className="mt-3 flex items-center gap-1.5 text-xs text-[#4d8aff] hover:text-[#0052FF] transition-colors font-semibold"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add another role
+                </button>
+
+                <p className="text-xs text-gray-600 mt-2">
+                  Higher weight = more raffle entries. e.g. "OG Holder" at 3× gets 3× the chance of "Member" at 1×.
+                </p>
               </div>
             </div>
 
