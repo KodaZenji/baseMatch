@@ -204,11 +204,10 @@ export default function AdminRafflePage() {
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
   const [configuringCampaign, setConfiguringCampaign] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [campaignOverrides, setCampaignOverrides] = useState<<Record<string, any>>({});
-  const [xTasksMap, setXTasksMap] = useState<<Record<string, XTask[]>>({});
-  const [saveMessage, setSaveMessage] = useState<<Record<string, string>>({});
-  const [botInviteApp, setBotInviteApp] = useState<<Application | null>(null);
-
+  const [campaignOverrides, setCampaignOverrides] = useState<Record<string, any>>({});
+const [xTasksMap, setXTasksMap] = useState<Record<string, XTask[]>>({});
+const [saveMessage, setSaveMessage] = useState<Record<string, string>>({});
+const [botInviteApp, setBotInviteApp] = useState<Application | null>(null);
   const isAdmin = !!address && address.toLowerCase() === ADMIN_WALLET;
 
   useEffect(() => {
