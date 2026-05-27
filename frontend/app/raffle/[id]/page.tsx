@@ -3,7 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
-import { Clock, Users, Trophy, ExternalLink, CheckCircle2, XCircle, Loader2, ArrowLeft, Ticket } from 'lucide-react';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { Clock, Users, Trophy, ExternalLink, CheckCircle2, XCircle, Loader2, ArrowLeft, Ticket, Twitter, Shield } from 'lucide-react';
+
+interface XTask {
+  type: 'follow' | 'like' | 'retweet' | 'comment';
+  label: string;
+  url: string;
+}
 
 interface Campaign {
   id: string;
@@ -21,6 +28,7 @@ interface Campaign {
   end_date: string;
   status: string;
   total_entries: number;
+  x_tasks: XTask[];
 }
 
 interface Winner {
@@ -39,6 +47,13 @@ function timeLeft(endDate: string): string {
   return `${hours}h ${mins}m left`;
 }
 
+const TASK_ICONS: Record<string, string> = {
+  follow: '👤',
+  like: '❤️',
+  retweet: '🔄',
+  comment: '💬',
+};
+
 export default function CampaignPage() {
   const router = useRouter();
   const params = useParams();
@@ -48,7 +63,7 @@ export default function CampaignPage() {
   const campaignId = params.id as string;
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [winners, setWinners] = useState<Winner[]>([]);
+  const [winners, setWinners] = useState<<Winner[]>([]);
   const [loading, setLoading] = useState(true);
   const [entering, setEntering] = useState(false);
   const [entryResult, setEntryResult] = useState<{ success: boolean; message: string; entry_number?: number } | null>(null);
@@ -58,12 +73,15 @@ export default function CampaignPage() {
   const discordUserId = searchParams.get('discord_user_id');
   const discordUsername = searchParams.get('discord_username');
   const discordError = searchParams.get('discord_error');
-  const walletFromCallback = searchParams.get('wallet');
 
   useEffect(() => {
     fetch(`/api/raffle/campaigns/${campaignId}`)
       .then(r => r.json())
-      .then(d => { setCampaign(d.campaign); setWinners(d.winners || []); setLoading(false); })
+      .then(d => { 
+        setCampaign({ ...d.campaign, x_tasks: d.campaign?.x_tasks || [] }); 
+        setWinners(d.winners || []); 
+        setLoading(false); 
+      })
       .catch(() => setLoading(false));
   }, [campaignId]);
 
@@ -153,6 +171,7 @@ export default function CampaignPage() {
 
   const isActive = campaign.status === 'active' && new Date(campaign.end_date) > new Date();
   const isDrawn = campaign.status === 'drawn';
+  const hasTasks = campaign.x_tasks && campaign.x_tasks.length > 0;
 
   return (
     <>
@@ -212,17 +231,51 @@ export default function CampaignPage() {
             <p className="text-gray-400 text-sm">{campaign.prize_description}</p>
           </div>
 
-          {/* Entry requirement — Base blue instead of purple */}
-          <div className="rounded-2xl border border-[#0052FF]/20 bg-[#0052FF]/8 p-5 mb-8">
-            <h3 className="text-[#4d8aff] font-bold mb-1 text-sm">Entry Requirement</h3>
-            <p className="text-gray-300 text-sm">
-              Must have the <span className="font-bold text-white">"{campaign.required_role_name}"</span> role
-              in the <span className="font-bold text-white">{campaign.discord_guild_name}</span> Discord server.
-            </p>
-            <a href={campaign.discord_guild_invite} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 mt-3 text-xs text-[#4d8aff] hover:text-[#0052FF] font-semibold">
-              <ExternalLink className="w-3.5 h-3.5" /> Join {campaign.discord_guild_name}
-            </a>
+          {/* ── Requirements & Tasks (like Alphabot/Atlas) ── */}
+          <div className="rounded-2xl border border-white/8 bg-white/4 p-5 mb-8">
+            <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-[#4d8aff]" /> Requirements & Tasks
+            </h3>
+
+            {/* Discord Role Requirement */}
+            <div className="flex items-start gap-3 mb-4 p-3 rounded-xl bg-[#0052FF]/8 border border-[#0052FF]/20">
+              <div className="w-8 h-8 rounded-lg bg-[#0052FF]/20 flex items-center justify-center flex-shrink-0">
+                <Users className="w-4 h-4 text-[#4d8aff]" />
+              </div>
+              <div>
+                <p className="text-white font-semibold text-sm">Discord Role Required</p>
+                <p className="text-gray-400 text-xs mt-0.5">
+                  Must have <span className="text-white font-bold">"{campaign.required_role_name}"</span> role in{' '}
+                  <span className="text-white font-bold">{campaign.discord_guild_name}</span>
+                </p>
+                <a href={campaign.discord_guild_invite} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-2 text-xs text-[#4d8aff] hover:text-[#0052FF] font-semibold">
+                  <ExternalLink className="w-3 h-3" /> Join Server
+                </a>
+              </div>
+            </div>
+
+            {/* X Tasks */}
+            {hasTasks && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">X / Twitter Tasks</p>
+                {campaign.x_tasks.map((task, idx) => (
+                  <a key={idx} href={task.url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 rounded-xl bg-white/4 border border-white/8 hover:bg-white/6 hover:border-white/12 transition-all group">
+                    <span className="text-lg">{TASK_ICONS[task.type] || '🐦'}</span>
+                    <div className="flex-1">
+                      <p className="text-white text-sm font-medium group-hover:text-[#4d8aff] transition-colors">{task.label}</p>
+                      <p className="text-gray-500 text-xs capitalize">{task.type}</p>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-gray-600 group-hover:text-[#4d8aff] transition-colors" />
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {!hasTasks && (
+              <p className="text-gray-600 text-xs">No additional tasks required for this collab.</p>
+            )}
           </div>
 
           {/* Winners */}
@@ -247,7 +300,7 @@ export default function CampaignPage() {
             </div>
           )}
 
-          {/* Entry section */}
+          {/* ── Entry section ── */}
           {isActive && (
             <div className="rounded-2xl border border-white/8 bg-white/4 p-6">
               <h3 className="text-white font-bold mb-4 text-lg" style={{ fontFamily: "'Syne', sans-serif" }}>
@@ -270,7 +323,12 @@ export default function CampaignPage() {
                   </div>
                 </div>
               ) : !isConnected ? (
-                <p className="text-gray-400 text-sm">Connect your wallet to enter this raffle.</p>
+                <div className="text-center py-4">
+                  <p className="text-gray-400 text-sm mb-4">Connect your wallet to enter this BMG collab raffle.</p>
+                  <div className="flex justify-center">
+                    <ConnectButton />
+                  </div>
+                </div>
               ) : (
                 <button
                   onClick={handleConnectDiscord}
