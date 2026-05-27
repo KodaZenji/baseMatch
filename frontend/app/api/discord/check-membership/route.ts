@@ -1,97 +1,62 @@
+// app/api/discord/check-membership/route.ts
+// EDITED: now checks partner campaign's specific guild + role, not hardcoded BaseMatch guild
+
 import { NextResponse } from 'next/server';
-import { supabaseService } from '@/lib/supabase.server';
 
 export const runtime = 'nodejs';
 
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID;
-const DISCORD_VERIFIED_ROLE_ID = process.env.DISCORD_VERIFIED_ROLE_ID;
 
 export async function POST(request: Request) {
   try {
-    const { address } = await request.json();
+    const { discord_user_id, guild_id, required_role_id } = await request.json();
 
-    if (!address) {
-      return NextResponse.json({ 
-        inServer: false, 
-        hasVerifiedRole: false 
-      });
+    if (!discord_user_id || !guild_id || !required_role_id) {
+      return NextResponse.json(
+        { error: 'discord_user_id, guild_id, and required_role_id are required' },
+        { status: 400 }
+      );
     }
 
-    const normalizedAddress = address.toLowerCase();
-
-    // Get user's Discord ID from database
-    const { data: profile, error: profileError } = await supabaseService
-      .from('profiles')
-      .select('discord_user_id')
-      .eq('wallet_address', normalizedAddress)
-      .single();
-
-    if (profileError || !profile?.discord_user_id) {
-      // User hasn't connected Discord yet
-      return NextResponse.json({ 
-        inServer: false, 
-        hasVerifiedRole: false 
-      });
+    if (!DISCORD_BOT_TOKEN) {
+      console.error('DISCORD_BOT_TOKEN not configured');
+      return NextResponse.json({ inServer: false, hasRole: false });
     }
 
-    const discordUserId = profile.discord_user_id;
-
-    // Check if user is in the server and has the verified role
-    if (!DISCORD_BOT_TOKEN || !DISCORD_GUILD_ID) {
-      console.error('Discord bot credentials not configured');
-      return NextResponse.json({ 
-        inServer: false, 
-        hasVerifiedRole: false 
-      });
-    }
-
-    // Get member info from Discord
+    // Check if user is in the partner's Discord server
     const memberResponse = await fetch(
-      `https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/members/${discordUserId}`,
+      `https://discord.com/api/v10/guilds/${guild_id}/members/${discord_user_id}`,
       {
-        headers: {
-          'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
-        },
+        headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` },
       }
     );
 
     if (!memberResponse.ok) {
-      // User is not in the server
-      return NextResponse.json({ 
-        inServer: false, 
-        hasVerifiedRole: false 
-      });
+      // 404 = user not in server, 403 = bot not in server
+      const status = memberResponse.status;
+      if (status === 403) {
+        console.error(`Bot is not in guild ${guild_id} — partner needs to invite the bot`);
+        return NextResponse.json({
+          inServer: false,
+          hasRole: false,
+          error: 'bot_not_in_server',
+        });
+      }
+      return NextResponse.json({ inServer: false, hasRole: false });
     }
 
     const member = await memberResponse.json();
-    
-    // Check if verified role check is enabled
-    let hasVerifiedRole = true; // Default to true if no verified role is configured
-    
-    if (DISCORD_VERIFIED_ROLE_ID) {
-      hasVerifiedRole = member.roles.includes(DISCORD_VERIFIED_ROLE_ID);
-    }
+    const hasRole = member.roles.includes(required_role_id);
 
-    console.log('✅ Membership check:', {
-      userId: discordUserId,
+    return NextResponse.json({
       inServer: true,
-      hasVerifiedRole,
-      verifiedRoleRequired: !!DISCORD_VERIFIED_ROLE_ID,
-      totalRoles: member.roles.length
-    });
-
-    return NextResponse.json({ 
-      inServer: true, 
-      hasVerifiedRole,
-      username: member.user?.username 
+      hasRole,
+      username: member.user?.username,
+      roles: member.roles,   // full role snapshot for storage
     });
 
   } catch (error) {
     console.error('Check membership error:', error);
-    return NextResponse.json({ 
-      inServer: false, 
-      hasVerifiedRole: false 
-    });
+    return NextResponse.json({ inServer: false, hasRole: false });
   }
 }
