@@ -384,8 +384,7 @@ export default function CampaignPage() {
                 >
                   <ExternalLink className="w-3 h-3" /> Join Server
                 </a>
-                {roles.length > 1 && (
-                                  )}
+                {roles.length > 1 && null}
               </div>
             )}
 
