@@ -1,4 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+export const runtime = 'nodejs';
+
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(
   request: NextRequest,
@@ -6,9 +16,8 @@ export async function POST(
 ) {
   try {
     const { action, admin_wallet, campaign_data } = await request.json();
-    const { id } = await params; // await the Promise
+    const { id } = await params;
 
-    // Admin auth check
     const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS?.toLowerCase();
     if (!admin_wallet || admin_wallet.toLowerCase() !== ADMIN_WALLET) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
