@@ -16,12 +16,13 @@ export async function GET(
     const supabase = getSupabase();
     const { id } = await params;  // ← await here
 
-    const { data: campaign, error } = await supabase
-      .from('raffle_campaigns')
-      .select('*')
-      .eq('id', id)
-      .single();
-
+    
+const { data: campaign, error } = await supabase
+  .from('raffle_campaigns')
+  .select('*, x_tasks') 
+  .eq('id', id)
+  .single();
+    
     if (error || !campaign) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
     }
