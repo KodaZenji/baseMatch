@@ -1,5 +1,8 @@
-import { NextResponse } from 'next/server';
-import { NextRequest } from 'next/server';
+// app/api/discord/callback/route.ts
+// EDITED: after OAuth success, redirects to raffle entry instead of verify/OG role
+// Stores discord identity in session, then redirects back to campaign page
+
+import { NextResponse, NextRequest } from 'next/server';
 import { verifyStateToken, isNonceUsed, markNonceAsUsed } from '@/lib/discord-security';
 
 export const runtime = 'nodejs';
@@ -15,45 +18,35 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state');
 
     if (!code || !state) {
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}?discord_error=missing_params`
-      );
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/raffle?discord_error=missing_params`);
     }
 
-    
-    const walletAddress = verifyStateToken(state);
-    
-    if (!walletAddress) {
-      console.error('🚨 SECURITY: Invalid or tampered state token detected');
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}?discord_error=invalid_token`
-      );
+    // Verify state token — now payload may be "address::campaignId"
+    const statePayload = verifyStateToken(state);
+    if (!statePayload) {
+      console.error('🚨 SECURITY: Invalid or tampered state token');
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/raffle?discord_error=invalid_token`);
     }
 
-  
     if (isNonceUsed(state)) {
-      console.error('🚨 SECURITY: Replay attack detected - token already used');
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}?discord_error=token_already_used`
-      );
+      console.error('🚨 SECURITY: Replay attack detected');
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/raffle?discord_error=token_already_used`);
     }
 
-    // Mark token as used immediately
     markNonceAsUsed(state);
 
-    console.log('✅ State token verified for wallet:', walletAddress);
+    // Parse wallet + optional campaignId from state payload
+    const [walletAddress, campaignId] = statePayload.split('::');
 
     // Exchange code for access token
     const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: DISCORD_CLIENT_ID!,
         client_secret: DISCORD_CLIENT_SECRET!,
         grant_type: 'authorization_code',
-        code: code,
+        code,
         redirect_uri: DISCORD_REDIRECT_URI,
       }),
     });
@@ -61,93 +54,47 @@ export async function GET(request: NextRequest) {
     if (!tokenResponse.ok) {
       const error = await tokenResponse.text();
       console.error('Discord token exchange failed:', error);
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}?discord_error=token_exchange_failed`
-      );
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/raffle?discord_error=token_exchange_failed`);
     }
 
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
-    // Get user info from Discord
+    // Get Discord user identity
     const userResponse = await fetch('https://discord.com/api/users/@me', {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     if (!userResponse.ok) {
-      console.error('Failed to fetch Discord user');
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}?discord_error=user_fetch_failed`
-      );
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/raffle?discord_error=user_fetch_failed`);
     }
 
     const discordUser = await userResponse.json();
-    const discordUserId = discordUser.id;
 
-    // Add user to guild (if not already a member)
-    if (process.env.DISCORD_BOT_TOKEN && process.env.DISCORD_GUILD_ID) {
-      try {
-        await fetch(
-          `https://discord.com/api/v10/guilds/${process.env.DISCORD_GUILD_ID}/members/${discordUserId}`,
-          {
-            method: 'PUT',
-            headers: {
-              'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              access_token: accessToken,
-            }),
-          }
-        );
-      } catch (error) {
-        console.error('Error adding user to guild:', error);
-      }
-    }
+    // Get user's guild memberships to snapshot roles
+    const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const guilds = guildsResponse.ok ? await guildsResponse.json() : [];
 
-    // Call verification endpoint with cryptographically verified wallet
-    const verifyResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/discord/verify`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Internal-Request': 'true',
-        },
-        body: JSON.stringify({
-          walletAddress,
-          discordUserId,
-          token: accessToken,
-        }),
-      }
-    );
+    // Build redirect — pass discord identity back to campaign page via query params
+    // The campaign page calls /api/raffle/enter with this data + verifies role server-side
+    const redirectBase = campaignId
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/raffle/${campaignId}`
+      : `${process.env.NEXT_PUBLIC_APP_URL}/raffle`;
 
-    const verifyData = await verifyResponse.json();
+    const params = new URLSearchParams({
+      discord_success: 'true',
+      discord_user_id: discordUser.id,
+      discord_username: `${discordUser.username}`,
+      wallet: walletAddress,
+      ...(campaignId && { campaign_id: campaignId }),
+    });
 
-    if (verifyData.success) {
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}?discord_success=true&role=${encodeURIComponent(verifyData.role || 'Early OG')}`
-      );
-    } else if (verifyData.alreadyVerified) {
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}?discord_info=already_verified`
-      );
-    } else if (verifyData.revoked) {
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}?discord_error=role_revoked_sybil`
-      );
-    } else {
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}?discord_error=${encodeURIComponent(verifyData.error || 'verification_failed')}`
-      );
-    }
+    return NextResponse.redirect(`${redirectBase}?${params.toString()}`);
 
   } catch (error) {
     console.error('Discord callback error:', error);
-    return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}?discord_error=callback_failed`
-    );
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/raffle?discord_error=callback_failed`);
   }
 }
