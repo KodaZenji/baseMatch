@@ -121,7 +121,7 @@ function ExploreMenu({ isOpen, onClose, setActiveTab }: {
               className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors text-gray-700 dark:text-gray-200 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/10 dark:to-orange-900/10 border border-yellow-200 dark:border-yellow-700">
               <Trophy className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
               <div className="text-left">
-                <span className="font-bold block">"Contests"</span>
+                <span className="font-bold block">Contests</span>
                 <span className="text-xs text-yellow-600 dark:text-yellow-400">Coming Soon ✨</span>
               </div>
             </button>
@@ -242,10 +242,16 @@ export default function Home() {
     }
   }, [isLoading]);
 
-  if (isLoading) {
+  // ── FIX: if wallet is connected but profile is still loading,
+  // show a spinner instead of flashing the landing page.
+  // This prevents the "wallet disconnect" appearance after coming back from ProfileEdit.
+  if (isConnected && isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
-        <div className="text-white text-2xl">Loading profile...</div>
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 rounded-full border-4 border-pink-500/30 border-t-pink-500 animate-spin" />
+          <p className="text-gray-500 text-sm">Loading your profile...</p>
+        </div>
       </div>
     );
   }
@@ -268,7 +274,7 @@ export default function Home() {
   }
 
   // ── Landing Page (not connected / no profile) ─────────────────────────────
-  if (!isConnected || !profile?.exists) {
+  if (!isConnected || (!isLoading && !profile?.exists)) {
     return (
       <>
         <BaseAppAutoConnect />
@@ -357,7 +363,10 @@ export default function Home() {
                   <span className={`font-bold ${isDark ? 'text-purple-400' : 'text-blue-500'}`}>✓</span>
                   <span className={isDark ? 'text-slate-300' : 'text-gray-700'}>Build your rep through real connections</span>
                 </div>
-                
+                <div className="flex items-center gap-2">
+                  <span className={`font-bold ${isDark ? 'text-pink-400' : 'text-blue-500'}`}>✓</span>
+                  <span className={isDark ? 'text-slate-300' : 'text-gray-700'}>Optional Staking For Serious Dates</span>
+                </div>
               </div>
 
               {/* ── CTAs ── */}
