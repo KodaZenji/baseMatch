@@ -76,26 +76,10 @@ function LogoPair({ partnerLogoUrl, partnerName, size = 16 }: {
   const overlap = `${size * 4 * 0.25}px`;
   return (
     <div className="flex items-center">
-      {/* BMG — left, behind */}
-      <div
-        className="rounded-2xl border-2 border-[#0a0a0f] overflow-hidden flex-shrink-0 bg-[#0052FF]/20"
-        style={{ width: sz, height: sz }}
-      >
-        <img
-          src={BASE_LOGO}
-          alt="BaseMatch"
-          className="w-full h-full object-cover"
-          onError={e => {
-            const el = e.target as HTMLImageElement;
-            el.style.display = 'none';
-            el.parentElement!.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#4d8aff;font-weight:bold;font-size:1.1rem">B</div>';
-          }}
-        />
-      </div>
-      {/* Partner — overlapping on top (z-10, negative left margin) */}
+      {/* Partner — left, on top */}
       <div
         className="rounded-2xl border-2 border-[#0a0a0f] overflow-hidden z-10 relative flex-shrink-0 bg-white/8"
-        style={{ width: sz, height: sz, marginLeft: `-${overlap}` }}
+        style={{ width: sz, height: sz }}
       >
         {partnerLogoUrl ? (
           <img
@@ -114,10 +98,25 @@ function LogoPair({ partnerLogoUrl, partnerName, size = 16 }: {
           </div>
         )}
       </div>
+      {/* BMG — right, behind */}
+      <div
+        className="rounded-2xl border-2 border-[#0a0a0f] overflow-hidden flex-shrink-0 bg-[#0052FF]/20"
+        style={{ width: sz, height: sz, marginLeft: `-${overlap}` }}
+      >
+        <img
+          src={BASE_LOGO}
+          alt="BaseMatch"
+          className="w-full h-full object-cover"
+          onError={e => {
+            const el = e.target as HTMLImageElement;
+            el.style.display = 'none';
+            el.parentElement!.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#4d8aff;font-weight:bold;font-size:1.1rem">B</div>';
+          }}
+        />
+      </div>
     </div>
   );
 }
-
 // Wallet button
 function WalletButton() {
   const { address, isConnected } = useAccount();
