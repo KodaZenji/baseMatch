@@ -9,7 +9,6 @@ import { Clock, Users, Trophy, ExternalLink, CheckCircle2, XCircle, Loader2, Arr
 const BLUE = '#0052FF';
 const BLUE_LIGHT = '#4d8aff';
 
-// Update this path to your actual BaseMatch logo asset
 const BASE_LOGO = '/bmg_choice.jpg';
 
 interface XTask {
@@ -31,7 +30,7 @@ interface Campaign {
   prize_description: string;
   prize_quantity: number;
   partner_logo_url: string | null;
-  banner_url: string | null; // admin-set default banner
+  banner_url: string | null;
   required_roles: RaffleRole[];
   discord_guild_name: string;
   discord_guild_invite: string;
@@ -67,20 +66,35 @@ const TASK_ICONS: Record<string, string> = {
   comment: '💬',
 };
 
-// Overlapping rounded-square logo pair
+// BMG logo left (behind), partner logo right (on top via z-10 + negative margin)
 function LogoPair({ partnerLogoUrl, partnerName, size = 16 }: {
   partnerLogoUrl: string | null;
   partnerName: string;
-  size?: number; // tailwind size unit (16 = w-16 h-16)
+  size?: number;
 }) {
-  const sz = `${size * 4}px`; // convert to px
-  const overlap = `${size * 4 * 0.25}px`; // 25% overlap
+  const sz = `${size * 4}px`;
+  const overlap = `${size * 4 * 0.25}px`;
   return (
     <div className="flex items-center">
-      {/* BaseMatch — left, on top */}
-      {/* Partner — right, overlapping */}
+      {/* BMG — left, behind */}
       <div
-        className="rounded-2xl border-2 border-[#0a0a0f] overflow-hidden flex-shrink-0 bg-white/8"
+        className="rounded-2xl border-2 border-[#0a0a0f] overflow-hidden flex-shrink-0 bg-[#0052FF]/20"
+        style={{ width: sz, height: sz }}
+      >
+        <img
+          src={BASE_LOGO}
+          alt="BaseMatch"
+          className="w-full h-full object-cover"
+          onError={e => {
+            const el = e.target as HTMLImageElement;
+            el.style.display = 'none';
+            el.parentElement!.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#4d8aff;font-weight:bold;font-size:1.1rem">B</div>';
+          }}
+        />
+      </div>
+      {/* Partner — overlapping on top (z-10, negative left margin) */}
+      <div
+        className="rounded-2xl border-2 border-[#0a0a0f] overflow-hidden z-10 relative flex-shrink-0 bg-white/8"
         style={{ width: sz, height: sz, marginLeft: `-${overlap}` }}
       >
         {partnerLogoUrl ? (
@@ -100,22 +114,6 @@ function LogoPair({ partnerLogoUrl, partnerName, size = 16 }: {
           </div>
         )}
       </div>
-       <div
-        className="rounded-2xl border-2 border-[#0a0a0f] overflow-hidden z-10 relative flex-shrink-0 bg-[#0052FF]/20"
-        style={{ width: sz, height: sz }}
-      >
-        <img
-          src={BASE_LOGO}
-          alt="BaseMatch"
-          className="w-full h-full object-cover"
-          onError={e => {
-            const el = e.target as HTMLImageElement;
-            el.style.display = 'none';
-            el.parentElement!.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#4d8aff;font-weight:bold;font-size:1.1rem">B</div>';
-          }}
-        />
-      </div>
-     
     </div>
   );
 }
@@ -289,7 +287,7 @@ export default function CampaignPage() {
             <ArrowLeft className="w-4 h-4" /> All Raffles
           </button>
 
-          {/* Hero — logo pair + project name, replaces tall banner */}
+          {/* Hero — partner logo on top of BMG, heading as "Partner × BMG" */}
           <div
             className="w-full rounded-2xl mb-6 px-6 py-7 flex items-center gap-5"
             style={{
@@ -300,12 +298,12 @@ export default function CampaignPage() {
           >
             <LogoPair partnerLogoUrl={campaign.partner_logo_url} partnerName={campaign.project_name} size={18} />
             <div>
-              <p className="text-[#4d8aff] text-xs font-semibold uppercase tracking-widest mb-1">× BaseMatch Genesis</p>
               <h1 className="text-2xl font-extrabold text-white leading-tight" style={{ fontFamily: "'Syne', sans-serif" }}>
-                {campaign.project_name}
+                {campaign.project_name}{' '}
+                <span style={{ color: BLUE_LIGHT }}>×</span>{' '}
+                BMG
               </h1>
             </div>
-            {/* External links */}
             <div className="ml-auto flex gap-2">
               {campaign.twitter_url && (
                 <a href={campaign.twitter_url} target="_blank" rel="noopener noreferrer"
@@ -347,7 +345,6 @@ export default function CampaignPage() {
               <Shield className="w-4 h-4" style={{ color: BLUE_LIGHT }} /> Requirements & Tasks
             </h3>
 
-            {/* Discord Role Requirements — multi-role with weights */}
             {roles.length > 0 && (
               <div className="mb-4">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
@@ -372,7 +369,12 @@ export default function CampaignPage() {
                           <p className="text-gray-400 text-xs">in {campaign.discord_guild_name}</p>
                         </div>
                       </div>
-                    
+                      <span
+                        className="text-xs font-bold px-2.5 py-1 rounded-lg flex-shrink-0"
+                        style={{ background: 'rgba(0,82,255,0.2)', color: BLUE_LIGHT }}
+                      >
+                        {role.weight}×
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -385,11 +387,9 @@ export default function CampaignPage() {
                 >
                   <ExternalLink className="w-3 h-3" /> Join Server
                 </a>
-                {roles.length > 1 && null}
               </div>
             )}
 
-            {/* X Tasks */}
             {hasTasks && (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">X / Twitter Tasks</p>
