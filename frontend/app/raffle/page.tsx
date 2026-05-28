@@ -55,24 +55,20 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // Overlapping rounded-square logo pair
-function LogoPair({ partnerLogoUrl, partnerName }: { partnerLogoUrl: string | null; partnerName: string }) {
+function LogoPair({ partnerLogoUrl, partnerName, size = 14 }: {
+  partnerLogoUrl: string | null;
+  partnerName: string;
+  size?: number;
+}) {
+  const sz = `${size * 4}px`;
+  const overlap = `${size * 4 * 0.25}px`;
   return (
     <div className="flex items-center">
-      {/* BaseMatch logo — left, on top (z-10) */}
-      <div className="w-14 h-14 rounded-2xl border-2 border-[#0a0a0f] overflow-hidden z-10 relative flex-shrink-0 bg-[#0052FF]/20">
-        <img
-          src={BASE_LOGO}
-          alt="BaseMatch"
-          className="w-full h-full object-cover"
-          onError={e => {
-            const el = e.target as HTMLImageElement;
-            el.style.display = 'none';
-            el.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-[#4d8aff] text-lg font-bold">B</div>';
-          }}
-        />
-      </div>
-      {/* Partner logo — right, slightly overlapping */}
-      <div className="w-14 h-14 rounded-2xl border-2 border-[#0a0a0f] overflow-hidden -ml-3 flex-shrink-0 bg-white/8">
+      {/* Partner — left, on top */}
+      <div
+        className="rounded-2xl border-2 border-[#0a0a0f] overflow-hidden z-10 relative flex-shrink-0 bg-white/8"
+        style={{ width: sz, height: sz }}
+      >
         {partnerLogoUrl ? (
           <img
             src={partnerLogoUrl}
@@ -81,19 +77,34 @@ function LogoPair({ partnerLogoUrl, partnerName }: { partnerLogoUrl: string | nu
             onError={e => {
               const el = e.target as HTMLImageElement;
               el.style.display = 'none';
-              el.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center text-white/40 text-lg font-bold">${partnerName[0]}</div>`;
+              el.parentElement!.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-weight:bold;font-size:1.1rem">${partnerName[0]}</div>`;
             }}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-white/30 text-lg font-bold">
+          <div className="w-full h-full flex items-center justify-center text-white/30 font-bold text-xl">
             {partnerName[0]}
           </div>
         )}
       </div>
+      {/* BMG — right, behind */}
+      <div
+        className="rounded-2xl border-2 border-[#0a0a0f] overflow-hidden flex-shrink-0 bg-[#0052FF]/20"
+        style={{ width: sz, height: sz, marginLeft: `-${overlap}` }}
+      >
+        <img
+          src={BASE_LOGO}
+          alt="BaseMatch"
+          className="w-full h-full object-cover"
+          onError={e => {
+            const el = e.target as HTMLImageElement;
+            el.style.display = 'none';
+            el.parentElement!.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#4d8aff;font-weight:bold;font-size:1.1rem">B</div>';
+          }}
+        />
+      </div>
     </div>
   );
 }
-
 export default function RafflePage() {
   const router = useRouter();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
