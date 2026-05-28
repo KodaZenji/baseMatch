@@ -35,23 +35,13 @@ export const metadata: Metadata = {
   },
 
   other: {
+    // ✅ KEPT: Base App identifier — required for dashboard.base.org registration
     'base:app_id': '69427d5ed19763ca26ddc392',
-    'fc:miniapp': JSON.stringify({
-      version: "next",
-      imageUrl: "https://ipfs.filebase.io/ipfs/QmX3Tkqk4H2wW8n4P6VDsQdwEfEM3M9KkBcGrWBKAGLjXX.png",
-      button: {
-        title: "Web3 Dating on Base",
-        action: {
-          type: "launch_miniapp",
-          name: "BaseMatch",
-          url: "https://basematch.app",
-          splashImageUrl: "https://ipfs.filebase.io/ipfs/QmZkcUNwxJvjdhs1u6WZMWu7F8911UwZZ3AwHufoUToUWD.png",
-          splashBackgroundColor: "#0a0a0f"
-        }
-      }
-    }),
-  }
+    // ✅ REMOVED: fc:miniapp — deprecated after April 9 migration
+    
+  },
 };
+
 export const viewport = {
   width: "device-width",
   initialScale: 1,
@@ -66,18 +56,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    /* suppressHydrationWarning is critical when using a theme toggle */
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${lexend.variable} font-sans antialiased`}
         style={{ fontFamily: 'var(--font-lexend), sans-serif' }}
       >
-         <div style={{ zoom: 0.92 }}>
-        <Providers>
-          <ReminderCheckerWrapper />
-          {children}
-        </Providers>
-           </div>
+        <div style={{ zoom: 0.92 }}>
+          <Providers>
+            <ReminderCheckerWrapper />
+            {children}
+          </Providers>
+        </div>
       </body>
     </html>
   );
