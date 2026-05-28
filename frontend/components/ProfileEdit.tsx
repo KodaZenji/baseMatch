@@ -1,7 +1,6 @@
 'use client';
 
 import { useProfileEdit } from '@/hooks/useProfileEdit';
-import FarcasterVerificationSection from './ProfileEdit/FarcasterVerificationSection';
 import EmailVerificationSection from './ProfileEdit/EmailVerificationSection';
 import ProfilePhotoSection from './ProfileEdit/ProfilePhotoSection';
 import ProfileFormFields from './ProfileEdit/ProfileFormFields';
@@ -27,8 +26,8 @@ export default function ProfileEdit() {
     showDeleteFinalConfirm,
     setShowDeleteFinalConfirm,
     isDeleting,
-    farcasterVerified,
-    setFarcasterVerified,
+
+
     handlePhotoChange,
     handleSendVerification,
     handleUpdateProfile,
@@ -91,16 +90,6 @@ export default function ProfileEdit() {
             onSendVerification={handleSendVerification}
           />
 
-          {/* Farcaster Verification - Only for wallet users */}
-          {hasWallet && (
-            <FarcasterVerificationSection
-              hasWallet={hasWallet}
-              farcasterVerified={farcasterVerified}
-              walletAddress={address || ''}
-              onVerificationComplete={() => setFarcasterVerified(true)}
-            />
-          )}
-
           {/* Profile Form Fields - BELOW verification sections */}
           <ProfileFormFields
             formData={formData}
@@ -109,7 +98,7 @@ export default function ProfileEdit() {
             }
           />
 
-          {/* Update Profile Button - NOW BELOW FARCASTER */}
+          {/* Update Profile Button */}
           <button
             type="submit"
             disabled={isPending || isConfirming}
