@@ -9,15 +9,12 @@ export interface Notification {
   message: string;
   read: boolean;
   metadata?: {
-    // Message notifications
     sender_address?: string;
     message_id?: string;
     user1_address?: string;
     user2_address?: string;
-    // Match notifications
     match_address?: string;
     match_name?: string;
-    // Profile update notifications
     profile_id?: string;
     is_new?: boolean;
     updated_field?: string;
@@ -29,7 +26,6 @@ export interface Notification {
       photoUrl?: boolean;
     };
     new_interests?: string;
-    // Stake notifications
     stake_id?: string;
     stake_amount?: string;
     meeting_timestamp?: number;
@@ -38,7 +34,6 @@ export interface Notification {
     payout_amount?: string;
     i_showed_up?: boolean;
     they_showed_up?: boolean;
-    // Date confirmation reminder notifications
     hours_since_meeting?: number;
     acceptor_address?: string;
   };
@@ -50,6 +45,8 @@ interface UseNotificationsProps {
   autoRefresh?: boolean;
 }
 
+const POLL_INTERVAL_MS = 30_000; // 30s polling fallback when realtime drops
+
 export function useNotifications({
   userAddress,
   autoRefresh = true
@@ -60,22 +57,18 @@ export function useNotifications({
   const [error, setError] = useState<string | null>(null);
 
   const realtimeChannelRef = useRef<any>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const realtimeActiveRef = useRef(false); // tracks if realtime is healthy
 
   const fetchNotifications = useCallback(async () => {
     if (!userAddress) return;
-
     try {
       setLoading(true);
       setError(null);
-
       const response = await fetch(
         `/api/notifications?userAddress=${encodeURIComponent(userAddress)}&limit=50`
       );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch notifications');
-      }
-
+      if (!response.ok) throw new Error('Failed to fetch notifications');
       const data = await response.json();
       setNotifications(data.notifications || []);
       setUnreadCount(data.unreadCount || 0);
@@ -87,54 +80,34 @@ export function useNotifications({
     }
   }, [userAddress]);
 
-  const markAsRead = useCallback(
-    async (notificationIds: string[]) => {
-      if (!userAddress || notificationIds.length === 0) return false;
-
-      try {
-        const response = await fetch('/api/notifications', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            notificationIds,
-            userAddress
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to mark notifications as read');
-        }
-
-        // Update local state
-        setNotifications(prev =>
-          prev.map(notif =>
-            notificationIds.includes(notif.id) ? { ...notif, read: true } : notif
-          )
-        );
-        setUnreadCount(prev => Math.max(0, prev - notificationIds.length));
-
-        return true;
-      } catch (err) {
-        console.error('Error marking notifications as read:', err);
-        return false;
-      }
-    },
-    [userAddress]
-  );
+  const markAsRead = useCallback(async (notificationIds: string[]) => {
+    if (!userAddress || notificationIds.length === 0) return false;
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationIds, userAddress })
+      });
+      if (!response.ok) throw new Error('Failed to mark notifications as read');
+      setNotifications(prev =>
+        prev.map(n => notificationIds.includes(n.id) ? { ...n, read: true } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - notificationIds.length));
+      return true;
+    } catch (err) {
+      console.error('Error marking as read:', err);
+      return false;
+    }
+  }, [userAddress]);
 
   const clearRead = useCallback(async () => {
     if (!userAddress) return false;
-
     try {
       const response = await fetch(
         `/api/notifications?userAddress=${encodeURIComponent(userAddress)}`,
         { method: 'DELETE' }
       );
-
-      if (!response.ok) {
-        throw new Error('Failed to clear notifications');
-      }
-
+      if (!response.ok) throw new Error('Failed to clear notifications');
       setNotifications(prev => prev.filter(n => !n.read));
       return true;
     } catch (err) {
@@ -143,10 +116,28 @@ export function useNotifications({
     }
   }, [userAddress]);
 
-  // Set up realtime subscription
+  // ── Start polling fallback ─────────────────────────────────────────────────
+  // Called when realtime is unhealthy or drops on poor connections (e.g. 3G/Brave)
+  const startPolling = useCallback(() => {
+    if (pollTimerRef.current) return; // already polling
+    console.log('📡 Realtime unavailable — switching to polling fallback');
+    pollTimerRef.current = setInterval(() => {
+      fetchNotifications();
+    }, POLL_INTERVAL_MS);
+  }, [fetchNotifications]);
+
+  const stopPolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  // ── Realtime + polling setup ───────────────────────────────────────────────
   useEffect(() => {
     if (!userAddress || !autoRefresh) return;
 
+    // Initial fetch
     fetchNotifications();
 
     const channel = supabaseClient
@@ -177,28 +168,40 @@ export function useNotifications({
           filter: `user_address=eq.${userAddress.toLowerCase()}`
         },
         (payload) => {
-          const updatedNotification = payload.new as Notification;
-          setNotifications(prev =>
-            prev.map(n => (n.id === updatedNotification.id ? updatedNotification : n))
-          );
-          // Recalculate unread count
-          setNotifications(current => {
-            const newUnreadCount = current.filter(n => !n.read).length;
-            setUnreadCount(newUnreadCount);
-            return current;
+          const updated = payload.new as Notification;
+          setNotifications(prev => {
+            const next = prev.map(n => n.id === updated.id ? updated : n);
+            setUnreadCount(next.filter(n => !n.read).length);
+            return next;
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          // Realtime is healthy — stop polling if it was running
+          realtimeActiveRef.current = true;
+          stopPolling();
+          console.log('✅ Realtime notifications active');
+        }
+
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          // Realtime dropped — start polling so notifications still update
+          realtimeActiveRef.current = false;
+          startPolling();
+          console.warn(`⚠️ Realtime ${status} — polling fallback active`);
+        }
+      });
 
     realtimeChannelRef.current = channel;
 
     return () => {
+      stopPolling();
       if (realtimeChannelRef.current) {
         supabaseClient.removeChannel(realtimeChannelRef.current);
+        realtimeChannelRef.current = null;
       }
     };
-  }, [userAddress, autoRefresh, fetchNotifications]);
+  }, [userAddress, autoRefresh, fetchNotifications, startPolling, stopPolling]);
 
   return {
     notifications,
