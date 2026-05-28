@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendFarcasterNotification } from '@/lib/sendFarcasterNotification';
+// ✅ MIGRATED: replaced sendFarcasterNotification with sendBaseNotification
+import { sendBaseNotification } from '@/lib/sendBaseNotification';
 
 export const runtime = 'nodejs';
 
@@ -10,7 +11,7 @@ function getSupabaseAdmin() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
-// GET - Fetch notifications for a user
+// GET - Fetch notifications for a user (unchanged)
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdmin();
-    
+
     let query = supabase
       .from('notifications')
       .select('*', { count: 'exact' })
@@ -78,8 +79,8 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdmin();
-    
-    // Store in your database
+
+    // Store in Supabase (unchanged)
     const { data, error } = await supabase
       .from('notifications')
       .insert({
@@ -100,13 +101,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ALSO send via Farcaster (fire and forget)
-    sendFarcasterNotification(
+    // ✅ MIGRATED: was sendFarcasterNotification(userAddress, title, message, metadata?.targetUrl)
+    // Base API uses targetPath (a path like "/matches") not a full URL
+    sendBaseNotification(
       userAddress,
       title,
       message,
-      metadata?.targetUrl
-    ).catch(err => console.error('Farcaster notification failed:', err));
+      metadata?.targetUrl   // sendBaseNotification handles full URL → path conversion internally
+    ).catch(err => console.error('Base notification failed:', err));
 
     return NextResponse.json({ notification: data }, { status: 201 });
   } catch (error) {
@@ -117,7 +119,8 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-// PATCH - Mark notifications as read
+
+// PATCH - Mark notifications as read (unchanged)
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
@@ -131,7 +134,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdmin();
-    
+
     const { error } = await supabase
       .from('notifications')
       .update({ read: true })
@@ -156,7 +159,7 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// DELETE - Clear all read notifications
+// DELETE - Clear all read notifications (unchanged)
 export async function DELETE(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -170,7 +173,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdmin();
-    
+
     const { error } = await supabase
       .from('notifications')
       .delete()
