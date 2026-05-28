@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Clock, Users, Trophy, Ticket, ChevronRight } from 'lucide-react';
 
 // Update this path to your actual BaseMatch logo asset
-const BASE_LOGO = 'https://ipfs.filebase.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw';
+const BASE_LOGO = '/bmg_choice.jpg';
 
 interface RaffleRole {
   role_id: string | null;
