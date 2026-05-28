@@ -25,7 +25,7 @@ export default function RaceComingSoon() {
 
           {/* Coming Soon */}
           <h2 className="text-3xl font-bold mb-4 text-gray-800 dark:text-gray-100">
-            Coming Soon
+           Contests Coming Soon
           </h2>
 
           {/* Main Message */}
@@ -33,16 +33,10 @@ export default function RaceComingSoon() {
             Don't get ghosted!
           </p>
           <p className="text-lg font-semibold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
-            Get OG roles NOW!
+            Grab BMG NOW!
           </p>
 
-          {/* Limited Offer Badge */}
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border border-yellow-300 dark:border-yellow-700 rounded-full px-4 py-2">
-            <Star className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
-            <span className="text-sm font-bold text-yellow-700 dark:text-yellow-400">
-              Limited time offer!
-            </span>
-          </div>
+          
 
         </div>
       </div>
