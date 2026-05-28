@@ -10,7 +10,7 @@ const BLUE = '#0052FF';
 const BLUE_LIGHT = '#4d8aff';
 
 // Update this path to your actual BaseMatch logo asset
-const BASE_LOGO = 'https://ipfs.filebase.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw';
+const BASE_LOGO = '/bmg_choice.jpg';
 
 interface XTask {
   type: 'follow' | 'like' | 'retweet' | 'comment';
@@ -78,21 +78,6 @@ function LogoPair({ partnerLogoUrl, partnerName, size = 16 }: {
   return (
     <div className="flex items-center">
       {/* BaseMatch — left, on top */}
-      <div
-        className="rounded-2xl border-2 border-[#0a0a0f] overflow-hidden z-10 relative flex-shrink-0 bg-[#0052FF]/20"
-        style={{ width: sz, height: sz }}
-      >
-        <img
-          src={BASE_LOGO}
-          alt="BaseMatch"
-          className="w-full h-full object-cover"
-          onError={e => {
-            const el = e.target as HTMLImageElement;
-            el.style.display = 'none';
-            el.parentElement!.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#4d8aff;font-weight:bold;font-size:1.1rem">B</div>';
-          }}
-        />
-      </div>
       {/* Partner — right, overlapping */}
       <div
         className="rounded-2xl border-2 border-[#0a0a0f] overflow-hidden flex-shrink-0 bg-white/8"
@@ -115,6 +100,22 @@ function LogoPair({ partnerLogoUrl, partnerName, size = 16 }: {
           </div>
         )}
       </div>
+       <div
+        className="rounded-2xl border-2 border-[#0a0a0f] overflow-hidden z-10 relative flex-shrink-0 bg-[#0052FF]/20"
+        style={{ width: sz, height: sz }}
+      >
+        <img
+          src={BASE_LOGO}
+          alt="BaseMatch"
+          className="w-full h-full object-cover"
+          onError={e => {
+            const el = e.target as HTMLImageElement;
+            el.style.display = 'none';
+            el.parentElement!.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#4d8aff;font-weight:bold;font-size:1.1rem">B</div>';
+          }}
+        />
+      </div>
+     
     </div>
   );
 }
