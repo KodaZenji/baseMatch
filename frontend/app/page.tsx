@@ -8,7 +8,7 @@ import Matches from '@/components/Matches';
 import Dashboard from '@/components/Dashboard';
 import Notifications from '@/components/Notifications';
 import { useProfile } from '@/hooks/useProfile';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
 import {
   Heart, Menu, Moon, Sun, X, MessageCircle, Users,
   LayoutDashboard, Wallet, LogOut, Loader2, Trophy
@@ -214,7 +214,7 @@ export default function Home() {
     if (isConnected && profile?.exists) setIsMenuOpen(false);
   }, [isConnected, profile?.exists]);
 
-  const { unreadCount } = useNotifications({ userAddress: address, autoRefresh: true });
+  const { unreadCount } = useUnreadCount(address);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -362,10 +362,6 @@ export default function Home() {
                 <div className="flex items-center gap-2">
                   <span className={`font-bold ${isDark ? 'text-purple-400' : 'text-blue-500'}`}>✓</span>
                   <span className={isDark ? 'text-slate-300' : 'text-gray-700'}>Build your rep through real connections</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`font-bold ${isDark ? 'text-pink-400' : 'text-blue-500'}`}>✓</span>
-                  <span className={isDark ? 'text-slate-300' : 'text-gray-700'}>Optional Staking For Serious Dates</span>
                 </div>
               </div>
 
