@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useRouter } from 'next/navigation';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 import { generateAvatar } from '@/lib/avatarUtils';
 import { handleProfileTextUpdate } from '@/lib/profileMinting';
@@ -41,8 +42,6 @@ interface UseProfileEditReturn {
     handleUpdateProfile: (e: React.FormEvent) => void;
     handleDeleteProfile: () => void;
     handleWalletLinked: () => void;
-
-    // Farcaster-specific
     isCheckingFarcaster: boolean;
     farcasterProfile: any;
     showFarcasterOptions: boolean;
@@ -58,6 +57,7 @@ export function useProfileEdit(): Omit<
     farcasterVerified: boolean;
     setFarcasterVerified: React.Dispatch<React.SetStateAction<boolean>>;
 } {
+    const router = useRouter();
     const { address, isConnected } = useAccount();
     const { profile, isLoading: profileLoading, refreshProfile } = useProfile(address);
 
@@ -166,7 +166,7 @@ export function useProfileEdit(): Omit<
         fetchMergedProfile();
     }, [address]);
 
-    // Transaction success handling
+    // ── Transaction success handling ─────────────────────────────────────────
     useEffect(() => {
         const handleTransactionSuccess = async () => {
             if (isSuccess && !hasShownSuccessRef.current) {
@@ -175,7 +175,8 @@ export function useProfileEdit(): Omit<
                 if (isDeleting) {
                     showNotification('✅ Profile deleted successfully!', 'success');
                     localStorage.clear();
-                    setTimeout(() => (window.location.href = '/'), 2000);
+                    // Use router.push instead of window.location.href to avoid full reload
+                    setTimeout(() => router.push('/'), 2000);
                 } else {
                     const photoToSync = newPhotoUrl || formData.photoUrl;
                     await syncProfileToDatabase({
@@ -188,12 +189,18 @@ export function useProfileEdit(): Omit<
                     });
 
                     showNotification('✅ Profile updated and verified on blockchain!', 'success');
+
+                    // ✅ FIX: stay on edit page — don't navigate away
+                    // User may still be reviewing their changes.
+                    // refreshProfile() re-fetches fresh data so form reflects new values.
+                    // 'profile-updated' event tells Dashboard to re-render when user goes back.
                     refreshProfile();
-                    setTimeout(() => window.location.reload(), 2000);
+                    window.dispatchEvent(new CustomEvent('profile-updated'));
                 }
             }
         };
         handleTransactionSuccess();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isSuccess, isDeleting, formData, newPhotoUrl]);
 
     const showNotification = (message: string, type: 'success' | 'error') => {
@@ -265,6 +272,7 @@ export function useProfileEdit(): Omit<
         if (isNaN(birthYear) || currentYear - birthYear < 18 || currentYear - birthYear > 120)
             return showNotification('Please enter a valid birth year', 'error');
 
+        // Email-only users (no wallet)
         if (!hasWallet || !isConnected) {
             try {
                 const response = await fetch('/api/profile/update-by-email', {
@@ -280,8 +288,14 @@ export function useProfileEdit(): Omit<
                     }),
                 });
                 const result = await response.json();
-                if (response.ok && result.success) showNotification('Profile updated successfully!', 'success');
-                else showNotification(result.error || 'Failed to update profile', 'error');
+                if (response.ok && result.success) {
+                    showNotification('Profile updated successfully!', 'success');
+                    // Stay on edit page — just dispatch event so Dashboard refreshes when user goes back
+                    window.dispatchEvent(new CustomEvent('profile-updated'));
+                    refreshProfile();
+                } else {
+                    showNotification(result.error || 'Failed to update profile', 'error');
+                }
             } catch {
                 showNotification('Failed to update profile', 'error');
             }
