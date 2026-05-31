@@ -42,8 +42,8 @@ function ConnectButton({ full = false }: { full?: boolean }) {
       disabled={isPending}
       className={`flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold text-sm transition-all disabled:opacity-50 hover:opacity-90 active:scale-[0.98] ${full ? 'w-full' : ''}`}
       style={{
-        background: `linear-gradient(135deg, ${BLUE}, #1a6fff)`,
-        boxShadow: '0 0 24px rgba(0,82,255,0.35)',
+        background: 'linear-gradient(135deg, #0044cc, #1558d6)',
+        boxShadow: '0 0 18px rgba(0,82,255,0.18)',
       }}
     >
       {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wallet className="w-4 h-4" />}
@@ -283,8 +283,8 @@ export default function LandingPage({
                     onClick={() => router.push('/register/wallet/choice')}
                     className="flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl text-white font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
                     style={{
-                      background: `linear-gradient(135deg, ${BLUE}, #1a6fff)`,
-                      boxShadow: '0 0 28px rgba(0,82,255,0.35)',
+                      background: 'linear-gradient(135deg, #0044cc, #1558d6)',
+                      boxShadow: '0 0 18px rgba(0,82,255,0.18)',
                     }}
                   >
                     Create Profile <ArrowRight className="w-4 h-4" />
@@ -470,8 +470,8 @@ export default function LandingPage({
                     onClick={() => router.push('/register/wallet/choice')}
                     className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl text-white font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
                     style={{
-                      background: `linear-gradient(135deg, ${BLUE}, #1a6fff)`,
-                      boxShadow: `0 0 28px rgba(0,82,255,0.35)`,
+                      background: 'linear-gradient(135deg, #0044cc, #1558d6)',
+                      boxShadow: '0 0 18px rgba(0,82,255,0.18)',
                     }}
                   >
                     Create Profile <ArrowRight className="w-4 h-4" />
