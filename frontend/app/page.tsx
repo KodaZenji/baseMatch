@@ -25,7 +25,7 @@ import LandingPage from '@/components/landing/LandingPage';
 const BLUE = '#0052FF';
 
 // ── Wallet button (used in app header) ───────────────────────────────────────
-export function WalletButton({ centered = false }: { centered?: boolean }) {
+function WalletButton({ centered = false }: { centered?: boolean }) {
   const { address, isConnected } = useAccount();
   const { connect, isPending } = useConnect();
   const { disconnect } = useDisconnect();
