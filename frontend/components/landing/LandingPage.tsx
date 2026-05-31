@@ -11,8 +11,12 @@ import {
 import { FaDiscord } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 import { FaPaintBrush, FaBolt, FaCamera, FaGem } from 'react-icons/fa';
+
+// ── Design tokens (aligned to raffle page) ───────────────────────────────────
 const BLUE = '#0052FF';
+const BLUE_LIGHT = '#4d8aff';
 const BLUE_DIM = 'rgba(0,82,255,0.12)';
+const BG = '#0a0a0f'; // raffle bg
 
 // ── Local wallet button ───────────────────────────────────────────────────────
 function ConnectButton({ full = false }: { full?: boolean }) {
@@ -60,7 +64,7 @@ function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
   return (
     <>
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={onClose} />
-      <div className="fixed top-0 right-0 h-full w-72 bg-[#0a0b14]/98 backdrop-blur-xl border-l border-white/8 shadow-2xl z-50">
+      <div className="fixed top-0 right-0 h-full w-72 bg-[#0a0a0f]/98 backdrop-blur-xl border-l border-white/8 shadow-2xl z-50">
         <div className="p-6 relative">
           <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-lg hover:bg-white/8 transition-colors">
             <X className="w-5 h-5 text-gray-400" />
@@ -92,11 +96,12 @@ function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
 
 // ── Animated profile card ─────────────────────────────────────────────────────
 const PROFILES = [
-  { name: 'Mia',  role: 'Digital Artist',   icon: FaPaintBrush, accent: '#FF00C7', glow: 'rgba(255,0,199,0.15)' },
-  { name: 'Noah', role: 'Onchain Builder',   icon: FaBolt,       accent: '#0052FF', glow: 'rgba(0,82,255,0.2)'   },
+  { name: 'Mia',  role: 'Digital Artist',   icon: FaPaintBrush, accent: '#4d8aff', glow: 'rgba(0,82,255,0.18)' },
+  { name: 'Noah', role: 'Onchain Builder',   icon: FaBolt,       accent: '#0052FF', glow: 'rgba(0,82,255,0.2)'  },
   { name: 'Zara', role: 'Photographer',      icon: FaCamera,     accent: '#f59e0b', glow: 'rgba(245,158,11,0.15)'},
   { name: 'Kai',  role: 'NFT Collector',     icon: FaGem,        accent: '#06b6d4', glow: 'rgba(6,182,212,0.15)' },
 ];
+
 function ProfilePreview() {
   const [idx, setIdx] = useState(0);
   const [visible, setVisible] = useState(true);
@@ -124,7 +129,7 @@ function ProfilePreview() {
 
       {/* Card */}
       <div
-        className="relative w-[280px] h-[380px] rounded-[28px] border border-white/10 overflow-hidden transition-all duration-400"
+        className="relative w-[280px] h-[380px] rounded-[28px] border border-white/10 overflow-hidden"
         style={{
           background: 'linear-gradient(160deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)',
           backdropFilter: 'blur(20px)',
@@ -138,14 +143,14 @@ function ProfilePreview() {
           style={{ background: `linear-gradient(to right, ${p.accent}, transparent)` }} />
 
         <div className="flex flex-col justify-between h-full p-7">
-          {/* Emoji + online indicator */}
+          {/* Icon + online indicator */}
           <div className="flex items-start justify-between">
             <div
-  className="w-16 h-16 rounded-2xl flex items-center justify-center"
-  style={{ background: `${p.accent}18`, border: `1px solid ${p.accent}30` }}
->
-  <p.icon className="w-7 h-7" style={{ color: p.accent }} />
-</div>
+              className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: `${p.accent}18`, border: `1px solid ${p.accent}30` }}
+            >
+              <p.icon className="w-7 h-7" style={{ color: p.accent }} />
+            </div>
             <span className="flex items-center gap-1.5 text-xs text-green-400 font-medium bg-green-400/10 border border-green-400/20 px-2.5 py-1 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
               Online
@@ -165,8 +170,7 @@ function ProfilePreview() {
           <div>
             <h3 className="text-white text-2xl font-bold mb-0.5">{p.name}</h3>
             <p className="text-white/40 text-sm mb-4">{p.role}</p>
-            <div className="flex items-center gap-2 text-xs"
-              style={{ color: p.accent }}>
+            <div className="flex items-center gap-2 text-xs" style={{ color: p.accent }}>
               <CheckCircle className="w-3.5 h-3.5" />
               <span className="font-semibold">Verified Wallet</span>
             </div>
@@ -212,18 +216,19 @@ export default function LandingPage({
         .float-delay { animation: float 6s ease-in-out infinite; animation-delay: -2s; }
       `}</style>
 
-      <div className="landing min-h-screen bg-[#05060f] relative overflow-x-hidden">
+      <div className="landing min-h-screen relative overflow-x-hidden" style={{ background: BG }}>
 
-        {/* Ambient glow orbs */}
+        {/* Ambient glow orbs — blue only, matching raffle */}
         <div className="pointer-events-none fixed inset-0 overflow-hidden">
           <div className="float absolute w-[500px] h-[500px] rounded-full opacity-20 blur-[100px]"
             style={{ background: 'radial-gradient(circle, #0052FF 0%, transparent 70%)', left: '-5%', top: '10%' }} />
-          <div className="float-delay absolute w-[400px] h-[400px] rounded-full opacity-10 blur-[100px]"
-            style={{ background: 'radial-gradient(circle, #FF00C7 0%, transparent 70%)', right: '-5%', bottom: '15%' }} />
+          <div className="float-delay absolute w-[400px] h-[400px] rounded-full opacity-8 blur-[100px]"
+            style={{ background: 'radial-gradient(circle, #1a6fff 0%, transparent 70%)', right: '-5%', bottom: '15%' }} />
         </div>
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
-        <header className="fixed top-0 w-full z-50 bg-[#05060f]/80 backdrop-blur-2xl border-b border-white/5">
+        <header className="fixed top-0 w-full z-50 backdrop-blur-2xl border-b border-white/5"
+          style={{ background: `${BG}cc` }}>
           <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
             <img
               src="https://ipfs.filebase.io/ipfs/Qme7TRxxfBP1offBsSsbtNhEbutbEgTmwd16EgHgPZutmw"
@@ -251,9 +256,9 @@ export default function LandingPage({
             <div className="flex-1 text-center lg:text-left">
               <div
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold border mb-8"
-                style={{ borderColor: `${BLUE}40`, background: BLUE_DIM, color: '#4d8aff' }}
+                style={{ borderColor: `${BLUE}40`, background: BLUE_DIM, color: BLUE_LIGHT }}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#0052FF]" />
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: BLUE }} />
                 Built on Base · Verified Dating
               </div>
 
@@ -261,7 +266,7 @@ export default function LandingPage({
                 Meet people{' '}
                 <span
                   className="bg-clip-text text-transparent"
-                  style={{ backgroundImage: 'linear-gradient(135deg, #4d8aff 0%, #0052FF 60%, #FF00C7 100%)' }}
+                  style={{ backgroundImage: `linear-gradient(to right, ${BLUE_LIGHT}, ${BLUE})` }}
                 >
                   behind the wallets.
                 </span>
@@ -278,8 +283,8 @@ export default function LandingPage({
                     onClick={() => router.push('/register/wallet/choice')}
                     className="flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl text-white font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
                     style={{
-                      background: 'linear-gradient(135deg, #FF00C7 0%, #0052FF 100%)',
-                      boxShadow: '0 0 28px rgba(0,82,255,0.3)',
+                      background: `linear-gradient(135deg, ${BLUE}, #1a6fff)`,
+                      boxShadow: '0 0 28px rgba(0,82,255,0.35)',
                     }}
                   >
                     Create Profile <ArrowRight className="w-4 h-4" />
@@ -298,9 +303,9 @@ export default function LandingPage({
               {/* Social proof */}
               <div className="flex items-center gap-3 mt-10 justify-center lg:justify-start">
                 <div className="flex -space-x-2.5">
-                  {['#FF00C7', '#0052FF', '#06b6d4', '#f59e0b'].map((c, i) => (
-                    <div key={i} className="w-8 h-8 rounded-full border-2 border-[#05060f]"
-                      style={{ background: `${c}40`, borderColor: '#05060f' }} />
+                  {[`${BLUE}40`, `${BLUE_LIGHT}40`, 'rgba(6,182,212,0.25)', 'rgba(245,158,11,0.25)'].map((c, i) => (
+                    <div key={i} className="w-8 h-8 rounded-full border-2"
+                      style={{ background: c, borderColor: BG }} />
                   ))}
                 </div>
                 <p className="text-sm text-white/40">
@@ -320,7 +325,7 @@ export default function LandingPage({
         <section className="py-24 px-6">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-14">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#4d8aff] mb-3">Why Us</p>
+              <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: BLUE_LIGHT }}>Why Us</p>
               <h2 className="syne text-3xl sm:text-4xl font-extrabold text-white">
                 Dating should feel more authentic.
               </h2>
@@ -332,13 +337,13 @@ export default function LandingPage({
                   icon: Shield,
                   title: 'Verified Profiles',
                   desc: 'Every profile starts with a wallet, reducing fake accounts and building trust from the first match.',
-                  accent: '#0052FF',
+                  accent: BLUE,
                 },
                 {
                   icon: Heart,
                   title: 'Shared Interests',
                   desc: 'Meet builders, creators, and collectors who understand your world and share your on-chain life.',
-                  accent: '#FF00C7',
+                  accent: BLUE_LIGHT,
                 },
                 {
                   icon: Lock,
@@ -369,14 +374,14 @@ export default function LandingPage({
         <section className="py-24 px-6">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-14">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#4d8aff] mb-3">Getting Started</p>
+              <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: BLUE_LIGHT }}>Getting Started</p>
               <h2 className="syne text-3xl sm:text-4xl font-extrabold text-white">Three simple steps.</h2>
             </div>
 
             <div className="grid md:grid-cols-3 gap-5 relative">
               {/* Connecting line (desktop) */}
               <div className="hidden md:block absolute top-10 left-[calc(16.67%+24px)] right-[calc(16.67%+24px)] h-px"
-                style={{ background: 'linear-gradient(to right, transparent, rgba(0,82,255,0.4), transparent)' }} />
+                style={{ background: `linear-gradient(to right, transparent, ${BLUE}40, transparent)` }} />
 
               {[
                 { step: '01', title: 'Connect', desc: 'Link your wallet or create an account in seconds.', icon: Wallet },
@@ -388,9 +393,9 @@ export default function LandingPage({
                     className="w-11 h-11 rounded-2xl flex items-center justify-center mb-5"
                     style={{ background: BLUE_DIM, border: `1px solid ${BLUE}30` }}
                   >
-                    <Icon className="w-5 h-5 text-[#4d8aff]" />
+                    <Icon className="w-5 h-5" style={{ color: BLUE_LIGHT }} />
                   </div>
-                  <div className="text-[#0052FF] font-extrabold text-xs mb-3 font-mono tracking-widest">{step}</div>
+                  <div className="font-extrabold text-xs mb-3 font-mono tracking-widest" style={{ color: BLUE }}>{step}</div>
                   <h3 className="text-white font-bold mb-2">{title}</h3>
                   <p className="text-white/40 text-sm leading-relaxed">{desc}</p>
                 </div>
@@ -403,25 +408,26 @@ export default function LandingPage({
         <section className="py-24 px-6">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-14">
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#4d8aff] mb-3">Community</p>
+              <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: BLUE_LIGHT }}>Community</p>
               <h2 className="syne text-3xl sm:text-4xl font-extrabold text-white">Who you'll meet.</h2>
             </div>
 
             <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
               {[
-  { name: 'Mia',  role: 'Digital Artist',  icon: FaPaintBrush, accent: '#FF00C7' },
-  { name: 'Noah', role: 'Onchain Builder',  icon: FaBolt,       accent: '#0052FF' },
-  { name: 'Zara', role: 'Photographer',     icon: FaCamera,     accent: '#f59e0b' },
-  { name: 'Kai',  role: 'NFT Collector',    icon: FaGem,        accent: '#06b6d4' },
-].map(({ name, role, icon: Icon, accent }) => (
+                { name: 'Mia',  role: 'Digital Artist',  icon: FaPaintBrush, accent: BLUE_LIGHT },
+                { name: 'Noah', role: 'Onchain Builder',  icon: FaBolt,       accent: BLUE      },
+                { name: 'Zara', role: 'Photographer',     icon: FaCamera,     accent: '#f59e0b' },
+                { name: 'Kai',  role: 'NFT Collector',    icon: FaGem,        accent: '#06b6d4' },
+              ].map(({ name, role, icon: Icon, accent }) => (
                 <div
                   key={name}
                   className="p-5 rounded-3xl border border-white/8 bg-white/3 hover:bg-white/5 hover:scale-[1.02] transition-all text-center group"
-                ><div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 ..."
-      style={{ background: `${accent}18`, border: `1px solid ${accent}25` }}>
-      <Icon className="w-6 h-6" style={{ color: accent }} />
-    </div>
-                           <h3 className="text-white font-bold text-sm">{name}</h3>
+                >
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                    style={{ background: `${accent}18`, border: `1px solid ${accent}25` }}>
+                    <Icon className="w-6 h-6" style={{ color: accent }} />
+                  </div>
+                  <h3 className="text-white font-bold text-sm">{name}</h3>
                   <p className="text-white/40 text-xs mt-0.5">{role}</p>
                   <div className="mt-3 flex items-center justify-center gap-1 text-xs" style={{ color: accent }}>
                     <CheckCircle className="w-3 h-3" />
@@ -438,17 +444,17 @@ export default function LandingPage({
           <div className="max-w-2xl mx-auto">
             <div
               className="rounded-[32px] p-10 text-center border border-white/8 relative overflow-hidden"
-              style={{ background: 'linear-gradient(160deg, rgba(0,82,255,0.1) 0%, rgba(255,0,199,0.06) 100%)' }}
+              style={{ background: `linear-gradient(160deg, ${BLUE}1a 0%, ${BLUE}0d 100%)` }}
             >
               {/* Inner glow */}
               <div className="absolute inset-0 rounded-[32px] pointer-events-none"
-                style={{ boxShadow: 'inset 0 0 60px rgba(0,82,255,0.08)' }} />
+                style={{ boxShadow: `inset 0 0 60px rgba(0,82,255,0.08)` }} />
 
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6"
                 style={{ background: BLUE_DIM, border: `1px solid ${BLUE}40` }}
               >
-                <Heart className="w-6 h-6 text-[#4d8aff]" />
+                <Heart className="w-6 h-6" style={{ color: BLUE_LIGHT }} />
               </div>
 
               <h2 className="syne text-3xl font-extrabold text-white mb-3">
@@ -464,8 +470,8 @@ export default function LandingPage({
                     onClick={() => router.push('/register/wallet/choice')}
                     className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl text-white font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
                     style={{
-                      background: 'linear-gradient(135deg, #FF00C7 0%, #0052FF 100%)',
-                      boxShadow: '0 0 28px rgba(0,82,255,0.3)',
+                      background: `linear-gradient(135deg, ${BLUE}, #1a6fff)`,
+                      boxShadow: `0 0 28px rgba(0,82,255,0.35)`,
                     }}
                   >
                     Create Profile <ArrowRight className="w-4 h-4" />
