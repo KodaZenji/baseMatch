@@ -421,10 +421,7 @@ export default function LandingPage({
       style={{ background: `${accent}18`, border: `1px solid ${accent}25` }}>
       <Icon className="w-6 h-6" style={{ color: accent }} />
     </div>
-                  >
-                    {emoji}
-                  </div>
-                  <h3 className="text-white font-bold text-sm">{name}</h3>
+                           <h3 className="text-white font-bold text-sm">{name}</h3>
                   <p className="text-white/40 text-xs mt-0.5">{role}</p>
                   <div className="mt-3 flex items-center justify-center gap-1 text-xs" style={{ color: accent }}>
                     <CheckCircle className="w-3 h-3" />
