@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Heart } from 'lucide-react';
 
 export default function EmailRegisterPage() {
     const router = useRouter();
@@ -47,27 +46,11 @@ export default function EmailRegisterPage() {
 
                 {/* Logo */}
                 <div className="flex justify-center mb-6">
-                    <div className="relative">
-                        <div className="bg-white rounded-full p-3 shadow-lg">
-                            <Heart
-                                className="w-12 h-12"
-                                fill="url(#brandGradient)"
-                                stroke="none"
-                            />
-                    
-                            <svg width="0" height="0">
-                                <defs>
-                                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stopColor="#ec4899" />
-                                        <stop offset="100%" stopColor="#a855f7" />
-                                    </linearGradient>
-                                </defs>
-                            </svg>
-                        </div>
+                    <div className="bg-white rounded-full p-3 shadow-lg">
+                        <img src="/bmg_new_logo.png" alt="BaseMatch" className="w-12 h-12 object-contain" />
                     </div>
                 </div>
 
-                {/* ✅ UPDATED: BaseMatch text gradient */}
                 <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
                     BaseMatch
                 </h1>
