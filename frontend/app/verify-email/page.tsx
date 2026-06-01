@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Heart, Mail, CheckCircle, AlertCircle } from 'lucide-react';
+import { Mail, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -15,7 +15,6 @@ export default function VerifyEmailPage() {
   const [email, setEmail] = useState('');
   const [timeLeft, setTimeLeft] = useState(600);
 
-  // Track where the user came from
   const [cameFromEdit, setCameFromEdit] = useState(false);
 
   useEffect(() => {
@@ -27,18 +26,15 @@ export default function VerifyEmailPage() {
       setMessage('No email found. Please start registration again.');
     }
 
-    // Check if user came from profile/edit
     const fromEdit = searchParams.get('from') === 'edit' || localStorage.getItem('verificationSource') === 'profile-edit';
     setCameFromEdit(fromEdit);
   }, [searchParams]);
 
   useEffect(() => {
     if (timeLeft <= 0) return;
-
     const interval = setInterval(() => {
       setTimeLeft((prev) => prev - 1);
     }, 1000);
-
     return () => clearInterval(interval);
   }, [timeLeft]);
 
@@ -51,11 +47,9 @@ export default function VerifyEmailPage() {
   const handleCodeChange = (index: number, value: string) => {
     if (value.length > 1) value = value[0];
     if (!/^\d*$/.test(value)) return;
-
     const newCode = [...code];
     newCode[index] = value;
     setCode(newCode);
-
     if (value && index < 5) {
       document.getElementById(`code-${index + 1}`)?.focus();
     }
@@ -78,10 +72,7 @@ export default function VerifyEmailPage() {
       const response = await fetch('/api/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: verificationCode,
-          email,
-        }),
+        body: JSON.stringify({ code: verificationCode, email }),
       });
 
       const data = await response.json();
@@ -97,27 +88,17 @@ export default function VerifyEmailPage() {
       setMessage('✅ Email verified successfully!');
 
       const isExistingUser = data.is_existing_user;
-
-      // Clean up verification source flag
       localStorage.removeItem('verificationSource');
 
-      // Redirect based on context
       setTimeout(() => {
         if (cameFromEdit) {
-          // User came from profile/edit, send them back
           router.push('/profile/edit');
         } else if (isExistingUser) {
-          // Existing user verifying from elsewhere
           router.push('/profile/edit');
         } else {
-          // New user - complete registration
           localStorage.setItem(
             'emailVerified',
-            JSON.stringify({
-              email,
-              profile_id: data.profile_id,
-              timestamp: Date.now(),
-            })
+            JSON.stringify({ email, profile_id: data.profile_id, timestamp: Date.now() })
           );
           router.push('/register/email/complete');
         }
@@ -136,18 +117,16 @@ export default function VerifyEmailPage() {
     setCode(['', '', '', '', '', '']);
     setMessage('');
     setTimeLeft(600);
-
     try {
       const response = await fetch('/api/register-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-
       if (response.ok) {
         setMessage('New code sent to ' + email);
       }
-    } catch (error) {
+    } catch {
       setStatus('error');
       setMessage('Failed to resend code');
     }
@@ -159,30 +138,18 @@ export default function VerifyEmailPage() {
 
         {/* Logo */}
         <div className="flex justify-center mb-6">
-          <div className="relative">
-            <div className="bg-white rounded-full p-3 shadow-lg">
-              <Heart
-                className="w-12 h-12"
-                fill="url(#brandGradient)"
-                stroke="none"
-              />
-              <svg width="0" height="0">
-                <defs>
-                  <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#ec4899" />
-                    <stop offset="100%" stopColor="#a855f7" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
+          <div className="bg-white rounded-full p-3 shadow-lg">
+            <img src="/bmg_new_logo.png" alt="BaseMatch" className="w-12 h-12 object-contain" />
           </div>
         </div>
 
-        <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+        {/* BaseMatch — blue */}
+        <h1 className="text-3xl font-bold text-center mb-2" style={{ color: '#0052FF' }}>
           BaseMatch
         </h1>
 
-        <h2 className="text-xl font-semibold text-gray-800 text-center mb-6">
+        {/* Email Verification — white muted */}
+        <h2 className="text-xl font-semibold text-center mb-6 text-gray-400">
           Email Verification
         </h2>
 
@@ -240,7 +207,7 @@ export default function VerifyEmailPage() {
         >
           {isVerifying ? (
             <span className="flex items-center justify-center gap-2">
-              <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               Verifying...
             </span>
           ) : (
