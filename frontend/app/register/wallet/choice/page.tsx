@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
-import { Edit3, Loader2, AlertCircle, CheckCircle, Heart, Hexagon } from 'lucide-react';
+import { Edit3, Loader2, AlertCircle, CheckCircle, Hexagon } from 'lucide-react';
 
 export default function SignupChoicePage() {
   const router = useRouter();
@@ -88,19 +88,11 @@ export default function SignupChoicePage() {
         {/* Logo */}
         <div className="flex justify-center mb-6">
           <div className="bg-white dark:bg-gray-800 rounded-full p-3 shadow-lg">
-            <Heart className="w-10 h-10" fill="url(#choiceGradient)" stroke="none" />
-            <svg width="0" height="0">
-              <defs>
-                <linearGradient id="choiceGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#ec4899" />
-                  <stop offset="100%" stopColor="#a855f7" />
-                </linearGradient>
-              </defs>
-            </svg>
+            <img src="/bmg_new_logo.png" alt="BaseMatch" className="w-10 h-10 object-contain" />
           </div>
         </div>
 
-        <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold text-center mb-2 text-white/80">
           How do you want to sign up?
         </h1>
         <p className="text-center text-gray-600 dark:text-gray-400 text-sm mb-8">
