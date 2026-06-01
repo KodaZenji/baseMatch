@@ -1,11 +1,26 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useAccount } from 'wagmi';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { injected } from 'wagmi/connectors';
+import {
+  Wallet, Loader2, LogOut, Sun, Moon, Menu, X,
+  Shield, Lock, ArrowRight, CheckCircle, Zap, Camera, Gem,
+} from 'lucide-react';
+import { FaDiscord } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
+import { FaPaintBrush, FaBolt, FaCamera, FaGem } from 'react-icons/fa';
+import { Sparkles, Upload, User } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { useRef } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Heart, Sparkles, Upload, Camera, Loader2, User } from 'lucide-react';
 import { INTEREST_CATEGORIES, interestsToTags, tagsToInterests, MAX_INTERESTS } from '@/components/ProfileEdit/ProfileFormFields';
+
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const BLUE = '#0052FF';
+const BLUE_LIGHT = '#4d8aff';
+const BLUE_DIM = 'rgba(0,82,255,0.12)';
 
 const SELECTED_COLOR = 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-transparent shadow-sm';
 const CATEGORY_COLORS: Record<string, string> = {
@@ -107,8 +122,14 @@ export default function CompleteWalletProfilePage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
         <div className="bg-white/95 dark:bg-gray-900/95 rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border border-gray-200 dark:border-gray-700">
-          <Heart className="w-12 h-12 mx-auto mb-4" fill="#C11C84" stroke="none" />
-          <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">BaseMatch</h1>
+          {/* Blue logo box */}
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background: BLUE_DIM, border: `1px solid ${BLUE}40` }}
+          >
+            <img src="/bmg_new_logo.png" alt="BaseMatch" className="w-8 h-8 object-contain" />
+          </div>
+          <h1 className="text-3xl font-bold mb-6 text-white/80">BaseMatch</h1>
           <div className="flex justify-center mb-6"><ConnectButton /></div>
           <button onClick={() => router.push('/')} className="text-gray-500 text-sm hover:text-gray-700">← Back</button>
         </div>
@@ -119,8 +140,16 @@ export default function CompleteWalletProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 py-8">
       <div className="bg-white dark:bg-gray-900/95 rounded-3xl shadow-2xl p-8 w-full max-w-2xl border border-gray-200 dark:border-gray-700 my-4">
-        <Heart className="w-12 h-12 mx-auto mb-4" fill="#C11C84" stroke="none" />
-        <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">Complete Your Profile</h1>
+
+        {/* Blue logo box */}
+        <div
+          className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+          style={{ background: BLUE_DIM, border: `1px solid ${BLUE}40` }}
+        >
+          <img src="/bmg_new_logo.png" alt="BaseMatch" className="w-8 h-8 object-contain" />
+        </div>
+
+        <h1 className="text-3xl font-bold text-center mb-2 text-white/80">Complete Your Profile</h1>
 
         {profileSource === 'baseapp' && (
           <div className="text-center mb-4">
