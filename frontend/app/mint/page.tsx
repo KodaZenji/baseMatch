@@ -5,7 +5,6 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagm
 import { useRouter } from 'next/navigation';
 import { PROFILE_NFT_ABI, CONTRACTS } from '@/lib/contracts';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Heart } from 'lucide-react';
 
 export default function MintPage() {
   const router = useRouter();
@@ -13,7 +12,7 @@ export default function MintPage() {
   const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess, error: receiptError } = useWaitForTransactionReceipt({ 
     hash,
-    pollingInterval: 1_000, // Poll every 1 second with Alchemy RPC
+    pollingInterval: 1_000,
   });
 
   const [mintData, setMintData] = useState<any>(null);
@@ -24,7 +23,6 @@ export default function MintPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [txHash, setTxHash] = useState<string>('');
 
-  // Memoized sync function
   const syncProfileWithWallet = useCallback(async (walletAddress: string): Promise<boolean> => {
     setIsSyncing(true);
 
@@ -77,10 +75,9 @@ export default function MintPage() {
     }
 
     setIsSyncing(false);
-    return true; // For wallet-first flow
+    return true;
   }, []);
 
-  // Check profile status
   useEffect(() => {
     if (!address) {
       setIsCheckingStatus(false);
@@ -107,7 +104,6 @@ export default function MintPage() {
           return;
         }
 
-        // Load minting payload
         const walletReg = localStorage.getItem('walletRegistration');
         const emailFirstReg = localStorage.getItem('emailFirstMint');
         const regString = walletReg || emailFirstReg;
@@ -136,7 +132,6 @@ export default function MintPage() {
     checkProfileStatus();
   }, [address, router]);
 
-  // Handle successful mint
   useEffect(() => {
     if (!isSuccess || !address || isSyncing) return;
 
@@ -147,12 +142,8 @@ export default function MintPage() {
 
       if (syncSuccess) {
         console.log('✅ Sync completed, cleaning up...');
-        
-        // Clear registration data
         localStorage.removeItem('walletRegistration');
         localStorage.removeItem('emailFirstMint');
-
-        // Immediate redirect
         router.push('/');
       } else {
         console.error('❌ Sync failed');
@@ -162,7 +153,6 @@ export default function MintPage() {
     handlePostMintSync();
   }, [isSuccess, address, isSyncing, router, syncProfileWithWallet]);
 
-  // Track transaction hash
   useEffect(() => {
     if (hash) {
       setTxHash(hash);
@@ -171,7 +161,6 @@ export default function MintPage() {
     }
   }, [hash]);
 
-  // Handle write errors
   useEffect(() => {
     if (writeError) {
       console.error('❌ Write contract error:', writeError);
@@ -180,7 +169,6 @@ export default function MintPage() {
     }
   }, [writeError]);
 
-  // Handle receipt errors
   useEffect(() => {
     if (receiptError) {
       console.error('❌ Receipt error:', receiptError);
@@ -202,7 +190,6 @@ export default function MintPage() {
       console.log('🚀 Starting mint transaction...');
       
       if (mintData.useRegisterWithEmail) {
-        // Email-first flow
         const payload = mintData.registerWithEmailPayload;
         console.log('📧 Using registerWithEmail function');
         
@@ -213,7 +200,6 @@ export default function MintPage() {
           args: [payload.name, payload.birthYear, payload.gender, payload.interests, payload.email],
         });
       } else {
-        // Wallet-first flow
         const payload = mintData.createProfilePayload;
         console.log('👛 Using createProfile function');
         
@@ -231,25 +217,22 @@ export default function MintPage() {
     }
   };
 
+  // ── Logo helper ───────────────────────────────────────────────────────────────
+  const LogoBlock = () => (
+    <div className="flex justify-center mb-6">
+      <div className="bg-white rounded-full p-3 shadow-lg">
+        <img src="/bmg_new_logo.png" alt="BaseMatch" className="w-12 h-12 object-contain" />
+      </div>
+    </div>
+  );
+
   // Loading state
   if (isCheckingStatus) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-          <div className="flex justify-center mb-6">
-            <div className="bg-white rounded-full p-3 shadow-lg">
-              <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
-              <svg width="0" height="0">
-                <defs>
-                  <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#ec4899" />
-                    <stop offset="100%" stopColor="#a855f7" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+          <LogoBlock />
+          <h1 className="text-3xl font-bold mb-6 text-white/80">
             BaseMatch
           </h1>
           <svg className="animate-spin h-8 w-8 text-indigo-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -268,20 +251,8 @@ export default function MintPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-          <div className="flex justify-center mb-6">
-            <div className="bg-white rounded-full p-3 shadow-lg">
-              <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
-              <svg width="0" height="0">
-                <defs>
-                  <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#ec4899" />
-                    <stop offset="100%" stopColor="#a855f7" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+          <LogoBlock />
+          <h1 className="text-3xl font-bold mb-6 text-white/80">
             BaseMatch
           </h1>
           <p className="text-gray-700 mb-6">Please connect your wallet to mint your profile</p>
@@ -299,20 +270,8 @@ export default function MintPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-          <div className="flex justify-center mb-6">
-            <div className="bg-white rounded-full p-3 shadow-lg">
-              <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
-              <svg width="0" height="0">
-                <defs>
-                  <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#ec4899" />
-                    <stop offset="100%" stopColor="#a855f7" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+          <LogoBlock />
+          <h1 className="text-3xl font-bold mb-6 text-white/80">
             BaseMatch
           </h1>
           <p className="text-gray-700 mb-6">{error || 'Loading...'}</p>
@@ -328,21 +287,9 @@ export default function MintPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full text-center">
-        <div className="flex justify-center mb-6">
-          <div className="bg-white rounded-full p-3 shadow-lg">
-            <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
-            <svg width="0" height="0">
-              <defs>
-                <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#ec4899" />
-                  <stop offset="100%" stopColor="#a855f7" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-        </div>
+        <LogoBlock />
 
-        <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold mb-6 text-white/80">
           BaseMatch
         </h1>
 
@@ -386,7 +333,6 @@ export default function MintPage() {
           <div>
             <p className="text-gray-700 mb-6">Ready to mint your BaseMatch profile NFT?</p>
             
-            {/* Transaction Status */}
             {(isPending || isConfirming) && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 {isPending && (
