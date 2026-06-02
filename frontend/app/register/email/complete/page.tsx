@@ -4,7 +4,23 @@ import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Heart } from 'lucide-react';
+import { INTEREST_CATEGORIES, interestsToTags, tagsToInterests, MAX_INTERESTS } from '@/components/ProfileEdit/ProfileFormFields';
+
+const SELECTED_COLOR = 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-transparent shadow-sm';
+const CATEGORY_COLORS: Record<string, string> = {
+    'Onchain & Web3': 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100',
+    'Lifestyle': 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100',
+    'Looking For': 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
+};
+
+// ── Logo helper ───────────────────────────────────────────────────────────────
+const LogoBlock = () => (
+    <div className="flex justify-center mb-6">
+        <div className="bg-white rounded-full p-3 shadow-lg">
+            <img src="/bmg_new_logo.png" alt="BaseMatch" className="w-12 h-12 object-contain" />
+        </div>
+    </div>
+);
 
 export default function CompleteEmailProfilePage() {
     const router = useRouter();
@@ -22,8 +38,18 @@ export default function CompleteEmailProfilePage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const selectedTags = interestsToTags(formData.interests);
+
+    function toggleTag(tag: string) {
+        if (selectedTags.includes(tag)) {
+            setFormData(p => ({ ...p, interests: tagsToInterests(selectedTags.filter(t => t !== tag)) }));
+        } else {
+            if (selectedTags.length >= MAX_INTERESTS) return;
+            setFormData(p => ({ ...p, interests: tagsToInterests([...selectedTags, tag]) }));
+        }
+    }
+
     useEffect(() => {
-        // Get email and profile_id from localStorage (set after email verification)
         const emailVerified = localStorage.getItem('emailVerified');
         if (emailVerified) {
             const data = JSON.parse(emailVerified);
@@ -37,19 +63,7 @@ export default function CompleteEmailProfilePage() {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
                 <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-                    <div className="flex justify-center mb-6">
-                        <div className="bg-white rounded-full p-3 shadow-lg">
-                            <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
-                            <svg width="0" height="0">
-                                <defs>
-                                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stopColor="#ec4899" />
-                                        <stop offset="100%" stopColor="#a855f7" />
-                                    </linearGradient>
-                                </defs>
-                            </svg>
-                        </div>
-                    </div>
+                    <LogoBlock />
                     <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
                         BaseMatch
                     </h1>
@@ -68,24 +82,12 @@ export default function CompleteEmailProfilePage() {
         );
     }
 
-    // Redirect if no email (user hasn't verified email yet)
+    // Redirect if no email
     if (!email) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
                 <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
-                    <div className="flex justify-center mb-6">
-                        <div className="bg-white rounded-full p-3 shadow-lg">
-                            <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
-                            <svg width="0" height="0">
-                                <defs>
-                                    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stopColor="#ec4899" />
-                                        <stop offset="100%" stopColor="#a855f7" />
-                                    </linearGradient>
-                                </defs>
-                            </svg>
-                        </div>
-                    </div>
+                    <LogoBlock />
                     <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
                         BaseMatch
                     </h1>
@@ -112,10 +114,11 @@ export default function CompleteEmailProfilePage() {
             if (!address) throw new Error('Wallet not connected');
             if (!profile_id) throw new Error('Profile ID not found. Please verify your email again.');
 
-            // Validate form
             if (!formData.name || !formData.birthYear || !formData.gender || !formData.interests) {
                 throw new Error('Please fill in all required fields');
             }
+
+            if (selectedTags.length === 0) throw new Error('Please select at least one interest');
 
             const currentYear = new Date().getFullYear();
             const birthYear = parseInt(formData.birthYear);
@@ -124,7 +127,6 @@ export default function CompleteEmailProfilePage() {
                 throw new Error('Birth year must correspond to an age between 18 and 120');
             }
 
-            // Store for minting using registerWithEmail with profile_id
             localStorage.setItem('emailFirstMint', JSON.stringify({
                 profile_id: profile_id,
                 id: profile_id,
@@ -141,7 +143,6 @@ export default function CompleteEmailProfilePage() {
                 contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS,
             }));
 
-            // Redirect to minting page
             router.push('/mint');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to complete profile');
@@ -151,26 +152,14 @@ export default function CompleteEmailProfilePage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full">
-                <div className="flex justify-center mb-6">
-                    <div className="bg-white rounded-full p-3 shadow-lg">
-                        <Heart className="w-12 h-12" fill="url(#brandGradient)" stroke="none" />
-                        <svg width="0" height="0">
-                            <defs>
-                                <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#ec4899" />
-                                    <stop offset="100%" stopColor="#a855f7" />
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                    </div>
-                </div>
+        <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4 py-8">
+            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full my-4">
+                <LogoBlock />
 
                 <h1 className="text-3xl font-bold mb-2 text-center bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
                     BaseMatch
                 </h1>
-                <p className="text-gray-600 text-center mb-2">Complete Your Profile</p>
+                <p className="text-gray-600 text-center mb-2 text-white/80 font-semibold">Complete Your Profile</p>
                 <p className="text-sm text-gray-500 text-center mb-8">Email: {email}</p>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -193,7 +182,7 @@ export default function CompleteEmailProfilePage() {
                         />
                     </div>
 
-                    {/* Birth Year - FIXED */}
+                    {/* Birth Year */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Birth Year *</label>
                         <select
@@ -206,7 +195,6 @@ export default function CompleteEmailProfilePage() {
                             {(() => {
                                 const currentYear = new Date().getFullYear();
                                 const options = [];
-                                // Generate years for ages 18 to 100
                                 for (let age = 18; age <= 100; age++) {
                                     const year = currentYear - age;
                                     options.push(
@@ -241,17 +229,47 @@ export default function CompleteEmailProfilePage() {
                         </select>
                     </div>
 
-                    {/* Interests */}
+                    {/* Interests — tag picker */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Interests *</label>
-                        <textarea
-                            value={formData.interests}
-                            onChange={(e) => setFormData({ ...formData, interests: e.target.value })}
-                            required
-                            rows={3}
-                            className="w-full px-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Hiking, Photography, Crypto..."
-                        />
+                        <div className="flex items-center justify-between mb-3">
+                            <label className="text-sm font-medium text-gray-700">Interests *</label>
+                            <span className={`text-xs font-semibold ${selectedTags.length >= MAX_INTERESTS ? 'text-red-500' : 'text-gray-400'}`}>
+                                {selectedTags.length}/{MAX_INTERESTS}
+                            </span>
+                        </div>
+                        <div className="space-y-4">
+                            {Object.entries(INTEREST_CATEGORIES).map(([category, tags]) => (
+                                <div key={category}>
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{category}</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {tags.map((tag) => {
+                                            const isSelected = selectedTags.includes(tag);
+                                            const isDisabled = !isSelected && selectedTags.length >= MAX_INTERESTS;
+                                            return (
+                                                <button
+                                                    key={tag}
+                                                    type="button"
+                                                    onClick={() => toggleTag(tag)}
+                                                    disabled={isDisabled}
+                                                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                                                        isSelected
+                                                            ? SELECTED_COLOR
+                                                            : isDisabled
+                                                            ? 'opacity-40 cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400'
+                                                            : `${CATEGORY_COLORS[category] ?? 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'} cursor-pointer`
+                                                    }`}
+                                                >
+                                                    {tag}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {selectedTags.length === 0 && (
+                            <p className="text-xs text-red-400 mt-2">Please select at least one interest</p>
+                        )}
                     </div>
 
                     <button
