@@ -31,13 +31,15 @@ function RainbowKitThemeWrapper({ children }: { children: React.ReactNode }) {
     <RainbowKitProvider
       initialChain={base}
       theme={isDark ? darkTheme({
-        accentColor: '#C11C84',
+        accentColor: '#0052FF',
         accentColorForeground: 'white',
         borderRadius: 'large',
+        overlayBlur: 'small',
       }) : lightTheme({
-        accentColor: '#C11C84',
+        accentColor: '#0052FF',
         accentColorForeground: 'white',
         borderRadius: 'large',
+        overlayBlur: 'small',
       })}
     >
       {children}
@@ -53,8 +55,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
     const init = async () => {
       try {
-        // Keep isInMiniApp guard for Farcaster client detection
-        // sdk.actions.ready() removed — deprecated after April 9 migration
         const isInMiniApp = await sdk.isInMiniApp();
         if (isInMiniApp) {
           console.log('ℹ️ Running inside Farcaster client');
