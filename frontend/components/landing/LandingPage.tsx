@@ -12,11 +12,11 @@ import { FaDiscord } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 import { FaPaintBrush, FaBolt, FaCamera, FaGem } from 'react-icons/fa';
 
-// ── Design tokens (aligned to raffle page) ───────────────────────────────────
+// ── Design tokens ─────────────────────────────────────────────────────────────
 const BLUE = '#0052FF';
 const BLUE_LIGHT = '#4d8aff';
 const BLUE_DIM = 'rgba(0,82,255,0.12)';
-const BG = '#0a0a0f'; // raffle bg
+const BG = '#0a0a0f';
 
 // ── Local wallet button ───────────────────────────────────────────────────────
 function ConnectButton({ full = false }: { full?: boolean }) {
@@ -52,7 +52,7 @@ function ConnectButton({ full = false }: { full?: boolean }) {
   );
 }
 
-// ── Landing Menu (not connected) ─────────────────────────────────────────────
+// ── Landing Menu ──────────────────────────────────────────────────────────────
 function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : 'unset';
@@ -94,14 +94,47 @@ function LandingMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
   );
 }
 
-// ── Animated profile card ─────────────────────────────────────────────────────
+// ── Profile data ──────────────────────────────────────────────────────────────
 const PROFILES = [
-  { name: 'Mia',  role: 'Digital Artist',   icon: FaPaintBrush, accent: '#4d8aff', glow: 'rgba(0,82,255,0.18)' },
-  { name: 'Noah', role: 'Onchain Builder',   icon: FaBolt,       accent: '#0052FF', glow: 'rgba(0,82,255,0.2)'  },
-  { name: 'Zara', role: 'Photographer',      icon: FaCamera,     accent: '#f59e0b', glow: 'rgba(245,158,11,0.15)'},
-  { name: 'Kai',  role: 'NFT Collector',     icon: FaGem,        accent: '#06b6d4', glow: 'rgba(6,182,212,0.15)' },
+  {
+    name: 'Byola',
+    role: 'Web3 Content Creator',
+    handle: '@GoBigBabe',
+    tags: ['Build/Dev', 'Web3', 'Content'],
+    accent: BLUE_LIGHT,
+    glow: 'rgba(77,138,255,0.2)',
+    photo: '/byola.jpg',
+  },
+  {
+    name: 'Youssef',
+    role: 'DevRel @ Base',
+    handle: '@0xyoussea',
+    tags: ['Build/Dev', 'AI Agents', 'DevRel'],
+    accent: BLUE,
+    glow: 'rgba(0,82,255,0.22)',
+    photo: '/yousef.jpg',
+  },
+  {
+    name: 'Montana',
+    role: 'Engineer @ Base',
+    handle: '@Montana_Wong',
+    tags: ['Base', 'Build/Dev', 'DeFi'],
+    accent: '#06b6d4',
+    glow: 'rgba(6,182,212,0.18)',
+    photo: '/wong.jpg',
+  },
+  {
+    name: 'Judith',
+    role: 'Photography & Travel',
+    handle: '',
+    tags: ['Photography', 'Hiking', 'NFTs'],
+    accent: '#f59e0b',
+    glow: 'rgba(245,158,11,0.18)',
+    photo: '/27.png',
+  },
 ];
 
+// ── Animated profile card ─────────────────────────────────────────────────────
 function ProfilePreview() {
   const [idx, setIdx] = useState(0);
   const [visible, setVisible] = useState(true);
@@ -121,64 +154,84 @@ function ProfilePreview() {
 
   return (
     <div className="relative flex justify-center items-center">
-      {/* Glow behind card */}
+      {/* Ambient glow */}
       <div
         className="absolute w-64 h-64 rounded-full blur-3xl transition-all duration-700"
-        style={{ background: p.glow, opacity: 0.8 }}
+        style={{ background: p.glow, opacity: 0.9 }}
       />
 
-      {/* Card */}
+      {/* Card wrapper */}
       <div
-        className="relative w-[280px] h-[380px] rounded-[28px] border border-white/10 overflow-hidden"
+        className="relative w-[280px] h-[380px] rounded-[28px] overflow-hidden"
         style={{
-          background: 'linear-gradient(160deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%)',
-          backdropFilter: 'blur(20px)',
           opacity: visible ? 1 : 0,
           transform: visible ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.98)',
           transition: 'opacity 0.4s ease, transform 0.4s ease',
         }}
       >
+        {/* Background photo — sits behind the glass */}
+        <div
+          className="absolute inset-0 bg-cover bg-center transition-all duration-700"
+          style={{
+            backgroundImage: `url(${p.photo})`,
+            transform: 'scale(1.05)',
+          }}
+        />
+
+        {/* Dark gradient overlay so text stays readable */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.85) 100%)',
+          }}
+        />
+
+        {/* Glass card layer */}
+        <div
+          className="absolute inset-0 border border-white/15 rounded-[28px]"
+          style={{
+            background: 'linear-gradient(160deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 100%)',
+            backdropFilter: 'blur(4px)',
+          }}
+        />
+
         {/* Top accent bar */}
         <div className="absolute top-0 left-0 right-0 h-1 rounded-t-[28px]"
           style={{ background: `linear-gradient(to right, ${p.accent}, transparent)` }} />
 
-        <div className="flex flex-col justify-between h-full p-7">
-          {/* Icon + online indicator */}
-          <div className="flex items-start justify-between">
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ background: `${p.accent}18`, border: `1px solid ${p.accent}30` }}
-            >
-              <p.icon className="w-7 h-7" style={{ color: p.accent }} />
-            </div>
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-between h-full p-7">
+          {/* Online indicator */}
+          <div className="flex justify-end">
             <span className="flex items-center gap-1.5 text-xs text-green-400 font-medium bg-green-400/10 border border-green-400/20 px-2.5 py-1 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
               Online
             </span>
           </div>
 
-          {/* Interests chips */}
-          <div className="flex flex-wrap gap-2">
-            {['Base', 'Web3', idx % 2 === 0 ? 'DeFi' : 'NFTs'].map(tag => (
-              <span key={tag} className="text-xs px-2.5 py-1 rounded-lg text-white/50 border border-white/10 bg-white/4">
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          {/* Name + role + verified */}
+          {/* Bottom info */}
           <div>
+            {/* Interest chips */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {p.tags.map(tag => (
+                <span key={tag} className="text-xs px-2.5 py-1 rounded-lg text-white/70 border border-white/15 bg-black/30">
+                  {tag}
+                </span>
+              ))}
+            </div>
+
             <h3 className="text-white text-2xl font-bold mb-0.5">{p.name}</h3>
-            <p className="text-white/40 text-sm mb-4">{p.role}</p>
+            <p className="text-white/50 text-sm mb-4">{p.role}</p>
+
             <div className="flex items-center gap-2 text-xs" style={{ color: p.accent }}>
               <CheckCircle className="w-3.5 h-3.5" />
-              <span className="font-semibold">Verified Wallet</span>
+              <span className="font-semibold">Verified on Base</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Floating dot indicators */}
+      {/* Dot indicators */}
       <div className="absolute -bottom-8 flex gap-1.5">
         {PROFILES.map((_, i) => (
           <div key={i} className="rounded-full transition-all duration-300"
@@ -193,7 +246,7 @@ function ProfilePreview() {
   );
 }
 
-// ── Main LandingPage component ────────────────────────────────────────────────
+// ── Main LandingPage ──────────────────────────────────────────────────────────
 export default function LandingPage({
   isDark,
   toggleDarkMode,
@@ -218,7 +271,7 @@ export default function LandingPage({
 
       <div className="landing min-h-screen relative overflow-x-hidden" style={{ background: BG }}>
 
-        {/* Ambient glow orbs — blue only, matching raffle */}
+        {/* Ambient glow orbs */}
         <div className="pointer-events-none fixed inset-0 overflow-hidden">
           <div className="float absolute w-[500px] h-[500px] rounded-full opacity-20 blur-[100px]"
             style={{ background: 'radial-gradient(circle, #0052FF 0%, transparent 70%)', left: '-5%', top: '10%' }} />
@@ -303,9 +356,9 @@ export default function LandingPage({
               {/* Social proof */}
               <div className="flex items-center gap-3 mt-10 justify-center lg:justify-start">
                 <div className="flex -space-x-2.5">
-                  {[`${BLUE}40`, `${BLUE_LIGHT}40`, 'rgba(6,182,212,0.25)', 'rgba(245,158,11,0.25)'].map((c, i) => (
-                    <div key={i} className="w-8 h-8 rounded-full border-2"
-                      style={{ background: c, borderColor: BG }} />
+                  {['/byola.jpg', '/yousef.jpg', '/wong.jpg', '/27.png'].map((src, i) => (
+                    <div key={i} className="w-8 h-8 rounded-full border-2 bg-cover bg-center"
+                      style={{ backgroundImage: `url(${src})`, borderColor: BG }} />
                   ))}
                 </div>
                 <p className="text-sm text-white/40">
@@ -379,7 +432,6 @@ export default function LandingPage({
             </div>
 
             <div className="grid md:grid-cols-3 gap-5 relative">
-              {/* Connecting line (desktop) */}
               <div className="hidden md:block absolute top-10 left-[calc(16.67%+24px)] right-[calc(16.67%+24px)] h-px"
                 style={{ background: `linear-gradient(to right, transparent, ${BLUE}40, transparent)` }} />
 
@@ -413,25 +465,34 @@ export default function LandingPage({
             </div>
 
             <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { name: 'Mia',  role: 'Digital Artist',  icon: FaPaintBrush, accent: BLUE_LIGHT },
-                { name: 'Noah', role: 'Onchain Builder',  icon: FaBolt,       accent: BLUE      },
-                { name: 'Zara', role: 'Photographer',     icon: FaCamera,     accent: '#f59e0b' },
-                { name: 'Kai',  role: 'NFT Collector',    icon: FaGem,        accent: '#06b6d4' },
-              ].map(({ name, role, icon: Icon, accent }) => (
+              {PROFILES.map(({ name, role, accent, photo, tags }) => (
                 <div
                   key={name}
-                  className="p-5 rounded-3xl border border-white/8 bg-white/3 hover:bg-white/5 hover:scale-[1.02] transition-all text-center group"
+                  className="relative rounded-3xl overflow-hidden h-[200px] hover:scale-[1.02] transition-all group border border-white/8"
                 >
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                    style={{ background: `${accent}18`, border: `1px solid ${accent}25` }}>
-                    <Icon className="w-6 h-6" style={{ color: accent }} />
-                  </div>
-                  <h3 className="text-white font-bold text-sm">{name}</h3>
-                  <p className="text-white/40 text-xs mt-0.5">{role}</p>
-                  <div className="mt-3 flex items-center justify-center gap-1 text-xs" style={{ color: accent }}>
-                    <CheckCircle className="w-3 h-3" />
-                    <span>Verified</span>
+                  {/* Photo background */}
+                  <div
+                    className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-500"
+                    style={{ backgroundImage: `url(${photo})` }}
+                  />
+                  {/* Gradient overlay */}
+                  <div
+                    className="absolute inset-0"
+                    style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.75) 100%)' }}
+                  />
+                  {/* Glass layer */}
+                  <div
+                    className="absolute inset-0"
+                    style={{ backdropFilter: 'blur(2px)', background: 'rgba(0,0,0,0.1)' }}
+                  />
+                  {/* Content */}
+                  <div className="relative z-10 flex flex-col justify-end h-full p-4">
+                    <h3 className="text-white font-bold text-sm">{name}</h3>
+                    <p className="text-white/50 text-xs mt-0.5 mb-2">{role}</p>
+                    <div className="flex items-center gap-1 text-xs" style={{ color: accent }}>
+                      <CheckCircle className="w-3 h-3" />
+                      <span>Verified on Base</span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -446,7 +507,6 @@ export default function LandingPage({
               className="rounded-[32px] p-10 text-center border border-white/8 relative overflow-hidden"
               style={{ background: `linear-gradient(160deg, ${BLUE}1a 0%, ${BLUE}0d 100%)` }}
             >
-              {/* Inner glow */}
               <div className="absolute inset-0 rounded-[32px] pointer-events-none"
                 style={{ boxShadow: `inset 0 0 60px rgba(0,82,255,0.08)` }} />
 
