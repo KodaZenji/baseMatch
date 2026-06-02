@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { Loader2, Camera, Upload, User } from 'lucide-react';
 import { INTEREST_CATEGORIES, interestsToTags, tagsToInterests, MAX_INTERESTS } from '@/components/ProfileEdit/ProfileFormFields';
 
 const SELECTED_COLOR = 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-transparent shadow-sm';
@@ -37,6 +38,12 @@ export default function CompleteEmailProfilePage() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [avatarUrl, setAvatarUrl] = useState('');
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadError, setUploadError] = useState('');
+    const uploadInputRef = useRef<HTMLInputElement>(null);
+
+    const hasPfp = !!avatarUrl && !avatarUrl.includes('dicebear');
 
     const selectedTags = interestsToTags(formData.interests);
 
@@ -57,6 +64,33 @@ export default function CompleteEmailProfilePage() {
             setProfile_id(data.profile_id);
         }
     }, []);
+
+    // Dicebear fallback avatar based on email
+    useEffect(() => {
+        if (email && !avatarUrl) {
+            const seed = email.replace('@', '').replace('.', '');
+            setAvatarUrl(`https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`);
+        }
+    }, [email, avatarUrl]);
+
+    async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadError('');
+        setIsUploading(true);
+        try {
+            const form = new FormData();
+            form.append('file', file);
+            const res = await fetch('/api/upload-image', { method: 'POST', body: form });
+            const data = await res.json();
+            if (!res.ok) { setUploadError(data.error || 'Upload failed.'); return; }
+            setAvatarUrl(data.url);
+        } catch {
+            setUploadError('Network error. Please try again.');
+        } finally {
+            setIsUploading(false);
+        }
+    }
 
     // Show wallet connection screen if not connected but email is verified
     if (!isConnected && email) {
@@ -139,6 +173,7 @@ export default function CompleteEmailProfilePage() {
                     gender: formData.gender,
                     interests: formData.interests,
                     email: email,
+                    photoUrl: avatarUrl,
                 },
                 contractAddress: process.env.NEXT_PUBLIC_PROFILE_NFT_ADDRESS,
             }));
@@ -168,6 +203,52 @@ export default function CompleteEmailProfilePage() {
                             {error}
                         </div>
                     )}
+
+                    {/* Photo Upload */}
+                    <div className="flex flex-col items-center">
+                        <div className="relative mb-3">
+                            {avatarUrl ? (
+                                <img
+                                    src={avatarUrl}
+                                    alt="Profile"
+                                    className="w-28 h-28 rounded-full border-4 border-white shadow-lg object-cover"
+                                    onError={(e) => {
+                                        const seed = email.replace('@', '').replace('.', '');
+                                        e.currentTarget.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}`;
+                                    }}
+                                />
+                            ) : (
+                                <div className="w-28 h-28 rounded-full border-4 border-white bg-gray-200 flex items-center justify-center shadow-lg">
+                                    <User className="w-14 h-14 text-gray-400" />
+                                </div>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => uploadInputRef.current?.click()}
+                                disabled={isUploading}
+                                className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white flex items-center justify-center shadow-lg hover:opacity-90 disabled:opacity-60"
+                            >
+                                {isUploading ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : hasPfp ? (
+                                    <Camera className="w-4 h-4" />
+                                ) : (
+                                    <Upload className="w-4 h-4" />
+                                )}
+                            </button>
+                        </div>
+                        <input
+                            type="file"
+                            ref={uploadInputRef}
+                            onChange={handlePhotoUpload}
+                            accept="image/*"
+                            className="hidden"
+                        />
+                        <p className="text-xs text-gray-500">
+                            {isUploading ? 'Uploading...' : hasPfp ? 'Tap camera to change photo' : 'Tap to upload your photo (max 3MB)'}
+                        </p>
+                        {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
+                    </div>
 
                     {/* Name */}
                     <div>
