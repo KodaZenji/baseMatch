@@ -273,7 +273,7 @@ export default function LandingPage({
               </h1>
 
               <p className="text-white/45 text-lg leading-relaxed max-w-md mx-auto lg:mx-0 mb-10">
-                Verified profiles. Shared on-chain interests.
+                Shared on-chain interests.
                 Dating built for builders, creators, and collectors on Base.
               </p>
 
