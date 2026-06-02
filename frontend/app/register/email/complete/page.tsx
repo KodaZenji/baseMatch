@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import CustomConnectButton from '@/components/CustomConnectButton';
 import { Loader2, Camera, Upload, User } from 'lucide-react';
 import { INTEREST_CATEGORIES, interestsToTags, tagsToInterests, MAX_INTERESTS } from '@/components/ProfileEdit/ProfileFormFields';
 
@@ -98,7 +98,7 @@ export default function CompleteEmailProfilePage() {
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
                 <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
                     <LogoBlock />
-                    <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                    <h1 className="text-3xl font-bold mb-6" style={{ color: '#0052FF' }}>
                         BaseMatch
                     </h1>
                     <p className="text-gray-700 mb-2 font-semibold">Step 2: Connect Wallet</p>
@@ -109,7 +109,7 @@ export default function CompleteEmailProfilePage() {
                         <p className="text-sm text-green-800">✅ {email}</p>
                     </div>
                     <div className="flex justify-center">
-                        <ConnectButton />
+                        <CustomConnectButton variant="light" full />
                     </div>
                 </div>
             </div>
@@ -122,7 +122,7 @@ export default function CompleteEmailProfilePage() {
             <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-blue-500 to-indigo-700 flex items-center justify-center p-4">
                 <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
                     <LogoBlock />
-                    <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                    <h1 className="text-3xl font-bold mb-6" style={{ color: '#0052FF' }}>
                         BaseMatch
                     </h1>
                     <p className="text-gray-700 mb-6">
@@ -191,7 +191,7 @@ export default function CompleteEmailProfilePage() {
             <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full my-4">
                 <LogoBlock />
 
-                <h1 className="text-3xl font-bold mb-2 text-center bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                <h1 className="text-3xl font-bold mb-2 text-center" style={{ color: '#0052FF' }}>
                     BaseMatch
                 </h1>
                 <p className="text-gray-600 text-center mb-2 text-white/80 font-semibold">Complete Your Profile</p>
