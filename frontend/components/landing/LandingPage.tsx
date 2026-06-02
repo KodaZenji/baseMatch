@@ -362,7 +362,7 @@ export default function LandingPage({
                   ))}
                 </div>
                 <p className="text-sm text-white/40">
-                  <span className="text-white font-semibold">500+</span> verified users on Base
+                  <span className="text-white font-semibold">Growing</span> community on Base
                 </p>
               </div>
             </div>
