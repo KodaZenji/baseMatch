@@ -51,7 +51,7 @@ export default function EmailRegisterPage() {
                     </div>
                 </div>
 
-                <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                <h1 className="text-3xl font-bold text-center mb-2" style={{ color: '#0052FF' }}>
                     BaseMatch
                 </h1>
 
