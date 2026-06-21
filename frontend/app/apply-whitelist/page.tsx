@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 const BASEMATCH_X_HANDLE = 'basematch_';
-const PINNED_TWEET_ID = '2068403150843789756';
+const PINNED_TWEET_ID = '2068733314941206879';
 const GUILD_XYZ_URL = 'https://guild.xyz/basematch';
 
 const FOLLOW_URL = `https://x.com/intent/follow?screen_name=${BASEMATCH_X_HANDLE}`;
