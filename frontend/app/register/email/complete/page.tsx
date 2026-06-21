@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
-import CustomConnectButton from '@/components/CustomConnectButton';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Loader2, Camera, Upload, User } from 'lucide-react';
 import { INTEREST_CATEGORIES, interestsToTags, tagsToInterests, MAX_INTERESTS } from '@/components/ProfileEdit/ProfileFormFields';
 
@@ -109,7 +110,7 @@ export default function CompleteEmailProfilePage() {
                         <p className="text-sm text-green-800">✅ {email}</p>
                     </div>
                     <div className="flex justify-center">
-                        <CustomConnectButton variant="light" full />
+                        <ConnectButton />
                     </div>
                 </div>
             </div>
