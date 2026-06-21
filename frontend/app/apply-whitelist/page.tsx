@@ -359,7 +359,7 @@ export default function ApplyWhitelistPage() {
               <div className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center">
                 <Users className="w-3.5 h-3.5 text-orange-400" />
               </div>
-              <span className="text-white font-medium text-[15px]">Tag 2 friends</span>
+              <span className="text-white font-medium text-[15px]">Tag a friend</span>
             </div>
             <p className="text-[#8E8E93] text-[13px] mb-3 leading-relaxed">
               Comment on the{' '}
@@ -371,7 +371,7 @@ export default function ApplyWhitelistPage() {
               >
                 pinned post
               </a>{' '}
-              tagging 3 friends, then paste the link below.
+              tagging 1 friend, then paste the link below.
             </p>
             <input
               type="url"
