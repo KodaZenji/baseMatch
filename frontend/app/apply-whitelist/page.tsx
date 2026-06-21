@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -15,7 +16,7 @@ import {
 } from 'lucide-react';
 
 const BASEMATCH_X_HANDLE = 'basematch_';
-const PINNED_TWEET_ID = 'PLACEHOLDER_TWEET_ID';
+const PINNED_TWEET_ID = '2068403150843789756';
 const GUILD_XYZ_URL = 'https://guild.xyz/basematch';
 
 const FOLLOW_URL = `https://x.com/intent/follow?screen_name=${BASEMATCH_X_HANDLE}`;
@@ -141,8 +142,14 @@ export default function ApplyWhitelistPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans" style={{ '--accent': BLUE } as React.CSSProperties}>
-      <div className="max-w-lg mx-auto px-5 py-10">
+    <div className="min-h-screen bg-black text-white font-sans relative overflow-hidden" style={{ '--accent': BLUE } as React.CSSProperties}>
+      {/* Base blue ambient glows — matches /raffle */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[#0052FF]/8 blur-[120px]" />
+        <div className="absolute top-1/2 -right-32 w-80 h-80 rounded-full bg-[#0052FF]/6 blur-[100px]" />
+      </div>
+
+      <div className="relative z-10 max-w-lg mx-auto px-5 py-10">
 
         <button
           onClick={() => router.push('/')}
@@ -155,8 +162,8 @@ export default function ApplyWhitelistPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 rounded-xl bg-[#1a1a1a] flex items-center justify-center ring-1 ring-white/10">
-              <Heart className="w-4 h-4" style={{ color: BLUE_LIGHT }} fill="currentColor" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0052FF] to-[#1a6fff] flex items-center justify-center shadow-[0_0_20px_rgba(0,82,255,0.4)]">
+              <Heart className="w-4 h-4 text-white" fill="currentColor" />
             </div>
             <span className="font-medium text-[13px] tracking-wide uppercase" style={{ color: BLUE_LIGHT }}>
               BASEMATCH GENESIS
@@ -245,7 +252,7 @@ export default function ApplyWhitelistPage() {
                   <div className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center">
                     <ThumbsUp className="w-3.5 h-3.5" style={{ color: BLUE_LIGHT }} />
                   </div>
-                  <span className="text-white font-medium text-[15px]">Like pinned post</span>
+                  <span className="text-white font-medium text-[15px]">Like X post</span>
                 </div>
                 {tasks.liked === 'done' && (
                   <span className="flex items-center gap-1 text-emerald-400 text-[13px] font-medium">
@@ -352,7 +359,7 @@ export default function ApplyWhitelistPage() {
               <div className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center">
                 <Users className="w-3.5 h-3.5 text-orange-400" />
               </div>
-              <span className="text-white font-medium text-[15px]">Tag 3 friends</span>
+              <span className="text-white font-medium text-[15px]">Tag 2 friends</span>
             </div>
             <p className="text-[#8E8E93] text-[13px] mb-3 leading-relaxed">
               Comment on the{' '}
