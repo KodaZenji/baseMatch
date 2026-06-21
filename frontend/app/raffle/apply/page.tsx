@@ -108,7 +108,7 @@ export default function RaffleApplyPage() {
 
         <div className="relative z-10 max-w-2xl mx-auto px-4 py-10">
           <button onClick={() => router.push('/raffle')} className="flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors mb-10 text-sm">
-            <ArrowLeft className="w-4 h-4" /> Back to Collabs
+            <ArrowLeft className="w-4 h-4" /> Back to Raffles
           </button>
 
           <div className="mb-10">
