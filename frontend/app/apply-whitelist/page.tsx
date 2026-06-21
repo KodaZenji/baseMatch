@@ -159,7 +159,7 @@ export default function ApplyWhitelistPage() {
               <Heart className="w-4 h-4" style={{ color: BLUE_LIGHT }} fill="currentColor" />
             </div>
             <span className="font-medium text-[13px] tracking-wide uppercase" style={{ color: BLUE_LIGHT }}>
-              BaseMatch
+              BASEMATCH GENESIS
             </span>
           </div>
           <h1 className="text-[32px] font-semibold text-white leading-tight mb-3 tracking-tight">
