@@ -307,7 +307,7 @@ export default function ApplyWhitelistPage() {
                     <MessageSquareQuote className="w-3.5 h-3.5" style={{ color: BLUE_LIGHT }} />
                   </div>
                   <span className="text-white font-medium text-[15px]">
-                    QT with <span className="italic" style={{ color: BLUE_LIGHT }}>&quot;BMG soon&quot;</span>
+                    QT with <span className="italic" style={{ color: BLUE_LIGHT }}>&quot;BMG (BaseMatch Genesis), the social layer for quality connections. Minting soon&quot;</span>
                   </span>
                 </div>
                 {tasks.qt === 'done' && (
