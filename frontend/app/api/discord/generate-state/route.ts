@@ -1,10 +1,10 @@
 // app/api/discord/generate-state/route.ts
-// EDITED: removed farcaster_verified gate — just checks profile exists
-// Used by raffle entry flow to initiate Discord OAuth
+// EDITED: removed profile-existence gate entirely — this is a partner collab raffle,
+// open to anyone with a wallet, not limited to existing BaseMatch users.
+// Used by raffle entry flow to initiate Discord OAuth.
 
 import { NextResponse } from 'next/server';
 import { generateStateToken } from '@/lib/discord-security';
-import { supabaseService } from '@/lib/supabase.server';
 
 export const runtime = 'nodejs';
 
@@ -19,16 +19,7 @@ export async function POST(request: Request) {
 
     const normalizedAddress = address.toLowerCase();
 
-    // Check profile exists — no longer requires farcaster_verified
-    const { data: profile, error: profileError } = await supabaseService
-      .from('profiles')
-      .select('wallet_address')
-      .eq('wallet_address', normalizedAddress)
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found. Please register first.' }, { status: 404 });
-    }
+    // No profile check — collab raffles are open to any wallet, registered or not.
 
     // Embed campaignId in state so callback knows which raffle to enter
     const statePayload = campaignId
