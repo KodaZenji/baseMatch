@@ -22,8 +22,6 @@ interface DiscordGuildRole {
 }
 
 // ── Resolve missing role_id values by name, via Discord's bot API ──────────
-// Discord roles are matched by exact name (case-insensitive) since the apply
-// form only ever collects a display name when role_id is left blank.
 async function resolveRoleIds(
   guildId: string,
   roles: RaffleRole[]
@@ -35,7 +33,6 @@ async function resolveRoleIds(
 
   const botToken = process.env.DISCORD_BOT_TOKEN;
   if (!botToken) {
-    // No bot token configured — can't resolve anything; surface all blanks as unresolved.
     return {
       resolved: roles,
       unresolved: roles.filter((r) => !r.role_id).map((r) => r.role_name),
@@ -47,7 +44,6 @@ async function resolveRoleIds(
   });
 
   if (!res.ok) {
-    // Bot not in server, missing permissions, or bad guild ID — can't resolve.
     return {
       resolved: roles,
       unresolved: roles.filter((r) => !r.role_id).map((r) => r.role_name),
@@ -58,17 +54,14 @@ async function resolveRoleIds(
   const unresolved: string[] = [];
 
   const resolved = roles.map((role) => {
-    if (role.role_id) return role; // already has an ID — leave as-is
-
+    if (role.role_id) return role;
     const match = guildRoles.find(
       (gr) => gr.name.trim().toLowerCase() === role.role_name.trim().toLowerCase()
     );
-
     if (!match) {
       unresolved.push(role.role_name);
-      return role; // still null — caller decides whether to block approval
+      return role;
     }
-
     return { ...role, role_id: match.id };
   });
 
@@ -115,7 +108,6 @@ export async function PATCH(
         return NextResponse.json({ error: 'Application not found' }, { status: 404 });
       }
 
-      // Validate required_roles from application
       const requiredRoles: RaffleRole[] = app.required_roles;
       if (!Array.isArray(requiredRoles) || requiredRoles.length === 0) {
         return NextResponse.json(
@@ -124,9 +116,6 @@ export async function PATCH(
         );
       }
 
-      // ── NEW: resolve any role_id left blank on the apply form ──────────
-      // Without this, roles with role_id === null can never match a user
-      // in /api/raffle/enter, silently locking everyone out of the raffle.
       const guildIdForLookup = campaign_data?.discord_guild_id || app.discord_guild_id;
 
       if (!guildIdForLookup) {
@@ -153,15 +142,13 @@ export async function PATCH(
         );
       }
 
-      await supabase
-        .from('raffle_partner_applications')
-        .update({
-          status: 'approved',
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: admin_wallet.toLowerCase(),
-        })
-        .eq('id', id);
-
+      // ── CAMPAIGN CREATED FIRST ───────────────────────────────────────────
+      // If this insert fails (bad column, constraint violation, etc.) the
+      // application status is never touched — it stays 'pending' and is
+      // safely retryable. This is the fix for the orphaned-approval bug:
+      // previously the application flipped to 'approved' BEFORE this insert,
+      // so a failure here left a permanently "approved" application with no
+      // matching campaign anywhere.
       const { data: campaign, error: campaignError } = await supabase
         .from('raffle_campaigns')
         .insert({
@@ -170,16 +157,9 @@ export async function PATCH(
           project_description: campaign_data?.project_description || app.project_description,
           prize_description: campaign_data?.prize_description || app.prize_description,
           prize_quantity: campaign_data?.prize_quantity || app.prize_quantity,
-
-          // partner_logo_url comes from the application
           partner_logo_url: app.partner_logo_url || null,
-
-          // banner_url is your admin-controlled default image — never from the partner
           banner_url: campaign_data?.banner_url || process.env.DEFAULT_RAFFLE_BANNER_URL || null,
-
-          // required_roles now has every role_id resolved — safe for /api/raffle/enter
           required_roles: resolvedRoles,
-
           discord_guild_id: guildIdForLookup,
           discord_guild_name: campaign_data?.discord_guild_name || app.project_name,
           discord_guild_invite: campaign_data?.discord_guild_invite || app.discord_server_url,
@@ -192,7 +172,29 @@ export async function PATCH(
         .select()
         .single();
 
-      if (campaignError) throw campaignError;
+      if (campaignError) {
+        console.error('Campaign creation failed — application left as pending:', campaignError);
+        return NextResponse.json(
+          { error: 'Failed to create campaign. Application was not marked approved — safe to retry.' },
+          { status: 500 }
+        );
+      }
+
+      // ── ONLY now flip the application to approved ────────────────────────
+      const { error: updateError } = await supabase
+        .from('raffle_partner_applications')
+        .update({
+          status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: admin_wallet.toLowerCase(),
+        })
+        .eq('id', id);
+
+      if (updateError) {
+        // Campaign exists but application status didn't update — log loudly,
+        // but don't fail the request since the campaign is already live.
+        console.error('Campaign created but application status update failed:', updateError);
+      }
 
       return NextResponse.json({ success: true, status: 'approved', campaign });
     }
