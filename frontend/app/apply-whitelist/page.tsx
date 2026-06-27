@@ -119,7 +119,7 @@ export default function ApplyWhitelistPage() {
   if (submitted) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-6 font-sans">
-        <div className="text-center max-w-sm">
+        <div className="text-center max-w-sm w-full">
           <div className="relative inline-flex mb-8">
             <div className="w-20 h-20 rounded-full bg-[#1a1a1a] flex items-center justify-center ring-1 ring-white/10">
               <CheckCircle2 className="w-10 h-10" style={{ color: BLUE }} />
@@ -131,13 +131,55 @@ export default function ApplyWhitelistPage() {
           <p className="text-[#8E8E93] mb-8 leading-relaxed text-[15px]">
             We&apos;ve logged your entry. Thanks for completing the tasks. Stay tuned on X.
           </p>
+
           <button
             onClick={() => router.push('/')}
-            className="px-8 py-3 text-white text-[15px] font-medium rounded-full active:scale-95 transition-all"
+            className="px-8 py-3 text-white text-[15px] font-medium rounded-full active:scale-95 transition-all mb-8"
             style={{ background: `linear-gradient(to right, ${BLUE}, #1a6fff)` }}
           >
             Back to BaseMatch
           </button>
+
+          {/* While you wait — bonus actions, now that the core flow is done */}
+          <div className="space-y-3 text-left">
+            <a
+              href={GUILD_XYZ_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 p-4 rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 hover:bg-[#2C2C2E] transition-colors group active:scale-[0.98]"
+            >
+              <div className="w-9 h-9 rounded-lg bg-[#2C2C2E] flex items-center justify-center ring-1 ring-white/10 flex-shrink-0">
+                <Users className="w-4 h-4" style={{ color: BLUE }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-[15px] mb-0.5">
+                  Boost your chances
+                </p>
+                <p className="text-[#8E8E93] text-[13px] truncate">
+                  Complete quests on Guild.xyz → basematch
+                </p>
+              </div>
+              <ExternalLink className="w-4 h-4 text-[#8E8E93] group-hover:text-white transition-colors flex-shrink-0" />
+            </a>
+
+            <Link
+              href="/raffle/apply"
+              className="flex items-center gap-3 p-4 rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 hover:bg-[#2C2C2E] transition-colors group active:scale-[0.98]"
+            >
+              <div className="w-9 h-9 rounded-lg bg-[#2C2C2E] flex items-center justify-center ring-1 ring-white/10 flex-shrink-0">
+                <Megaphone className="w-4 h-4" style={{ color: BLUE }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-[15px] mb-0.5">
+                  Got a community?
+                </p>
+                <p className="text-[#8E8E93] text-[13px] truncate">
+                  Partner with us — give your members BMG whitelist access
+                </p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#8E8E93] group-hover:text-white transition-colors flex-shrink-0" />
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -178,46 +220,6 @@ export default function ApplyWhitelistPage() {
             Complete the tasks below and submit your wallet to enter the whitelist.
           </p>
         </div>
-
-        {/* Guild nudge banner */}
-        <a
-          href={GUILD_XYZ_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 p-4 rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 hover:bg-[#2C2C2E] transition-colors mb-8 group active:scale-[0.98]"
-        >
-          <div className="w-9 h-9 rounded-lg bg-[#2C2C2E] flex items-center justify-center ring-1 ring-white/10 flex-shrink-0">
-            <Users className="w-4 h-4" style={{ color: BLUE }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-medium text-[15px] mb-0.5">
-              Boost your chances
-            </p>
-            <p className="text-[#8E8E93] text-[13px] truncate">
-              Complete quests on Guild.xyz → basematch
-            </p>
-          </div>
-          <ExternalLink className="w-4 h-4 text-[#8E8E93] group-hover:text-white transition-colors flex-shrink-0" />
-        </a>
-
-        {/* Got a community? Partner with us — links to /raffle */}
-        <Link
-          href="/raffle/apply"
-          className="flex items-center gap-3 p-4 rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 hover:bg-[#2C2C2E] transition-colors mb-8 group active:scale-[0.98]"
-        >
-          <div className="w-9 h-9 rounded-lg bg-[#2C2C2E] flex items-center justify-center ring-1 ring-white/10 flex-shrink-0">
-            <Megaphone className="w-4 h-4" style={{ color: BLUE }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-medium text-[15px] mb-0.5">
-              Got a community?
-            </p>
-            <p className="text-[#8E8E93] text-[13px] truncate">
-              Partner with us — give your members BMG whitelist access
-            </p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-[#8E8E93] group-hover:text-white transition-colors flex-shrink-0" />
-        </Link>
 
         <div className="space-y-4 mb-6">
 
