@@ -222,6 +222,18 @@ export default function RaffleApplyPage() {
               <div>
                 <label className={labelCls}>Discord Server Invite Link *</label>
                 <input className={inputCls} placeholder="https://discord.gg/..." value={form.discord_server_url} onChange={set('discord_server_url')} />
+                <p className="text-[11px] text-gray-600 mt-1.5 leading-relaxed">
+                  Don&apos;t have a Discord community, but got a Telegram one?{' '}
+                  <a
+                    href="https://x.com/0x_aurio"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#4d8aff] hover:text-[#0052FF] underline underline-offset-2"
+                  >
+                    Contact x.com/@0x_aurio
+                  </a>{' '}
+                  with your request.
+                </p>
               </div>
               <div>
                 <label className={labelCls}>Server (Guild) ID <span className="text-gray-600 font-normal normal-case tracking-normal">(optional)</span></label>
