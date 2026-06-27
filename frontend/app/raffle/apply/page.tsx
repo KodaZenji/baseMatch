@@ -143,7 +143,7 @@ export default function RaffleApplyPage() {
               <h2 className="text-white font-bold text-base">Project Information</h2>
               <div>
                 <label className={labelCls}>Project Name *</label>
-                <input className={inputCls} placeholder="e.g. BaseMonkeys" value={form.project_name} onChange={set('project_name')} />
+                <input className={inputCls} placeholder="e.g. Lil. Bangerz" value={form.project_name} onChange={set('project_name')} />
               </div>
               <div>
                 <label className={labelCls}>Project Description *</label>
