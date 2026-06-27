@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Heart,
   ArrowLeft,
@@ -13,6 +14,7 @@ import {
   MessageSquareQuote,
   ThumbsUp,
   ChevronRight,
+  Megaphone,
 } from 'lucide-react';
 
 const BASEMATCH_X_HANDLE = 'basematch_';
@@ -197,6 +199,25 @@ export default function ApplyWhitelistPage() {
           </div>
           <ExternalLink className="w-4 h-4 text-[#8E8E93] group-hover:text-white transition-colors flex-shrink-0" />
         </a>
+
+        {/* Got a community? Partner with us — links to /raffle */}
+        <Link
+          href="/raffle/apply"
+          className="flex items-center gap-3 p-4 rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 hover:bg-[#2C2C2E] transition-colors mb-8 group active:scale-[0.98]"
+        >
+          <div className="w-9 h-9 rounded-lg bg-[#2C2C2E] flex items-center justify-center ring-1 ring-white/10 flex-shrink-0">
+            <Megaphone className="w-4 h-4" style={{ color: BLUE }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-medium text-[15px] mb-0.5">
+              Got a community?
+            </p>
+            <p className="text-[#8E8E93] text-[13px] truncate">
+              Partner with us — give your members BMG whitelist access
+            </p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-[#8E8E93] group-hover:text-white transition-colors flex-shrink-0" />
+        </Link>
 
         <div className="space-y-4 mb-6">
 
