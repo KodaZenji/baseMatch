@@ -52,6 +52,7 @@ interface Campaign {
   prize_quantity: number;
   end_date: string;
   x_tasks: XTask[];
+  discord_guild_id: string | null;
 }
 
 const TASK_PRESETS: Record<XTaskType, { label: string; urlHint: string }> = {
@@ -129,6 +130,27 @@ function CopyButton({ text, label }: { text: string; label: string }) {
       {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
       {copied ? 'Copied!' : label}
     </button>
+  );
+}
+
+// ── Bot connection status badge ──────────────────────────────────────────
+// Shows whether /api/discord/bot-callback has fired for this campaign yet.
+// Without discord_guild_id set, every entrant will silently fail role checks
+// — this makes that gap visible in the panel instead of discovered later.
+function BotStatusBadge({ guildId }: { guildId: string | null }) {
+  if (guildId) {
+    return (
+      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border bg-green-500/20 text-green-400 border-green-500/30">
+        <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+        Bot connected
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+      <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
+      Waiting on bot invite
+    </span>
   );
 }
 
@@ -545,7 +567,10 @@ const [botInviteApp, setBotInviteApp] = useState<Application | null>(null);
                       <div key={c.id} className="rounded-2xl border border-[#0052FF]/20 bg-[#0052FF]/5 overflow-hidden">
                         <div className="p-5 flex items-center justify-between">
                           <div>
-                            <h3 className="font-bold">{c.project_name}</h3>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-bold">{c.project_name}</h3>
+                              <BotStatusBadge guildId={c.discord_guild_id} />
+                            </div>
                             <p className="text-[#4d8aff] text-xs mt-0.5">
                               {tasks.length} X task{tasks.length !== 1 ? 's' : ''} configured · Not yet live
                             </p>
@@ -659,7 +684,10 @@ const [botInviteApp, setBotInviteApp] = useState<Application | null>(null);
                   {activeCampaigns.map(c => (
                     <div key={c.id} className="rounded-2xl border border-white/8 bg-white/4 p-5 flex items-center justify-between">
                       <div>
-                        <h3 className="font-bold">{c.project_name}</h3>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-bold">{c.project_name}</h3>
+                          <BotStatusBadge guildId={c.discord_guild_id} />
+                        </div>
                         <div className="flex items-center gap-4 text-xs text-gray-400 mt-1">
                           <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{c.total_entries} entries</span>
                           <span className="flex items-center gap-1"><Trophy className="w-3.5 h-3.5" />{c.prize_quantity} WL spots</span>
