@@ -20,6 +20,12 @@ interface XTask {
   url: string;
 }
 
+interface RaffleRole {
+  role_id: string | null;
+  role_name: string;
+  weight: number;
+}
+
 interface Application {
   id: string;
   project_name: string;
@@ -27,7 +33,7 @@ interface Application {
   contact_discord: string;
   contact_email: string;
   discord_guild_id: string;
-  required_role_name: string;
+  required_roles: RaffleRole[];
   prize_description: string;
   prize_quantity: number;
   proposed_start_date: string | null;
@@ -463,7 +469,24 @@ const [botInviteApp, setBotInviteApp] = useState<Application | null>(null);
                         <div className="border-t border-white/8 p-5 space-y-4">
                           <div className="grid grid-cols-2 gap-3 text-xs">
                             <div><p className="text-gray-500 mb-1">Guild ID</p><p className="font-mono">{app.discord_guild_id || '—'}</p></div>
-                            <div><p className="text-gray-500 mb-1">Required Role</p><p>{app.required_role_name}</p></div>
+                            <div>
+                              <p className="text-gray-500 mb-1">Required Roles</p>
+                              {Array.isArray(app.required_roles) && app.required_roles.length > 0 ? (
+                                <div className="space-y-0.5">
+                                  {app.required_roles.map((r, i) => (
+                                    <p key={i}>
+                                      {r.role_name}
+                                      <span className="text-gray-500"> · {r.weight}×</span>
+                                      {!r.role_id && (
+                                        <span className="text-yellow-400"> · ID unresolved</span>
+                                      )}
+                                    </p>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-gray-600">—</p>
+                              )}
+                            </div>
                           </div>
 
                           <div className="space-y-2">
