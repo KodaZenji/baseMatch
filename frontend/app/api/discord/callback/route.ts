@@ -1,6 +1,9 @@
 // app/api/discord/callback/route.ts
-// EDITED: after OAuth success, redirects to raffle entry instead of verify/OG role
-// Stores discord identity in session, then redirects back to campaign page
+// EDITED: Discord-first flow — state now carries only campaignId, no wallet.
+// Wallet is connected AFTER this, back on the campaign page, once the user
+// has seen their Discord eligibility. Also removed the unused guilds fetch
+// — that endpoint can't return per-guild roles anyway; role checks happen
+// server-side in /api/raffle/enter via the bot token.
 
 import { NextResponse, NextRequest } from 'next/server';
 import { verifyStateToken, isNonceUsed, markNonceAsUsed } from '@/lib/discord-security';
@@ -21,9 +24,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/raffle?discord_error=missing_params`);
     }
 
-    // Verify state token — now payload may be "address::campaignId"
-    const statePayload = verifyStateToken(state);
-    if (!statePayload) {
+    // Verify state token — payload is now just the campaignId
+    const campaignId = verifyStateToken(state);
+    if (!campaignId) {
       console.error('🚨 SECURITY: Invalid or tampered state token');
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/raffle?discord_error=invalid_token`);
     }
@@ -34,9 +37,6 @@ export async function GET(request: NextRequest) {
     }
 
     markNonceAsUsed(state);
-
-    // Parse wallet + optional campaignId from state payload
-    const [walletAddress, campaignId] = statePayload.split('::');
 
     // Exchange code for access token
     const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
@@ -71,24 +71,14 @@ export async function GET(request: NextRequest) {
 
     const discordUser = await userResponse.json();
 
-    // Get user's guild memberships to snapshot roles
-    const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    const guilds = guildsResponse.ok ? await guildsResponse.json() : [];
-
-    // Build redirect — pass discord identity back to campaign page via query params
-    // The campaign page calls /api/raffle/enter with this data + verifies role server-side
-    const redirectBase = campaignId
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/raffle/${campaignId}`
-      : `${process.env.NEXT_PUBLIC_APP_URL}/raffle`;
+    // Redirect back to the campaign page with Discord identity — NO wallet yet.
+    // The campaign page will show eligibility status and prompt for wallet next.
+    const redirectBase = `${process.env.NEXT_PUBLIC_APP_URL}/raffle/${campaignId}`;
 
     const params = new URLSearchParams({
       discord_success: 'true',
       discord_user_id: discordUser.id,
-      discord_username: `${discordUser.username}`,
-      wallet: walletAddress,
-      ...(campaignId && { campaign_id: campaignId }),
+      discord_username: discordUser.username,
     });
 
     return NextResponse.redirect(`${redirectBase}?${params.toString()}`);
