@@ -349,6 +349,32 @@ const [botInviteApp, setBotInviteApp] = useState<Application | null>(null);
     } finally { setActionLoading(null); }
   }
 
+  async function handleRecheckBot(campaignId: string) {
+    setActionLoading(`recheck-${campaignId}`);
+    try {
+      const res = await fetch(`/api/raffle/${campaignId}/recheck-bot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_wallet: address }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCampaigns(prev => prev.map(c =>
+          c.id === campaignId ? { ...c, bot_connected: data.bot_connected } : c
+        ));
+        if (!data.bot_connected) {
+          alert('Bot is no longer in this server. The partner needs to re-invite it.');
+        }
+      } else {
+        alert(data.error || 'Recheck failed.');
+      }
+    } catch {
+      alert('Network error during recheck.');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   async function handleDecline(appId: string) {
     setActionLoading(appId);
     try {
@@ -704,6 +730,18 @@ const [botInviteApp, setBotInviteApp] = useState<Application | null>(null);
                         </div>
                       </div>
                       <div className="flex gap-2">
+                        <button
+                          onClick={() => handleRecheckBot(c.id)}
+                          disabled={actionLoading === `recheck-${c.id}`}
+                          title="Re-verify the bot is still in this Discord server"
+                          className="px-3 py-2 rounded-xl border border-white/10 text-gray-400 text-xs hover:text-white hover:border-white/20 transition-all disabled:opacity-50"
+                        >
+                          {actionLoading === `recheck-${c.id}` ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            'Recheck Bot'
+                          )}
+                        </button>
                         <button onClick={() => setConfiguringCampaign(configuringCampaign === c.id ? null : c.id)}
                           className="px-3 py-2 rounded-xl border border-white/10 text-gray-400 text-xs hover:text-white hover:border-white/20 transition-all">
                           Edit Tasks
