@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
   Heart,
   ArrowLeft,
@@ -162,8 +161,10 @@ export default function ApplyWhitelistPage() {
               <ExternalLink className="w-4 h-4 text-[#8E8E93] group-hover:text-white transition-colors flex-shrink-0" />
             </a>
 
-            <Link
+            <a
               href="/raffle/apply"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-3 p-4 rounded-2xl bg-[#1C1C1E] ring-1 ring-white/5 hover:bg-[#2C2C2E] transition-colors group active:scale-[0.98]"
             >
               <div className="w-9 h-9 rounded-lg bg-[#2C2C2E] flex items-center justify-center ring-1 ring-white/10 flex-shrink-0">
@@ -178,7 +179,7 @@ export default function ApplyWhitelistPage() {
                 </p>
               </div>
               <ChevronRight className="w-4 h-4 text-[#8E8E93] group-hover:text-white transition-colors flex-shrink-0" />
-            </Link>
+            </a>
           </div>
         </div>
       </div>
