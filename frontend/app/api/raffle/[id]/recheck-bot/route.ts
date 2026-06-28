@@ -12,14 +12,21 @@ function getSupabase() {
 
 // POST /api/raffle/[id]/recheck-bot
 // Re-verifies the bot is still present in a campaign's Discord server.
-// Call this on a cron (e.g. every few hours) or from an admin "Recheck" button —
-// catches the case where a partner kicks the bot after launch, which nothing
-// else currently detects.
+// Called manually from the admin panel's "Recheck" button — catches the
+// case where a partner kicks the bot after launch, which nothing else
+// currently detects on its own.
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { admin_wallet } = await request.json();
   const { id } = await params;
+
+  const ADMIN_WALLET = process.env.ADMIN_WALLET_ADDRESS?.toLowerCase();
+  if (!admin_wallet || admin_wallet.toLowerCase() !== ADMIN_WALLET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
   const supabase = getSupabase();
 
   const { data: campaign, error } = await supabase
@@ -30,6 +37,10 @@ export async function POST(
 
   if (error || !campaign) {
     return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
+  }
+
+  if (!campaign.discord_guild_id) {
+    return NextResponse.json({ bot_connected: false });
   }
 
   const botToken = process.env.DISCORD_BOT_TOKEN;
