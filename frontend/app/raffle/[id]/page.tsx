@@ -32,6 +32,7 @@ interface Campaign {
   partner_logo_url: string | null;
   banner_url: string | null;
   required_roles: RaffleRole[];
+  discord_guild_id: string;
   discord_guild_name: string;
   discord_guild_invite: string;
   twitter_url: string | null;
@@ -167,6 +168,19 @@ export default function CampaignPage() {
   const [entryResult, setEntryResult] = useState<{ success: boolean; message: string; entry_number?: number } | null>(null);
   const [error, setError] = useState('');
 
+  // Discord identity is captured BEFORE wallet — connecting Discord no
+  // longer requires a wallet at all. Eligibility is checked immediately
+  // after Discord connects, so the user knows if they qualify before
+  // ever being asked to connect a wallet.
+  const [discordIdentity, setDiscordIdentity] = useState<{ userId: string; username: string } | null>(null);
+  const [checkingEligibility, setCheckingEligibility] = useState(false);
+  const [eligibility, setEligibility] = useState<{
+    inServer: boolean;
+    matched: boolean;
+    weight: number;
+    roleName: string | null;
+  } | null>(null);
+
   const discordSuccess = searchParams.get('discord_success');
   const discordUserId = searchParams.get('discord_user_id');
   const discordUsername = searchParams.get('discord_username');
@@ -187,22 +201,88 @@ export default function CampaignPage() {
       .catch(() => setLoading(false));
   }, [campaignId]);
 
+  // Discord just redirected back — capture identity, check eligibility.
+  // No wallet involved at this point.
   useEffect(() => {
-    if (discordSuccess === 'true' && discordUserId && discordUsername && address && campaign) {
-      handleEnter(discordUserId, discordUsername);
+    if (discordSuccess === 'true' && discordUserId && discordUsername && campaign) {
+      setDiscordIdentity({ userId: discordUserId, username: discordUsername });
+      checkEligibility(discordUserId, campaign);
     }
     if (discordError) {
       setError(`Discord error: ${discordError.replace(/_/g, ' ')}`);
     }
-  }, [discordSuccess, discordUserId, discordUsername, address, campaign]);
+  }, [discordSuccess, discordUserId, discordUsername, campaign]);
+
+  // Once wallet connects AND we already know the user is eligible,
+  // submit the actual entry. This is the only point a wallet is required.
+  useEffect(() => {
+    if (isConnected && address && discordIdentity && eligibility?.matched && !entryResult && !entering) {
+      handleEnter(discordIdentity.userId, discordIdentity.username);
+    }
+  }, [isConnected, address, discordIdentity, eligibility]);
+
+  async function checkEligibility(dUserId: string, c: Campaign) {
+    if (!c.required_roles || c.required_roles.length === 0) {
+      setEligibility({ inServer: true, matched: true, weight: 1, roleName: null });
+      return;
+    }
+    setCheckingEligibility(true);
+    setError('');
+    try {
+      const res = await fetch('/api/discord/check-membership', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          discord_user_id: dUserId,
+          guild_id: c.discord_guild_id,
+          // check-membership needs *some* role_id to run — we only use
+          // the returned `roles` array for our own weight resolution below.
+          required_role_id: c.required_roles[0]?.role_id ?? null,
+        }),
+      });
+      const data = await res.json();
+
+      if (data.error === 'bot_not_in_server') {
+        setError('Configuration error — please contact the campaign organizer.');
+        setEligibility(null);
+        return;
+      }
+
+      if (!data.inServer) {
+        setEligibility({ inServer: false, matched: false, weight: 0, roleName: null });
+        return;
+      }
+
+      const userRoleIds: string[] = data.roles || [];
+      let matchedWeight = 0;
+      let matchedRoleName: string | null = null;
+      for (const role of c.required_roles) {
+        if (role.role_id && userRoleIds.includes(role.role_id) && role.weight > matchedWeight) {
+          matchedWeight = role.weight;
+          matchedRoleName = role.role_name;
+        }
+      }
+
+      setEligibility({
+        inServer: true,
+        matched: matchedWeight > 0,
+        weight: matchedWeight,
+        roleName: matchedRoleName,
+      });
+    } catch {
+      setError('Could not check Discord eligibility. Please try again.');
+    } finally {
+      setCheckingEligibility(false);
+    }
+  }
 
   async function handleConnectDiscord() {
-    if (!address) { setError('Please connect your wallet first.'); return; }
+    if (!campaign) return;
 
     const stateRes = await fetch('/api/discord/generate-state', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address, campaignId }),
+      body: JSON.stringify({ campaignId }),
     });
     const stateData = await stateRes.json();
     if (!stateRes.ok) { setError(stateData.error || 'Failed to generate state'); return; }
@@ -455,31 +535,79 @@ export default function CampaignPage() {
                     <p className="text-xs text-green-500 mt-0.5">Good luck! Winners announced after the raffle ends.</p>
                   </div>
                 </div>
-              ) : !isConnected ? (
+              ) : !discordIdentity ? (
+                // Step 1 — Discord first. No wallet needed to see if you qualify.
                 <div className="text-center py-4">
-                  <p className="text-gray-400 text-sm mb-4">Connect your wallet to enter this BMG collab raffle.</p>
+                  <p className="text-gray-400 text-sm mb-4">
+                    Connect Discord to check if you qualify — no wallet needed yet.
+                  </p>
+                  <button
+                    onClick={handleConnectDiscord}
+                    className="w-full py-4 rounded-2xl text-white font-bold text-base hover:opacity-90 transition-all shadow-[0_0_30px_rgba(0,82,255,0.3)]"
+                    style={{ background: `linear-gradient(to right, ${BLUE}, #1a6fff)` }}
+                  >
+                    🎮 Connect Discord
+                  </button>
+                </div>
+              ) : checkingEligibility ? (
+                <div className="flex items-center justify-center gap-2 py-6 text-gray-400 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Checking eligibility...
+                </div>
+              ) : eligibility && !eligibility.inServer ? (
+                // Step 2a — connected Discord, but not in the partner's server yet.
+                <div className="text-center py-2">
+                  <p className="text-gray-300 text-sm mb-3">
+                    You need to join <span className="font-semibold text-white">{campaign.discord_guild_name}</span> first.
+                  </p>
+                  <a
+                    href={campaign.discord_guild_invite}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border text-sm font-semibold mb-3"
+                    style={{ borderColor: `${BLUE}40`, color: BLUE_LIGHT }}
+                  >
+                    <ExternalLink className="w-4 h-4" /> Join {campaign.discord_guild_name}
+                  </a>
+                  <br />
+                  <button
+                    onClick={() => discordIdentity && checkEligibility(discordIdentity.userId, campaign)}
+                    className="text-xs text-gray-500 hover:text-white underline underline-offset-2 transition-colors"
+                  >
+                    I&apos;ve joined — recheck
+                  </button>
+                </div>
+              ) : eligibility && !eligibility.matched ? (
+                // Step 2b — in the server, but missing the required role.
+                <div className="text-center py-2">
+                  <p className="text-gray-300 text-sm mb-3">
+                    You&apos;re in <span className="font-semibold text-white">{campaign.discord_guild_name}</span>, but you don&apos;t have a qualifying role yet.
+                  </p>
+                  <button
+                    onClick={() => discordIdentity && checkEligibility(discordIdentity.userId, campaign)}
+                    className="text-xs text-gray-500 hover:text-white underline underline-offset-2 transition-colors"
+                  >
+                    Recheck eligibility
+                  </button>
+                </div>
+              ) : eligibility?.matched && !isConnected ? (
+                // Step 3 — eligible! Now, and only now, ask for a wallet.
+                <div className="text-center py-2">
+                  <div className="flex items-center justify-center gap-2 mb-4 text-green-400 text-sm font-semibold">
+                    <CheckCircle2 className="w-4 h-4" />
+                    You qualify!{eligibility.weight > 1 && ` ${eligibility.weight}× chance via "${eligibility.roleName}"`}
+                  </div>
+                  <p className="text-gray-400 text-sm mb-4">Connect your wallet to claim your entry.</p>
                   <WalletButton />
                 </div>
               ) : (
-                <button
-                  onClick={handleConnectDiscord}
-                  disabled={entering}
-                  className="w-full py-4 rounded-2xl text-white font-bold text-base hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(0,82,255,0.3)]"
-                  style={{ background: `linear-gradient(to right, ${BLUE}, #1a6fff)` }}
-                >
-                  {entering ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-5 h-5 animate-spin" /> Verifying...
-                    </span>
-                  ) : (
-                    '🎟️ Connect Discord & Enter'
-                  )}
-                </button>
+                <div className="flex items-center justify-center gap-2 py-6 text-gray-400 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Submitting entry...
+                </div>
               )}
 
-              {isConnected && !entryResult && (
+              {discordIdentity && eligibility?.matched && isConnected && !entryResult && (
                 <p className="text-xs text-gray-600 text-center mt-3">
-                  We'll verify your Discord role and enter you automatically.
+                  Submitting your entry now...
                 </p>
               )}
             </div>
