@@ -53,6 +53,7 @@ interface Campaign {
   end_date: string;
   x_tasks: XTask[];
   discord_guild_id: string | null;
+  bot_connected: boolean;
 }
 
 const TASK_PRESETS: Record<XTaskType, { label: string; urlHint: string }> = {
@@ -137,8 +138,8 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 // Shows whether /api/discord/bot-callback has fired for this campaign yet.
 // Without discord_guild_id set, every entrant will silently fail role checks
 // — this makes that gap visible in the panel instead of discovered later.
-function BotStatusBadge({ guildId }: { guildId: string | null }) {
-  if (guildId) {
+function BotStatusBadge({ connected }: { connected: boolean }) {
+  if (connected) {
     return (
       <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border bg-green-500/20 text-green-400 border-green-500/30">
         <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
@@ -565,18 +566,19 @@ const [botInviteApp, setBotInviteApp] = useState<Application | null>(null);
 
                     return (
                       <div key={c.id} className="rounded-2xl border border-[#0052FF]/20 bg-[#0052FF]/5 overflow-hidden">
-                        <div className="p-5 flex items-center justify-between">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-bold">{c.project_name}</h3>
-                              <BotStatusBadge guildId={c.discord_guild_id} />
-                            </div>
-                            <p className="text-[#4d8aff] text-xs mt-0.5">
-                              {tasks.length} X task{tasks.length !== 1 ? 's' : ''} configured · Not yet live
-                            </p>
+                        <div className="p-5">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h3 className="font-bold truncate">{c.project_name}</h3>
+                            <BotStatusBadge connected={c.bot_connected} />
                           </div>
+                          <p className="text-[#4d8aff] text-xs mt-0.5">
+                            {tasks.length} X task{tasks.length !== 1 ? 's' : ''} configured · Not yet live
+                          </p>
+                        </div>
+
+                        <div className="px-5 pb-5">
                           <button onClick={() => setConfiguringCampaign(isConfiguring ? null : c.id)}
-                            className="px-4 py-2 rounded-xl border border-[#0052FF]/40 text-[#4d8aff] text-sm font-semibold hover:bg-[#0052FF]/10 transition-all flex items-center gap-2">
+                            className="px-4 py-2 rounded-xl border border-[#0052FF]/40 text-[#4d8aff] text-sm font-semibold hover:bg-[#0052FF]/10 transition-all flex items-center justify-center gap-2 w-full sm:w-auto">
                             <Twitter className="w-4 h-4" />
                             {isConfiguring ? 'Close' : 'Edit X Tasks'}
                           </button>
@@ -650,7 +652,8 @@ const [botInviteApp, setBotInviteApp] = useState<Application | null>(null);
                                 {actionLoading === `save-${c.id}` ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Save Draft'}
                               </button>
                               <button onClick={() => saveTasks(c.id, true)}
-                                disabled={actionLoading === `save-${c.id}` || tasks.length === 0}
+                                disabled={actionLoading === `save-${c.id}` || tasks.length === 0 || !c.bot_connected}
+                                title={!c.bot_connected ? 'Bot must be connected to this server before launching' : ''}
                                 className="flex-1 py-3 rounded-xl text-white font-bold text-sm hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                                 style={{ background: `linear-gradient(to right, ${BLUE}, #1a6fff)` }}>
                                 {actionLoading === `save-${c.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
@@ -661,6 +664,11 @@ const [botInviteApp, setBotInviteApp] = useState<Application | null>(null);
                             {tasks.length === 0 && (
                               <p className="text-xs text-gray-600 text-center">
                                 Add at least one X task before launching. You can also launch with no tasks — just click Save & Launch with an empty list.
+                              </p>
+                            )}
+                            {!c.bot_connected && (
+                              <p className="text-xs text-yellow-500 text-center">
+                                ⚠️ Bot hasn&apos;t been invited to this server yet — Launch is disabled until it connects.
                               </p>
                             )}
                           </div>
@@ -686,7 +694,7 @@ const [botInviteApp, setBotInviteApp] = useState<Application | null>(null);
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-bold">{c.project_name}</h3>
-                          <BotStatusBadge guildId={c.discord_guild_id} />
+                          <BotStatusBadge connected={c.bot_connected} />
                         </div>
                         <div className="flex items-center gap-4 text-xs text-gray-400 mt-1">
                           <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{c.total_entries} entries</span>
