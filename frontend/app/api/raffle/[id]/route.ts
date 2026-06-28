@@ -160,6 +160,7 @@ export async function PATCH(
           partner_logo_url: app.partner_logo_url || null,
           banner_url: campaign_data?.banner_url || process.env.DEFAULT_RAFFLE_BANNER_URL || null,
           required_roles: resolvedRoles,
+          bot_connected: true, // resolveRoleIds() only succeeds if the bot was actually in this guild
           discord_guild_id: guildIdForLookup,
           discord_guild_name: campaign_data?.discord_guild_name || app.project_name,
           discord_guild_invite: campaign_data?.discord_guild_invite || app.discord_server_url,
@@ -167,7 +168,7 @@ export async function PATCH(
           website_url: app.website_url || null,
           start_date: campaign_data?.start_date || app.proposed_start_date || new Date().toISOString(),
           end_date: campaign_data?.end_date || app.proposed_end_date,
-          status: 'active',
+          status: 'pending', // held — NOT publicly visible until admin explicitly launches it
         })
         .select()
         .single();
