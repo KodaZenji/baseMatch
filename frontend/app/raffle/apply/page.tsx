@@ -236,8 +236,11 @@ export default function RaffleApplyPage() {
                 </p>
               </div>
               <div>
-                <label className={labelCls}>Server (Guild) ID <span className="text-gray-600 font-normal normal-case tracking-normal">(optional)</span></label>
+                <label className={labelCls}>Server ID</label>
                 <input className={inputCls} placeholder="123456789012345678" value={form.discord_guild_id} onChange={set('discord_guild_id')} />
+                <p className="text-[11px] text-gray-600 mt-1.5 leading-relaxed">
+                  Please ensure it&apos;s correct.
+                </p>
               </div>
 
               {/* Required Roles with weights — replaces single role_id + role_name */}
