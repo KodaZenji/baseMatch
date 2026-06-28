@@ -1,16 +1,13 @@
-// frontend/lib/discord-security.ts
 import crypto from 'crypto';
 
 // Auto-generate and cache secret if not provided
 let cachedSecret: string | null = null;
 
 function getOrGenerateSecret(): string {
-  // Try to get from environment first
   if (process.env.DISCORD_STATE_SECRET) {
     return process.env.DISCORD_STATE_SECRET;
   }
 
-  // If not in production, generate and cache a temporary one
   if (process.env.NODE_ENV !== 'production') {
     if (!cachedSecret) {
       cachedSecret = crypto.randomBytes(64).toString('base64');
@@ -21,7 +18,6 @@ function getOrGenerateSecret(): string {
     return cachedSecret;
   }
 
-  // Production requires explicit secret
   throw new Error(
     'DISCORD_STATE_SECRET is required in production. ' +
     'Visit https://basematch.app/admin/generate-secret to create one.'
@@ -31,32 +27,32 @@ function getOrGenerateSecret(): string {
 const SECRET_KEY = getOrGenerateSecret();
 
 interface StateData {
-  wallet: string;
+  payload: string; // was `wallet` — generalized since wallet isn't known until after Discord connect now
   timestamp: number;
   nonce: string;
 }
 
 /**
- * Generate a cryptographically secure state token
+ * Generate a cryptographically secure state token.
+ * `payload` is just an opaque signed string — currently used for campaignId,
+ * but not semantically tied to a wallet anymore.
  */
-export function generateStateToken(walletAddress: string): string {
+export function generateStateToken(payload: string): string {
   const nonce = crypto.randomBytes(16).toString('hex');
   const timestamp = Date.now();
-  
+
   const stateData: StateData = {
-    wallet: walletAddress.toLowerCase(),
+    payload,
     timestamp,
     nonce,
   };
 
-  // Create HMAC signature
   const message = JSON.stringify(stateData);
   const signature = crypto
     .createHmac('sha256', SECRET_KEY)
     .update(message)
     .digest('hex');
 
-  // Combine data + signature
   const token = {
     data: stateData,
     signature,
@@ -66,7 +62,8 @@ export function generateStateToken(walletAddress: string): string {
 }
 
 /**
- * Verify state token is valid and not tampered with
+ * Verify state token is valid and not tampered with.
+ * Returns the original payload string, or null if invalid/expired.
  */
 export function verifyStateToken(token: string): string | null {
   try {
@@ -76,7 +73,6 @@ export function verifyStateToken(token: string): string | null {
 
     const { data, signature } = decoded;
 
-    // Verify signature
     const message = JSON.stringify(data);
     const expectedSignature = crypto
       .createHmac('sha256', SECRET_KEY)
@@ -88,14 +84,13 @@ export function verifyStateToken(token: string): string | null {
       return null;
     }
 
-    // Check expiry (15 minutes)
     const age = Date.now() - data.timestamp;
     if (age > 15 * 60 * 1000) {
       console.warn('⚠️ Expired token');
       return null;
     }
 
-    return data.wallet;
+    return data.payload;
   } catch (error) {
     console.error('Error verifying token:', error);
     return null;
@@ -111,8 +106,7 @@ export function markNonceAsUsed(token: string): void {
       Buffer.from(token, 'base64url').toString('utf-8')
     );
     usedNonces.add(decoded.data.nonce);
-    
-    // Clean up after 1 hour
+
     setTimeout(() => {
       usedNonces.delete(decoded.data.nonce);
     }, 60 * 60 * 1000);
