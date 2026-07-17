@@ -29,16 +29,6 @@ async redirects() {
       destination: '/apply-whitelist',
       permanent: true,
     },
-    {
-      source: '/apply-whitelist',
-      destination: '/',
-      permanent: false,
-    },
-    {
-      source: '/raffle/apply',
-      destination: '/',
-      permanent: false,
-    },
   ]
 },
 
