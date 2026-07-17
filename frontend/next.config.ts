@@ -22,15 +22,25 @@ const nextConfig: NextConfig = {
   },
 
   // Redirect short link to full whitelist page
-  async redirects() {
-    return [
-      {
-        source: '/apply',
-        destination: '/apply-whitelist',
-        permanent: true,
-      },
-    ];
-  },
+async redirects() {
+  return [
+    {
+      source: '/apply',
+      destination: '/apply-whitelist',
+      permanent: true,
+    },
+    {
+      source: '/apply-whitelist',
+      destination: '/',
+      permanent: false,
+    },
+    {
+      source: '/raffle/apply',
+      destination: '/',
+      permanent: false,
+    },
+  ]
+},
 
   // 3. Webpack Fallbacks (Used when you run next build --webpack)
   serverExternalPackages: ['pino', 'thread-stream', 'pino-pretty', 'lokijs', 'encoding'],
